@@ -1,0 +1,32 @@
+\begin{tikzpicture}
+[ 
+  every node/.style ={scale=0.35},
+ ]
+\tikzstyle{every path}=[draw, line width=0.3mm];
+\def\bracket{
+  \draw[-] (1,10) -| (0,0) -- (1,0);
+  \draw[-] (9,10) -| (10,0) -- (9,0);
+}
+\def\basecoords{ 
+    \coordinate (-v1) at (1,1);
+    \coordinate (-v2) at (9,1);
+    \coordinate (-v3) at (9,9);
+    \coordinate (-v4) at (1,9);
+}
+\tikzset{pics/.cd,
+  my square/.style={code={\basecoords\fill [#1] (-v1) rectangle (-v3);\bracket}},
+  my trileft/.style={code={\basecoords\fill [#1] (-v2) -- (-v4) -- (-v1);\bracket}},
+  my triright/.style={code={\basecoords\fill [#1] (-v2) -- (-v3) -- (-v4);\bracket}}
+ }
+
+\pic[local bounding box=A,scale=0.4]  at (0,0)                              {my square={opacity=0.3,gray} };
+\pic[local bounding box=B,scale=0.4,right=2 cm of A.south east] {my trileft   ={opacity=0.3,gray}};
+\pic[local bounding box=C,scale=0.4,right=2 cm of B.south east] {my triright ={opacity=0.3,gray}};
+
+\node[scale=2] (a) at ($(A.east)!0.5!(B.west)$) {$=$};
+\node[scale=2] (b) at ($(B.east)!0.5!(C.west)$) {$\times$};
+
+\node[scale=2] (At) at ([shift={(80:0.5)}]$(A.north)$) {$A$};
+\node[scale=2] (Bt) at ([shift={(80:0.5)}]$(B.north)$) {$L$};
+\node[scale=2] (Ct) at ([shift={(80:0.5)}]$(C.north)$) {$U$};
+\end{tikzpicture}

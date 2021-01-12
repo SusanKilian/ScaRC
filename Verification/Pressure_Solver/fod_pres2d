@@ -1,0 +1,10 @@
+fod 8 pressure_iteration2d_scarc
+fod 8 pressure_iteration2d_uscarc
+fod 8 pressure_iteration2d_scarc_cggmg
+fod 8 pressure_iteration2d_scarc_gmg
+fod 8 pressure_iteration2d_scarc_tight
+fod 8 pressure_iteration2d_scarc_twolevel
+#dod 8 pressure_iteration2d_default
+#dod 8 pressure_iteration2d_tight
+#dod 8 pressure_iteration2d_uglmat
+#dod 1 pressure_iteration2d_1mesh

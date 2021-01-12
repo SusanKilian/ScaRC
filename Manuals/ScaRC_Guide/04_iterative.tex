@@ -1,0 +1,375 @@
+% -----------------------------------------------------------------------------------------------------------------------------------
+% Iterative solvers
+% ------------------------------------------------------------------------------------------------------------------------------------
+\section{Iterative Poisson solvers in FDS}
+In contrast to direct solvers, iterative solvers perform multiple computational cycles producing a sequence of iterations which gradually improve an initial estimate of the solution until a predefined stopping criterion has been reached. 
+%
+Usually, they are easier to implement than direct ones, because they can be reduced to a series of core components such as matrix-vector multiplications, linear-combinations of vectors, scalar-products, etc.\ for which highly optimized program packages can be used, e.g.\ BLAS~\cite{Dongarra:2002}.
+%
+The computational complexity associated with each single cycle is comprehensively less compared to direct methods. Thus, the decisive question is how many cycles are needed for convergence.
+
+Because iterative methods do not produce any fill-in, they preserve the sparsity structure of the system matrix and are much less demanding with respect to storage than direct methods.
+%
+However, iterative methods may depend on special properties of the underlying problem such as symmetry or positive-definiteness. Convergence can be very slow for ill-conditioned problems such that many iterations must be performed to reach the specified tolerance. Furthermore, they often require the optimal choice of certain algorithmic parameters which are highly problem-dependent and mostly difficult to predict a-priori.
+
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Basic iteration
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsection{The Basic Iteration}
+\label{SEC_SCARC_basic_iteration}
+Based on Equation (\ref{EQ_SCARC_single_system}) the following simple relation applies
+$ %\be 
+%x = A^{-1} b = x -x + A^{-1} b = x - A^{-1} A x + A^{-1} b = x + A^{-1} (b-Ax)\,.
+x = A^{-1} b = x + A^{-1} (b-Ax)\,.
+$ %\ee
+If the inverse $A^{-1}$ of the original system matrix $A$ is replaced by a suitable approximation matrix $B$ with $B \approx A^{-1}$
+the so-called {\it preconditioned Richardson method}, or shorter, {\it basic iteration} for the solution of Equation (\ref{EQ_SCARC_single_system}) can be derived
+\be 
+  x^k = x^{k-1} + B\, (b - Ax^{k-1})\,. 
+\label{EQ_SCARC_basic_iteration}
+\ee
+$x^k, x^{k-1} \in \mathbb{R}^{n}$ are iteration vectors and
+$B \in \mathbb{R}^{n \times n}$ is a {\it preconditioning matrix} which can explicitly depend on an additional relaxation parameter $\omega\in \mathbb{R}$, that is, $B = B(\omega)$.
+
+Equation (\ref{EQ_SCARC_basic_iteration}) is the typical core component of many iterative methods for the solution of Equation (\ref{EQ_SCARC_single_system}).
+Starting with a initial guess $x^0$, it is used to successively minimize the {\it residual} or {\it defect}  $d^{k-1}:=b-A x^{k-1}$ which gives it also the name {\it defect correction method}.
+Measured in a suitable norm the defect indicates how good the current iterate $x^k$ already fulfills equation $Ax=b$.
+For the error $x-x^k$ in the $k$-th iteration step, there holds 
+ \[ x-x^k = (I- B A)^k (x-x^0)\]
+with the {\it error propagation operator} $F=(I- B \,A)$. The sequence of iterations $x^k$ converges to the solution of $Ax=b$ if and only if its {\it spectral radius}, the maximum of the absolute values of the eigenvalue, is smaller than 1. 
+
+The convergence rate of iterative methods usually depends on the grid resolution, but can be comprehensively improved by appropriate selection of the preconditioning matrix $B$.
+The goal behind is to transform the original system $Ax=b$  into an equivalent system $B\,Ax=B\,b$ whose solution requires significantly less iterations than that of the original system to satisfy a predefined termination criterion.
+Or in other words, the transformed system $B\,Ax=B\,b$ should have a much better eigenvalue distribution than $Ax=b$ such that its condition number is substantially smaller and convergence can be reached much faster with less computational costs.
+
+To achieve this goal, $B$ unfortunately has to meet two very contradictory conditions:
+On the one hand, $B $ should be a good approximative inverse of $A$, i.e.\ $B \approx A^{-1}$, such that $B\,A$ is close to the identity matrix (with corresponding small condition number), but this means that $B$ is still very complex and expensive to use.
+On the other hand, the application of $B$ should be much cheaper than the application of $A^{-1}$, i.e.\ $B \sim I$,  but that does not lead to an improvement at all. The more special properties of the original system $A$ can be incorporated into $B$, the better the convergence typically  is (i.e.\ the norm of the error propagation operator tends towards zero), but the higher the computational costs are, too. 
+Again, a careful compromise has to be found.
+
+\subsubsection{Preconditioning based on additive matrix splittings}
+For the definition of different preconditioners an additive 
+splitting of $A$ into its diagonal part $D$, its lower triangular part $L$ and its upper triangular part $U$ can be used, i.e.\ $A=L + D+U$. Note, that for symmetric problems as the one considered here it holds $U=L$ which saves the additional storage of the upper matrix $U$.
+
+Now, the simplest preconditioning is defined by using only the diagonal matrix, $B_{JAC} = D^{-1}$ ({\it Jacobi preconditioner}), which has the advantage that it can easily be inverted. But as expected this does not lead to any significant improvement of convergence speed. 
+Involving more information of $A$ by also using its lower triangular part gives in a first step $B_{GS} = (L+D)^{-1}$ ({\it Gauss-Seidel preconditioner}) which is already much better but also more expensive to apply. Further improvements can be achieved by introducing an additional (optimal) relaxation parameter $\omega$ which leads to $B_{SOR} = (\omega L + D)^{-1}$  ({\it Successive Overrelaxation preconditioner}). For symmetric problems symmetrized versions of the preconditioners should be used accordingly. The preconditioner $B_{SSOR}$  ({\it Symmetric Successive Overrelaxation preconditioner}) combines two SOR passes, namely a forward pass followed by a backward pass traversing the cells in reverse order, such that the resulting preconditioning matrix is similar to a symmetric matrix. 
+%$(D+\omegaL)^{-1}(D + \omega U)^{-1$\\
+% $B_{SSOR}= (\frac{1}{2-\omega }(\frac{1}{\omega }D+L)(\frac{1}{\omega }D)^{-1}(\frac{1}{\omega }D+L)^{T})^{-1}$
+%the matrix A is symmetric, then the Symmetric Successive Over-relaxation method, combines two SOR passes together in such a way that the resulting iteration matrix is similar to a symmetric matrix. Specifically, the first SOR sweep is carried out as in SOR, but in the second sweep the unknowns are updated in the reverse order. SSOR is a forward SOR sweep followed by a backward SOR sweep. The similarity of the SSOR iteration matrix to a symmetric matrix permits the application of SSOR as a pre-conditioner for other iterative schemes for symmetric matrices. Indeed, this is the primary motivation for SSOR since its convergence rate , with an optimal value, is usually slower than the convergence rate of SOR with an optimal value 
+%M = (ω−1DA + LA)􏰀(2ω−1 − 1)DA􏰁−1(ω−1DA + UA)$
+%A symmetric variant for the Gauss-Seidel preconditioner is defined by $B_{SGS}= ((D+L)D^{-1}(D+L)^{T})^{-1}$
+%The Gauss-Seidel preconditioner is defined by
+%M=L+D
+%in which L is the strictly lower-triangular part of A and
+%D = diag(A). By introducing a relaxation parameter, we get the SOR-preconditioner.
+%For symmetric problems it is wise to take a symmetric preconditioner. %
+%Only $O(n)$ operations required.
+
+The dependence on the relaxation parameter $\omega$ can be very sensitive. An incorrectly chosen $\omega$ may quickly lead to divergence. Unfortunately,  its optimal value often depends on the refinement parameters and is a-priori difficult to determine.
+
+Furthermore, the upper variants are mainly based on a very local way of proceeding: The iteration value in one single grid cell is computed as more or less simple mean value of its directly adjacent cells. New information can only be passed cell-by-cell through the whole domain which makes them unsuitable for problems with fast global data transport. Thus, they are rather bad solvers and in their pure form not suitable for complex problems. However, they have a decisive advantage which will give them further significance in the context of multigrid methods as will be explained below.
+
+\subsubsection{Preconditioning based on multiplicative matrix splittings}
+A more elaborate way of preconditioning is based on different multiplicative splittings of $A$. 
+It was already described in Section \ref{SEC_SCARC_lu_decomposition} that the matrix can be decomposed into the product of a lower and upper triangular matrix $A=LU$, see again Fig.~\ref{FIG_SCARC_lu_decomposition}. Note, that in this case $L$ and $U$ are different from those in the additive decompositions above. 
+If this factorization is used for preconditioning in case of a single-mesh application, $B_{LU}=LU$  ({\it $LU$-preconditioner}), the basic iteration will terminate within exactly one iteration because then $B=A$. If the system only needs to be solved once, nothing is gained from this procedure because the costs will remain the same as for the original system itself, or in other words, the system could have been solved by $LU$-decomposition from the beginning. 
+%
+But if the system has to be solved multiple times as is the case for FDS in the course of hundreds or thousands of time steps, it may be very advantageous to accept the costs for the factorization in an initial phase because in every subsequent time step the corresponding solution can be found by simple for- and backward substitution based on this decomposition which is computationally much cheaper. Note, that the multi-mesh case differs from this and will be treated separately again later.
+
+
+However, the $LU$-decomposition is rather memory-intensive because it suffers from the undesired fill-in as already illustrated in Fig.~\ref{FIG_SCARC_lu_memory_need} above. For realistic 3D-problems this effect may be very pronounced. To remedy this situation, slimmed-down versions for the triangular matrices, $\tilde{L}$ and $\tilde{U}$, can be used alternatively. They are based on 
+omitting entries smaller than a given tolerance or using the same (or a similar) pattern of non-zero elements as the matrix $A$ itself such that only the approximate relation $\tilde{L}\tilde{U}\approx A$ holds true. Thus, the resulting preconditioner, $B_{ILU} = \tilde{L}\tilde{U}$ ({\it ILU-preconditioner}), may be regarded as an incomplete, but computationally much cheaper variant of its complete counterpart. 
+Unfortunately, $ILU$-preconditioning is not always stable. But it has proven to be rather efficient in many fields of application if the most basic information of $A$ can be incorporated. Its application as preconditioner in FDS will be tested in medium term as well.
+
+Finally, the mesh-wise preconditioning can also be performed by means of local FFT methods, provided that a structured discretization is used. As the later test calculations will show, among the variants considered here so far, this turns out to be the fastest type of mesh-wise preconditioning for structured applications of the basic iteration and its later generalizations. 
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Preconditioning based on domain decomposition
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsubsection{Preconditioning based on domain decomposition}
+\label{SEC_SCARC_block_precon}
+
+In the course of a domain decomposition method the computational domain $\Omega$ is subdivided into single subdomains $\Omega_i$, i.e.\ 
+$\Omega=\cup_{i=1, \dots, M} \,\Omega_i\,$. Now, the individual operations of the basic iteration must be performed in a distributed manner.
+%
+To this end, let $K$ be the set of all cells in $\Omega$ and $K_i \subset K$ the subset of cells belonging to subdomain $\Omega_i$, such that $K=\cup_{i=1, \dots, M}\, K_i$.
+The number of cells in $\Omega$ and $\Omega_i$ are defined by $n := \mid\!\! K \!\!\mid$ 
+and $n_i := \mid\!\! K_i \!\!\mid$, respectively.
+
+On every subdomain $\Omega_i$ the local coefficient matrix $A_i \in \mathbb{R}^{n_i \times n_i}$ is
+then defined as a restriction of the global matrix $A \in \mathbb{R}^{n \times n}$ to the
+set $K_i$.  %spoken intuitively ``$\,A_i \equiv \restrict{A}{\Omega_i}$''.
+%
+Its formal algebraic definition requires a {\it prolongation matrix} $R_i^T \in \mathbb{R}^{n \times n_i}$ which
+positions a local vector $x_i \in \mathbb{R}^{n_i}$ from subdomain $\Omega_i$ 
+to the corresponding positions of the global vector $x \in \mathbb{R}^n$ in the global domain $\Omega$,% and replaces the missing parts with zeros:
+\[
+(R_i^T x_i)_j :=
+ \left\{
+  \begin{array}{l@{\,, \quad }l}
+   (x_i)_j & \mbox{if $j \in K_i  \,,$} \\[1.2ex]
+   0       & \mbox{if $j \in K-K_i\,.$} 
+  \end{array}
+ \right.
+\]
+Vice versa, the transposed {\it restriction matrix} $R_i \in \R^{n_i \times n}$ restricts a global vector $x\in \R^n$ to its local counterpart $x_i \in \R^{n_i}$ by only chosing the corresponding entries from $K_i$.  
+Thus, the local matrices are defined by
+\be
+A_i := R_i A R_i^T\,, \qquad i=1, \ldots, M\,,
+\label{EQ_SCARC_subdomain_matrices}
+\ee
+and respresent $n_i \!\times\! n_i$-sized sub-blocks of $A$. Special properties of $A$ (as e.g.\ diagonal dominance and positive definitness) are preserved. Note, that the matrices $R_i$ und $R_i^T$ are never explicitly built but are only defined by their action.
+
+Now, most of the core components of the basic iteration (\ref{EQ_SCARC_basic_iteration}) can simply be computed in a data-parallel way.
+Matrix-vector multiplications $Ax$, as needed for the defect computation, are computed in two steps: First, only the sub-mesh-related local matrix-vector products $y_i$ are computed simultaneously.
+Secondly, these local contributions are combined to a global matrix-vector product $y$ using the upper prolongation operators, 
+\be 
+y = A\, x = {\widetilde{\sum}}_{i=1, \ldots, M}\, R_i^T y_i = {\widetilde{\sum}}_{i=1, \ldots, M}\, R_i^T A_i x_i\,.
+\label{EQ_SCARC_matvec_product}
+\ee
+Here, the corresponding entries at inner boundary cells require a special treatment: As illustrated in Fig.~
+\ref{FIG_SCARC_matvec_exchange}, a matrix stencil that is positioned at an inner boundary cell has one or more `legs' that reach out of the subdomain into its direct neighbors, but the related values of $x$ which are needed for the sum in Equation (\ref{EQ_SCARC_matvec_product}) are initially missing there. To guarantee that the same final matrix-vector product is achieved as for a corresponding serial execution, these values must be exchanged via  next-neighbor communication which is indicated by the marked sigma sign in Equation (\ref{EQ_SCARC_matvec_product}).
+
+\begin{figure}[ht]
+\scalebox{1.0}{
+\begin{minipage}[t]{1.0\textwidth}
+\begin{center}
+\input{\tikzPath/matvec_prod}
+\caption{The computation of global matrix-vector products requires next-neighbor communications along mesh interfaces since in an internal boundary cell single legs of the corresponding matrix stencil may reach into a neighboring mesh.}
+\label{FIG_SCARC_matvec_exchange}
+\end{center}
+\end{minipage}}
+\end{figure}
+
+Since the spatial discretization for the pressure is based on cell midpoints, linear combinations, $\alpha x+ \beta y$, of vectors $x$ and $y$ do not require any communication at all. Every subdomain simply holds its associated part of the global vector, but along mesh interfaces no redundancies can occur. Thus, fundamental parts of the basic iteration can be done simultaneously and continue to operate globally in the same way as a hypothetic serial computation.
+
+%This matrix is just the same matrix which you would get if you discretized the complete geometry within ONE big grid. 
+
+The situation is more complicated for the various preconditioners. %which differ more or less comprehensively from their serial counterparts.
+With a view to the underlying domain decomposition, a natural strategy is to break up the preconditioning according to the domain decomposition. Now, each subdomain applies its own preconditioning based on approximations for the local matrix inverses $A_i^{-1}$. 
+
+\newpage
+For example, the block-wise analogue of the Jacobi preconditioner looks like
+\[ x^k = x^{k-1} + \sum_{i=1}^M R_i^T D_i^{-1} R_i\, (b - Ax^{k-1})\,, \]
+where each subdomain only uses the local diagonal matrix $D_i$ for preconditioning.
+The solution of the local preconditioning problems only incorporates purely local computations which can be performed simultaneously with maximum possible exploitation of the local processor power. Their final global coupling only requires local next-neighbor communication. 
+Thus, the resulting {\it block-preconditioning} yields significant improvements in the parallel efficiency. 
+
+However, as already explained, this strategy is associated with a breakup of the strongly recursive dependencies of optimal serial preconditioners such that numerical efficiency may strongly deteriorate in terms of poorer convergence rates compared to the serial analogues and also dependencies on the number of subdomains and/or other refinement parameters. 
+
+Besides, the efficiency of the block-preconditioning can be difficult to predict for realistic geometries with complex combinations of the single subdomains.
+More details about preconditioning based on domain decomposition techniques will be given in the subsequent Section (\ref{SEC_SCARC_scarc}). 
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Generalizations of the basic iteration
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsection{Efficient Generalizations of the Basic Iteration}
+\label{SEC_SCARC_generalizations}
+Even for powerful preconditioners the  basic iteration (\ref{EQ_SCARC_basic_iteration}) is rather inefficient and requires a comprehensible number of iterations to drive the solution within a predefined tolerance. This especially holds true for complex situations with complicated geometric details.
+
+But the single representatives can be embedded into much stronger generalized schemes such as the global {\it preconditioned conjugate gradient method} (CG) or a {\it geometric multigrid method} (MG).
+Both schemes are closely related, because they are based on simple defect
+correction iterations, which approximate the error by using a sequence of smaller subproblems. 
+The main difference between both is found in the choice of the underlying subspaces.
+A brief overview of both classes is given below.
+%This issue is discussed in more detail in 
+%??. %\mcite{Hackbusch }\cite{Hackbusch94}. 
+
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Preconditioned conjugate gradient method
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsubsection{Preconditioned Conjugate Gradient Method} 
+\label{SEC_SCARC_cg}
+
+CG-methods belong to the class of {\it Krylov subspace} methods which iteratively construct a $k$-dimensional vector space, 
+$\mbox{span}\{r,Ar,...,A^{k-1}r\}$, using A-orthogonalisation. They are designed to find the minimum of the quadratic form 
+\[F(x)=1/2\, x^T A x - x^T b \rightarrow 0\] 
+which is equivalent to solving Equation (\ref{EQ_SCARC_single_system}). 
+New search directions are built in such a way that they are orthogonal to all previous residuals and search directions. This process guarantees a steady improvement of the search directions and convergence to the minimum of the quadratic form after at most $n$ steps. %This subspace is called a Krylov subspace, a subspace created by repeatedly applying a matrix to a vector. 
+%TOFIX: The Krylov subspace is the $m$-dimensional vector space span{r(0),Ar(0),...,Am−1r(0)}. All Krylov subspace methods iteratively construct such a vector space based on A-orthogonalisation.
+
+Below a general algorithmic description of the CG-method for the solution of Equation (\ref{EQ_SCARC_single_system}) with preconditioning by $B$ is given.
+Therein, the notation $(v,w)=v^T w$ denotes the standard scalar product of two vectors with the corresponding norm $\|v\| =\sqrt{(v,v)}$.
+
+
+\newpage
+\paragraph{\underline{Conjugate gradient method for the solution of $Ax=b$ with preconditioning by {\boldmath {$B$}}}} \mbox{} \\[1ex]
+Given an initial guess $x^0$, then perform the following steps: \\[2ex]
+\begin{tabular}{ccll}
+%
+\multicolumn{1}{l}{\bf Initialization:}&&&\\[1ex]
+\hspace{1.0cm} $r^0$ & $\hspace{0.2cm}=$ & $A x^0-b$      & \hspace{1.0cm} initial residual $x^0$      \\[1.0ex]
+\hspace{1.0cm} $v^0$ & $\hspace{0.2cm}=$ & $B\,\, r^0$  & \hspace{1.0cm} preconditioning  \\[1.0ex]
+\hspace{1.0cm} $d^0$     & $\hspace{0.2cm}=$ & $-v^0$          & \hspace{1.0cm} vector update 	     \\[2.0ex]
+%
+ \multicolumn{1}{l}{\bf Iteration \boldmath $k\geq 0$:}&&&\\[1ex]
+\hspace{1.0cm}$\alpha_k$ & $=$ & $(r^k, v^k)/(d^k, A d^k)$     & \hspace{1.0cm} new search parameter		     \\[1.0ex]
+\hspace{1.0cm}$x^{k+1}$     & $=$ & $x^k + \alpha_k \,d^k$          & \hspace{1.0cm} new solution	   \\[1.0ex]
+\hspace{1.0cm}$r^{k+1}$  & $=$ & $r^k + \alpha_k \,A d^k$      & \hspace{1.0cm} new residual		     \\[1.0ex]
+\hspace{1.0cm}$v^{k+1}$  & $=$ & ${B\,\, r^{k+1}}$        & \hspace{1.0cm} preconditioning     \\[1.0ex]
+\hspace{1.0cm}$\beta_k$  & $=$ & $(r^{k+1}, v^{k+1})/(r^k,v^k)$   & \hspace{1.0cm} new search parameter	  \\[1.0ex]
+\hspace{1.0cm}$d^{k+1}$  & $=$ & $- v^{k+1} + \beta_k d^k$      &\hspace{1.0cm} new search direction    \\[1.0ex]
+\hspace{1.0cm}$\| r^{k+1}/r^0 \|$ & < &$\epsilon$ 			& \hspace{1.0cm} convergence check			\\[1.5ex]
+\end{tabular}
+
+\vspace{0.5cm}
+
+Standard methods are restricted to symmetric positive-definite problems, but
+there also exist variants for the non-symmetric case, the so-called {\it BICG-methods} see e.g.~\cite{Saad:2003} or~\cite{Axelsson:1998}.
+%
+They only need less storage space for several auxiliary vectors and are largely based on matrix-vector multiplications and global scalar-products.
+%
+Using the 2D pipe geometry of Figure \ref{FIG_SCARC_basic_pipe_geometry}, the CG method is also graphically represented in Figure \ref{FIG_SCARC_cg_method}.
+\begin{figure}[ht]
+\centering\input{\tikzPath/multi_pipe_cg.tex}
+\caption{Data-parallel global CG-method with mesh-wise preconditioning for the 2D pipe geometry. Local communication is needed for matrix-vector products, global communication for scalar products and defect norms.} 
+\label{FIG_SCARC_cg_method}
+\end{figure}
+
+\newpage
+In the multi-mesh case, most operations can be performed in a purely data-parallel way: All matrix vector products, linear combinations, norms and scalar products give the same results as for a hypothetic single-mesh execution, but are only calculated in a distributed manner which is indicated by the only dashed boundaries between the single sub-meshes. For matrix-vector products this requires the (computationally cheap) local data exchanges between directly adjacent meshes as already described. For global scalar products %, i.e.\ $s=\lsumiN s_i = \lsumiN(v_i,w_i)$, 
+and global norms, respectively, the local contributions must be exchanged between all meshes to finally get a global sum. Certainly, this leads to a worsening of the parallel efficiency because the processors have to synchronize and possibly wait for each other which has a negative effect especially in geometric complex cases where the meshes cannot be evenly distributed among the processors. On the other hand, these global operations also contribute to much stronger global coupling.
+
+Typically, the convergence rate of CG-methods  depends on the discretization parameters, but can be considerably improved by choosing a suitable preconditioning matrix $B$. For its construction, domain decomposition techniques can be used effectively, see~\cite{Bramble:1991}.
+There exists an upper bound for the required number of iterations which is
+proportional to the square root of the {\it condition number} $\kappa (B \, A) = \lambda_{max} (B \, A) / \lambda_{min} (B\, A)$,
+\[ \| e_k \|_A \leq 2 \big(\frac{\sqrt{\kappa (B \,A)} -1}{\sqrt{\kappa (B \,A)} +1}\big)^k \| e_0\|_A\,\]  
+Here, $\lambda_{min}$ and $\lambda_{max}$ denote the smallest/biggest eigenvalue of $B A$, $e_k= x_k - x$ the error between the iterative solution $x_k$ and the exact solution $x$, and  $\|x\|_A := (Ax,x) ^{1/2}$ the corresponding $A$-norm.
+
+The acceleration of convergence by reducing the condition number of the preconditioned system $\kappa(B \, A)$ compared to that of the original system $\kappa(A)$ should at least compensate for the extra cost of computing the product $B r^{k+1}$ in the upper algorithm, 
+but in the best case, of course, be much larger. 
+%
+Geometrically, the idea behind the preconditioning in CG-methods can be understood as a transformation of the quadratic form into a more spherical shape such that the eigenvalues are closer together. While the simple diagonal Jacobi-preconditioning matrix $D$ only scales along the coordinate axes, the perfect preconditioner $B=A$ performs a scaling along the eigenvector axes leading to the optimal possible effect $\lambda_{max}=\lambda_{min}$ with a resulting condition number of one.
+
+
+
+The ultimate goal is to construct an optimal
+preconditioner with a convergence rate independent of the fine grid resolution, the size of the sub-meshes (or their number respectively) and also of possibly present anisotropies. In practise, this goal is usually hard to achieve and strongly depends on the individual situation. Nevertheless, there are many possibilities, especially on the basis of  domain decomposition techniques, to achieve a more or less pronounced improvements.% which will be presented below.
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Geometric multigrid method
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsubsection{Geometric Multigrid Methods} 
+\label{SEC_SCARC_mg}
+
+Fast convergence rates independent of the grid size with moderate computational complexity may be reached with MG-methods. The term `multigrid' should not be confused with the term `subdomain'. It does not refer to a sequence of different sub-grids arising from a domain decomposition but rather a hierarchy of grids with different resolutions for one and the same mesh.
+MG-methods act on a hierarchy of grids with different resolutions and are able to achieve fast convergence rates independent of the grid size with moderate computational complexity.
+
+\newpage
+The basic idea behind MG-methods is to improve the convergence speed of the basic iteration by correcting the defects on successively coarser grids.
+This process explicitly uses an important property of the single representatives of the basic iteration, namely the so called {\it smoothing property}: As can be shown by a Fourier analysis, the high-frequency error components are damped out very quickly, often in only a few iterations, whereas the low-frequency error components are very persistent towards additional iterations.
+This special property is based on the fact that the new iteration value in a single grid point is computed as more or less simple mean value of the surrounding grid values. If this set of nodes is already smoothed out, hardly any further improvement can be achieved. Thus, new information is only propagated very slowly through the whole domain. Informally, the whole multigrid procedure looks like this:
+
+\begin{itemize}
+\item {\bf Pre-Smoothing:}
+Starting from a given initial solution on the finest grid level, several steps of a simple basic iteration with a suitable matrix $B$ are performed. After only a few iterations 
+the mentioned smoothing property usually leads to a considerable reduction of the high-frequent error components of the defect while the low-frequent components are nearly unchanged and still may be very large. 
+This suggests to restrict this  {\it smoothed}  defect  on the next coarser grid (e.g.\ with the double grid size) by using a suitable grid transfer operator based on interpolation, where it can be approximated at much lower costs. 
+\item {\bf Coarse grid correction:} The alternating interplay of smoothing and restriction
+may be continued until the coarsest grid level has been reached where the remaining coarse grid problem can be solved exactly by some suitable method. At this stage the low-frequent components are resolved with the maximum possible global coupling, at least in a coarse sense. 
+%\newpage   % remove this depending on layout
+\item {\bf Post-Smoothing:} The resulting coarse grid correction is then successively extended to the next finer level, whereby typically several steps of the basic iteration are performed at each level again until the finest level is finally reached.
+\end{itemize}
+
+
+For an algorithmic description of this procedure, 
+let there be given a hierarchical sequence of $L$ meshes for the domain $\Omega$
+with corresponding mesh parameters $0<h^{(L)}< \ldots < h^{(0)}\,,$
+where the finest grid is associated with index `$L$' up to index `0' for the coarse grid. On every mesh level 
+$l=0, \ldots,L\,,$ the
+corresponding Poisson matrix $A^{(l)}$, preconditioning matrix $B^{(l)}$, solution vector $x^{(l)}$ and right hand side vector $b^{(l)}$ are
+used.
+Further, let ${R^{(l)}}^T$ be a prolongation operator which interpolates a vector from level $l$ to level $l+1$ and
+$R^{(l)}$ its corresponding counterpart which restricts a vector vice-versa.
+
+In order to simplify the notation we will subsequently omit the iteration index $k$ used in the basic iteration (\ref{EQ_SCARC_basic_iteration})
+and simply use the notation $x_i \leftarrow (\cdot)$
+to express that the value on the right hand side is assigned to the left hand side within an iterative process. Thus, the basic iteration on each grid level $l$ now simply reads as
+\[ x^{(l)} \leftarrow x^{(l)} + B^{(l)}\, \big(b^{(l)} - A^{(l)} x^{(l)} \big)\,. \]
+
+Based on these definitions the MG-method with smoothing by the preconditioning matrices $B^{(l)}$ reads like summarized below.
+
+\newpage   % remove this depending on layout
+{\underline{{\bf Multigrid method}\,\,{\boldmath $x^{(l)} \leftarrow MG(l,A^{(l)},b^{(l)},x^{(l)},b^{(l)})$}\,\, for\,\,{\boldmath $l\geq 1$}}} \mbox{} \\[1ex]
+Given an initial solution, then compute an approximate solution of $A^{(l)} x^{(l)} =b^{(l)}$ by:
+\begin{enumerate}
+%
+\item {\bf Pre-smoothing:} \\ [1ex]
+Perform $k_1$ steps of a basic iteration scheme
+\[ x^{(l)} \leftarrow x^{(l)} + B^{(l)}\, \big(b^{(l)} - A^{(l)} x^{(l)} \big)\,. \]
+\item {\bf Coarse grid correction:}
+%
+\begin{enumerate}
+\item Restrict the defect to level $l-1$
+\[ b^{(l-1)} \leftarrow R^{(l-1)} (b^{(l)} - A^{(l)} x^{(l)} )\,. \]
+\item Solve the problem
+\[ A^{(l-1)} x^{(l-1)} = b^{(l-1)} \]
+in case $\,l=1$ exactly and in case  $l>1$ by $p$-fold recursive application of
+\[ x^{(l-1)}  \leftarrow MG(l-1,A^{(l-1)}, b^{(l-1)}, x^{(l-1)}, b^{(l-1)}),\,\]
+$p \geq 1\,,$  with $x^{(l-1)}=0$.
+\item Correct the solution on level $l$ by the prolonged coarse grid solution
+\[ x^{(l)} \leftarrow x^{(l)} + {R^{(l-1)}}^T x^{(l-1)} \,.\]
+\end{enumerate}
+%
+\item {\bf Post-smoothing:} \\[1ex]
+Perform $k_2$ steps of a basic iteration scheme
+\[ x^{(l)} \leftarrow x^{(l)} + B^{(l)}\, \big(b^{(l)} - A^{(l)} x^{(l)} \big)\,. \]
+%
+\end{enumerate}
+
+\begin{figure}[htbp]
+\begin{center}
+\input{\tikzPath/mgrid_types.tex}
+%\includegraphics[height=2.7cm]{\figPath/fig_ver_cycles}
+\end{center}
+\caption{Different types of multigrid cycles which prescribe the order in which and how often the single levels are run through.}
+\label{FIG_SCARC_mg_cycle}
+\end{figure}
+
+\newpage
+Fig.~\ref{FIG_SCARC_mg_method} illustrates the whole procedure graphically
+for the already known 2D pipe example using simply 3 grid levels with different resolutions. Please note, that in practice typically more levels are used. Apart from the coarse grid level, a pre-defined number of basic iterations, e.g. with SSOR preconditioning, is performed on the different grid levels, which only requires local communication when calculating the global matrix vector products. The coarse grid problem is usually solved using a direct solver, which in turn requires global communication.
+\vspace{0.2cm}
+\begin{figure}[ht]
+\centering\input{\tikzPath/multi_pipe_mg.tex}
+\caption{Geometric multigrid method with mesh-wise smoothing for the 2D pipe geometry. Local communication is needed for matrix-vector products, global communication for the solution of the coarse grid problem. }
+\label{FIG_SCARC_mg_method}
+\end{figure}
+
+
+%\newpage  % remove this depending on layout
+The number of smoothing steps may depend on the grid level. It is also possible to only apply the pre- or post-smoothing exclusively.
+%In the correction step (2c), the prolonged coarse grid solution can also be weighted by an additional relaxation parameter $x^{(l-1)} \leftarrow x^{(l-1)} + \alpha b^{(l)}\, \big(b^{(l)} - A^{(l)} x^{(l-1)} \big)$.
+The recursive change between the different grid levels can be performed in several ways, depending on how
+often and in which order the the individual levels are passed, see Fig.~\ref {FIG_SCARC_mg_cycle}.
+
+
+From a computational point of view the V-cycle is the most efficient type because it only needs one single coarse grid solution, but it also behaves the most sensitive to irregularities in the problem.
+The most robust, but also the most expensive, is the W cycle. As a good compromise between
+the higher computational efficiency of the V-cycle and the larger 
+robustness of the W-cycle the F cycle has evolved.
+The cost of a complete cycle is only a modest multiple of the cost for a single pass on the finest grid.
+
+
+All in all, each grid level is responsible for the reduction of a certain range of the error frequencies. The low-frequent components on a finer grid appear as high-frequent components on the next coarser grid. The efficiency of the complete method substantially depends on how good the ranges, which are smoothed on the single grid levels, are adjusted among each other.
+%
+Besides, there is not only ONE single MG-method but a huge range of variations based on different combinations of its components (smoothers, grid transfer operators and coarse grid solvers) which should best be adapted to the underlying problem.
+
+\newpage
+The upper MG-method can be used for both serial and parallel applications and the same considerations regarding the parallel executability of the single components hold true as for the CG-method before.
+%
+The solution of the coarse grid problem takes a special position here: It is a very small problem which has to be solved globally such that the relation between computational and communication work is disproportionately bad.
+Its global computation implies a logarithmical growth of the communication costs if the number of subdomains is increased. This can be remedied by completely solving the coarse grid problem on a single processor, what in turn is associated with corresponding data transfers and waiting times on the other processors. Nevertheless, by using adequate domain decomposition strategies based on strong smoothers high numerical efficiencies can be achieved, such that usually only a few MG-iterations must be performed and the disadvantages mentioned do not matter that much.
+
+
+\subsubsection{Summary for generalizations}  
+All in all it can be stated that both, CG- and MG-methods, are able to reasonably improve the convergence speed of the basic iteration returning the exact solution in a small up to a moderate number of iterations depending on the underlying problem. 
+
+Apart from using the aforementioned globally defined matrix-vector products, these methods incorporate even more globally acting features such as global scalar-products in case of CG or an additional coarse grid problem in case of MG which furthermore contribute to a stronger global coupling. Certainly, the acceleration of convergence speed achieved by these features must be set in relation to the increased computational overhead associated with them.
+
+Due to their already mentioned restriction to different core components, iterative methods prove to be easier and more universally parallelizable than direct ones. In both methods the local solutions are not used as stand-alone solvers but embedded in an outer iteration where they only serve as corrections to the global solution. In this context, the potential of domain decomposition methods can largely be exploited.
+
+
+

@@ -54,6 +54,8 @@ Verification/Scarc/dump/*
 Verification/Scarc/matlab/*
 Verification/Scarc/ssor
 
+*.zip
+*.chid
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/fortran,visualstudio,visualstudiocode,vim,intellij+all,clion+all

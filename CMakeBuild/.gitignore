@@ -1,0 +1,3 @@
+*.mod
+CMakeCache.txt
+CMakeFiles

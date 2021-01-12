@@ -1,0 +1,102 @@
+\documentclass[12pt]{article}
+
+% --------- Path definitions
+\def\tikzPath{./tikz}
+\def\figPath{./figures}
+\def\utilPath{./utilities}
+
+% --------- Must be set to corresponding Manuals/Bibliography directory in official FDS installation path
+\def\bibPath{/Volumes/FettesBrot/GIT/github/FDS/00_Orig/Manuals/Bibliography}
+
+\input{\bibPath/commoncommands}
+\input{/Volumes/FettesBrot/GIT/github/FDS/01_ScaRC/Manuals/ScaRC_Guide/declarations.tex}
+% --------- Packages
+\usepackage{ulem}
+\usepackage{amsmath,amssymb}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage[12pt]{moresize}
+\usepackage{tikz,tikz-3dplot,graphicx,mathtools}
+\usetikzlibrary{positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+\usetikzlibrary{arrows.meta} 
+\tikzset{>=latex}
+
+\newenvironment{myfont}{\fontfamily{\ttdefault}\selectfont}{\par}
+
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=0.2pt] (char) {#1};}}
+            
+\newcommand*\suci[1]{\raisebox{.5pt}{\circled{\raisebox{-.1pt} {\footnotesize {#1}}}}}
+
+%\newcommand{\mymk}[1]{%
+%   \tikz[baseline=(char.base)]\node[anchor=south west, draw,rectangle, rounded corners, inner sep=1pt, minimum size=5mm, text height=1mm](char){\raisebox{-5pt}{\ensuremath{{#1}}} ;}
+\setlength{\fboxsep}{2pt}
+
+\newcommand*\HS{{H'\,}}
+\newcommand*\HSK[1]{\HS^{#1}}
+\newcommand*\pH{\partial {H}}
+\newcommand*\pHS{\partial {\HS}}
+\newcommand*\pHSK[1]{\partial {\HS}^{#1}}
+\newcommand*\HSPT{\partial^2 {\HS}}
+
+\newcommand*\HLB[3]{\HS_{#1}^{\fbox{\raisebox{1pt}{\scriptsize{#2}}}\,,\,{#3}}} 
+\newcommand*\HL[3]{\HS_{#1}^{\circled{\raisebox{-0.1pt}{\scriptsize{#2}}}\,,\,{#3}}} 
+\newcommand*\HLN[2]{\HS_{#1}^{\circled{\raisebox{-0.1pt}{\scriptsize{#2}}}}} 
+
+\newcommand*\HP[2]{\pHS^{\circled{\raisebox{-0.1pt}{\scriptsize{#1}}}\,,\,{#2}} } 
+\newcommand*\HPT[2]{\HSPT^{\circled{\raisebox{0.1pt}{\scriptsize{#1}}}\,,\,{#2}}} 
+
+\newcommand*\HPN[1]{\pHS^{\circled{\raisebox{-0.1pt}{\scriptsize{#1}}}} } 
+\newcommand*\HPNT[1]{\HSPT^{\circled{\raisebox{0.1pt}{\scriptsize{#1}}}}} 
+
+\newcommand*\HLO[2]{\overline{\HS}_{#1}^{\;{#2}}}
+
+\newcommand*\HBO[1]{\overline{\HS}_{#1}}
+
+
+
+\newcommand*\UIK[1]{u_i^{*,{#1}}}
+\newcommand*\FIB{F_i^n  \bigg|_{\partial B}}
+\newcommand*\UIB{u_i^n  \bigg|_{\partial B}}
+\newcommand*\UIKB[1]{u_i^{*,{#1}} \bigg|_{\partial B}}
+
+\newcommand*\dB{\bigg|_{\partial B}}
+\newcommand*\DX{\Delta \, x}
+\newcommand*\DXT{\DX^2}
+\newcommand*\DXP{\partial x}
+\newcommand*\DXPT{\partial x^2}
+\newcommand*\DXH{\frac{\DX}{2}}
+
+\newcommand*\DY{\Delta \, y}
+\newcommand*\DYT{\DY^2}
+\newcommand*\DYH{\frac{\DY}{2}}
+\newcommand*\DYP{\partial y}
+\newcommand*\DYPT{\partial y^2}
+
+\newcommand*\PA{\partial}
+\newcommand*\PAT{\partial^2}
+
+\newcommand*\pD{\partial D}
+\newcommand*\pM{\partial M}
+\newcommand*\pB{\partial B}
+\newcommand*\pxi{\partial x_i}
+\newcommand*\Fin{F_i^n}
+
+
+\begin{document}
+
+\include{00_basic_new}
+\include{01_mgm}
+\include{02_true}
+%\include{02_cases}
+
+% ---------  bibliography
+\bibliographystyle{unsrt}
+\bibliography{\bibPath/FDS_general,\bibPath/FDS_refs,\bibPath/FDS_mathcomp,bibliography}
+
+%\addcontentsline{toc}{chapter}{References}
+
+\end{document}
+

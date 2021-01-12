@@ -1,0 +1,60 @@
+\documentclass[12pt]{article}
+
+% ------------ Path definitions
+\def\bibPath{../../../fds/Manuals/Bibliography}
+\def\scarcPath{../ScaRC_Guide}
+\def\tikzPath{../ScaRC_Guide/tikz}
+\def\figPath{../ScaRC_Guide/figures}
+
+% ------------ Individual definitions
+\input{\bibPath/commoncommands}
+\input{\scarcPath/declarations}
+
+% ------------ Used packages
+\usepackage{titling}
+\usepackage{amsmath}
+\usepackage[explicit]{titlesec}
+\usepackage{ulem}
+\usepackage[12pt]{moresize}
+\usepackage{lastpage}
+\usepackage{tikz,tikz-3dplot,graphicx,mathtools}
+\usetikzlibrary{positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+\usetikzlibrary{arrows.meta} 
+\tikzset{>=latex}
+
+% ------------ FEMTC layout
+\titleformat{\section}
+ {\normalfont\large\bfseries\uppercase}{\thesection}{1em}{\uline{#1}}
+\titleformat{\subsection}
+ {\normalfont\large\itshape}{\thesubsection}{1em}{\uline{#1}}
+
+\newenvironment{myfont}{\fontfamily{\ttdefault}\selectfont}{\par}
+
+
+\begin{document}
+
+% ------------ Titel page with abstract
+\title{\scarc{} is ready for use in FDS}
+\author{Dr. Susanne Kilian \\[2mm] hhpberlin, Ingenieure f\"ur Brandschutz GmbH, D-10245 Berlin \\ [1ex]\href{mailto:s.kilian@hhpberlin.de}{\tt s.kilian@hhpberlin.de}}
+\date{} 
+\begin{titlingpage}
+  \maketitle
+  \input{00_abstract}
+\end{titlingpage}
+
+% ------------ Sections
+\input{01_motivation}
+\input{02_discretization}
+\input{03_poisson}
+\input{04_tests}
+
+% ---------------- Bibliography
+\bibliographystyle{unsrt}
+\bibliography{\bibPath/FDS_general,\bibPath/FDS_refs,\bibPath/FDS_mathcomp,\bibPath/sv_fire,\bibPath/sv_graphics,\scarcPath/bibliography}
+
+\addcontentsline{toc}{chapter}{References}
+
+\end{document}
+

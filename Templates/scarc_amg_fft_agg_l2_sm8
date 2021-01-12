@@ -1,0 +1,10 @@
+&PRES SOLVER                   = 'SCARC'
+      SCARC_MATRIX             = 'COMPACT'
+      SCARC_METHOD             = 'MULTIGRID'
+      SCARC_MULTIGRID          = 'ALGEBRAIC'
+      SCARC_MULTIGRID_ACCURACY = 1.0E-6
+      SCARC_MULTIGRID_THETA    = 2.0E-2 
+      SCARC_MULTIGRID_LEVEL    = 2
+      SCARC_SMOOTH             = 'FFT'
+      SCARC_SMOOTH_ITERATIONS  = 8
+      SCARC_COARSENING         = 'AGGREGATED' /

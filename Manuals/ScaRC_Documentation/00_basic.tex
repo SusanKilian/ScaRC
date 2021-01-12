@@ -1,0 +1,71 @@
+%\section{McKenney-Greengard-Mayo method}
+
+%The momentum equation in FDS can be written as 
+%\[
+%u_i^{n+1} = u_i^n - \Delta t \left[ F_i^n + \frac{\HSO^n}{\pxi} + \frac{\partial \HS^n}{\pxi} \right] 
+%\]
+
+\section{Basic MGM algorithm}
+
+% --------------------------------------------------------------------------------------------------------------------------------------------
+%  Predictor
+% --------------------------------------------------------------------------------------------------------------------------------------------
+
+
+\begin{enumerate}
+
+\item Solve structured inhomogeneous Poisson for $H$ on $D+B$ with BC's from original problem
+\[
+\frac{\partial^2 H}{\pxi \pxi}  =  \frac{\partial F_i^n}{\pxi} - \left[   \frac{(\nabla \cdot \bu)	^{n+1} - (\nabla \cdot \bu)^{n} }{\Delta t} \right]  \qquad \mbox{on} \;\;D+B 
+\]
+
+\item Project velocity on $D+B$  
+\[ u_i^{*,0} = u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi} \right]  \qquad \mbox{on} \;\;D+B  \]
+
+\item While error in Poisson on $D$ do for $k=0, 1, \cdots, K_{max}$
+
+\begin{enumerate}
+\item Determine BC's for ${\HSK{k}}$ 
+\begin{align} 
+\HSK{k}                             & = 0                                            &\mbox{on \;}  &\pD \mbox{\;(pressure BC)} \nonumber \\
+\frac{\HSK{k} }{\pxi}           & = 0                                            &\mbox{on \;}  &\pD \mbox{\;(velocity BC)}.  \nonumber \\
+\HSK{k}                             & = {\begin{cases} 
+                                                0                & \mbox{ if } k=0 \\
+                                              \HLO{}{k-1}  & \mbox{ if } k>0  \mbox{\;(simple mean BC)}  \nonumber \\ %\label{BC_Laplace} \\
+                                            \end{cases} }                           &\mbox{on \;}  \pM \\
+\frac{\partial {\HSK{k} }}{\pxi} &= \frac{u_i^{*,k} - 0}{\Delta t}  &\mbox{on \;} &\pB  \nonumber
+\end{align}
+
+\item Solve unstructured homogeneous Laplace for $\HSK{k}$ on $D$ with BC's from 3.(a) % (\ref{BC_Laplace})
+\[   \frac{\partial^2 \HSK{k} }{\pxi \pxi} = 0 \qquad \mbox{on} \;\; D\]
+
+\item Project velocity on $D$
+\[   \UIK{k+1} =  u_i^{*,k} - \Delta t \left[\frac{\partial \HSK{k}}{\pxi} \right]  \qquad \mbox{on} \;\;D  \]
+
+\end{enumerate}
+\item Define new pressure solution $H^n := H + \HSK{k}$
+\end{enumerate}
+
+\newpage
+
+
+\begin{align}
+\UIK{0} & = u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi} \right]     \nonumber \\
+\UIK{1} & = u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi} \right] - \Delta t \frac{\pHSK{0}}{\pxi}      \nonumber \\
+\UIK{2} & = u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi} \right] - \Delta t  \frac{\pHSK{0}}{\pxi} - \Delta t  \frac{\pHSK{1}}{\pxi}     \nonumber \\
+ \end{align}
+
+\subsection{Consider First Laplace iteration}
+
+\begin{align}  
+%
+\UIK{1}\dB  &=  \underbrace{\left(u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi}\right] \right) }_{u_i^{*,0}}\dB -   \Delta t \underbrace{\left( \frac{\pHSK{0}}{\pxi}\right)\dB}_{\frac{u_i^{*,0}}{\Delta t}}   = 0 \nonumber \\[2ex]
+%
+\UIK{1}\dM  &=  \underbrace{\left(u_i^n - \Delta t \left[ F_i^n + \frac{\pH}{\pxi}\right] \right) }_{u_i^{*,0}}\dB -   \Delta t \underbrace{\left( \frac{\pHSK{0}}{\pxi}\right)\dB}_{\frac{u_i^{*,0}}{\Delta t}}   = 0 \nonumber \\[2ex]
+ \end{align}
+
+
+
+
+
+

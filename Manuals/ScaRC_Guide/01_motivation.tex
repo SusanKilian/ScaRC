@@ -1,0 +1,23 @@
+\section{Motivation}
+
+The solution of elliptic partial differential equations (PDEs) %such as the pressure equation in FDS
+is an integral part of the numerical solution of physical processes.
+Research into the development of numerical solvers for elliptic problems has a very long history and has produced a number of highly powerful approaches which, however, were originally tailored for purely serial applications of mostly small or moderate size.
+In view of the immense magnitude and complexity of today's CFD-problems, the efficient design of suitable parallel algorithms which fully exploit the current (super)computing power of modern high performance architectures seems inevitable and is a particularly great challenge. 
+
+But especially for elliptic problems, it is extremely difficult to develop algorithms which are numerically efficient and highly scalable at the same time: For this type of PDEs the solution at inner parts of the computational domain is strongly determined by all of its boundary values, that is, information must travel through the entire grid at least once. At the same time, these problems are characterized by an extremely high propagation speed for information such that even 
+strictly localised effects immediately impact the overall solution in the whole domain.
+Thus, achieving fast convergence along with a high level of computational accuracy ({\it numerical efficiency}) is closely linked to the speed at which information can be exchanged across the entire domain.
+In contrast to that, the efficient parallelization of a numerical algorithm is mainly determined by the amount of interprocessor-communication needed to coordinate the single processors to ultimately produce a global solution. Achieving a good scalability to large processor counts  ({\it parallel efficiency}) requires as much data locality as possible in order to minimize the communication overhead between the single processors. So, a proper compromise has to be found between those two very contradictory requirements.
+
+A very natural approach for the parallel solution of PDEs based on finite difference discretization like in FDS is the use of {\it domain decomposition} techniques: The computational domain is subdivided into smaller subdomains which are assigned to the different processors of a parallel computer and simultaneously perform a series of local computations which are coordinated by synchronized data exchanges among each other. This parallel procedure may reduce the required runtime for a given constellation and enlarge the class of computable problems comprehensively.
+
+Special care must be taken to ensure that this artificial subdivision does not impair the inherent global character of the underlying problem which especially holds true for elliptic problems. In particular, it must be guaranteed that the parallelization process preserves the convergence order and approximation quality of well-proven serial algorithms as best as possible.
+%
+However, the efficiency of many serial elliptic solvers mainly relies on highly recursive data dependencies strongly connecting all parts of the domain which implies an extremely low level of intrinsic parallelism. 
+In order to achieve a better parallel efficiency they must be split off and adapted to the new architectural features which typically requires extensive structural modifications to the numerical core and is often
+associated with more or less considerable losses of numerical efficiency (worse approximation quality, dependencies on the number of subdomains or the refinement parameters).
+The effects of this situation on the FDS pressure solution are described in more detail below and different solution techniques are presented.
+
+
+

@@ -1,0 +1,64 @@
+\begin{tikzpicture}
+[
+ scale=0.75,
+ every node/.style ={scale=0.75},
+ inner sep=1mm,
+ %scale=1.0,
+ L3/.style={circle, draw=black!0,  minimum size=3.5mm},
+ L2/.style={circle, draw=black!40, fill=blue!10, thin, minimum size=3.5mm},
+ L2A/.style={circle, draw=black!40, fill=blue!10, thin, minimum size=7.5mm},
+ L1/.style={rectangle, draw=black!40, fill=black!03,   thin, minimum size=6cm},
+ inner sep=0.6mm,
+ X/.style={circle, draw=black!100, fill=black!03, thin, minimum size=4cm},
+ X2/.style={circle,draw=white, line width=4mm, minimum size=4.6cm}
+ ],
+ %
+\node [X]  at ( 10.5, 6)  {};
+\draw[step=1cm,gray,very thin] (8.5,4.5) -- (12.5,4.5);
+\draw[step=1cm,gray,very thin] (8.5,5.5) -- (12.5,5.5);
+\draw[step=1cm,gray,very thin] (8.5,6.5) -- (12.5,6.5);
+\draw[step=1cm,gray,very thin] (8.5,7.5) -- (12.5,7.5);
+\draw[step=1cm,gray,very thin] (9,4) -- (9,8);
+\draw[step=1cm,gray,very thin] (10,4) -- (10,8);
+\draw[step=1cm,gray,very thin] (11,4) -- (11,8);
+\draw[step=1cm,gray,very thin] (12,4) -- (12,8);
+%
+\node [X2] at (10.5, 6) {};
+%
+\draw (10.5, 6) circle  (2cm);
+\node [L2A]  (M2)   at ( 10.5, 6)  {\normalsize $\;-4\;$};
+\node [L2A]  (S2)    at ( 10.5, 5)  {\normalsize $1$};
+\node [L2A]  (W2)   at ( 9.5, 6)  {\normalsize $1$};
+\node [L2A]  (E2)    at ( 11.5, 6)  {\normalsize $1$};
+\node [L2A]  (N2)    at ( 10.5, 7)  {\normalsize $1$};
+\node [L3]    at ( 12.9, 6)  {\Large \,$\cdot \,\frac{1}{h^2}$};
+%
+\draw [thick]  (M2.south)  -- (S2.north) ;
+\draw [thick]  (M2.west) -- (W2.east) ;
+\draw [thick]  (M2.north) -- (N2.south) ;
+\draw [thick]  (M2.east) -- (E2.west) ;
+%
+\node [L1]    at ( 5, 5)  {};
+\draw[step=0.5cm,gray,very thin] (2,2) grid (8,8);
+%\draw[step=8cm,thick] (2,2) grid (6,6);
+
+%
+\node [L2]  (M)   at ( 5.75, 4.25)  {};
+\node [L2]  (S)    at ( 5.75, 3.75)  {};
+\node [L2]  (W)   at ( 5.25, 4.25)  {};
+\node [L2]  (E)    at ( 6.25, 4.25)  {};
+\node [L2]  (N)    at ( 5.75, 4.75)  {};
+%
+\draw [line width=.4mm, draw=black!30,dashed] (5.75,4.25) circle (1.05cm);
+\draw [line width=.4mm, draw=black!30] (10.5,6) circle (2cm);
+\draw [line width=.4mm, draw=black!30,dashed] (5.3,5.2) -- (9.45,7.7);
+\draw [line width=.4mm, draw=black!30,dashed] (5.9,3.2) -- (10.53,3.99);
+
+%
+\draw [thick]  (M.south)  -- (S.north) ;
+\draw [thick]  (M.west) -- (W.east) ;
+\draw [thick]  (M.north) -- (N.south) ;
+\draw [thick]  (M.east) -- (E.west) ;
+
+%
+\end{tikzpicture}

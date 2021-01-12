@@ -1,0 +1,62 @@
+\documentclass[12pt]{article}
+
+% --------- Path definitions
+\def\tikzPath{./tikz}
+\def\figPath{./figures}
+\def\utilPath{./utilities}
+
+% --------- Must be set to corresponding Manuals/Bibliography directory in official FDS installation path
+\def\bibPath{../../../01_fds/Manuals/Bibliography}
+
+\input{\bibPath/commoncommands}
+\input{declarations}
+% --------- Packages
+\usepackage{ulem}
+\usepackage{float}
+\usepackage[12pt]{moresize}
+\usepackage{tikz,tikz-3dplot,graphicx,mathtools}
+\usetikzlibrary{positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+\usetikzlibrary{arrows.meta} 
+\tikzset{>=latex}
+
+\newenvironment{myfont}{\fontfamily{\ttdefault}\selectfont}{\par}
+
+
+\begin{document}
+
+% ---------  title 
+\title{ 
+Documentation of the \\[5mm]
+alternative FDS pressure solver \\[8mm]
+ {\Huge \scarc{}} \\[16mm]
+ {Beta-Version} \\[16mm]}
+\author{Dr. Susanne Kilian \\[5mm] hhpberlin, Ingenieure f\"ur Brandschutz GmbH, D-10245 Berlin \\ [5mm]
+\href{mailto:s.kilian@hhpberlin.de}{\tt s.kilian@hhpberlin.de}
+}
+\date{} 
+\maketitle
+
+\newpage	
+\tableofcontents
+%\listoffigures
+%\listoftables
+
+% ---------  sections
+\include{01_motivation}
+\include{02_poisson}
+\include{03_direct}
+\include{04_iterative}
+\include{05_scarc}
+\include{06_verification}
+
+
+% ---------  bibliography
+\bibliographystyle{unsrt}
+\bibliography{\bibPath/FDS_general,\bibPath/FDS_refs,\bibPath/FDS_mathcomp,bibliography}
+
+%\addcontentsline{toc}{chapter}{References}
+
+\end{document}
+

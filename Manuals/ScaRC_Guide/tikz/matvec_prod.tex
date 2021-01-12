@@ -1,0 +1,53 @@
+\begin{tikzpicture}
+[
+scale=0.8,
+every node/.style ={scale=0.8},
+inner sep=1mm,
+%scale=1.0,
+L2A/.style={circle, draw=black!40, fill=blue!10, thin, minimum size=7.5mm},
+L1/.style={rectangle, draw=black!40, fill=black!03,   thin, minimum size=6cm},
+box/.style = {very thin, black!70, rectangle, inner xsep=10pt, inner ysep=10pt,},
+inner sep=0.6mm,
+],
+%
+% \draw [L1] (0.25,2) -- (7.5,2);
+\fill [black!4] (0.5,0.5) rectangle (4,2.0);
+\fill [black!8] (4.0,0.5) rectangle (7.5,2.0);
+\fill [black!6] (0.5,2.0) rectangle (4,8.5);
+\fill [black!2] (4.0,2.0) rectangle (7.5,8.5);
+
+\draw [step=1.0, very thin, black!20] (0.5,0.5) grid (7.5,8.5);
+\draw [very thick] (0.5,2) -- (7.5,2);
+\draw [very thick] (4,0.5) -- (4,8.5);
+
+\node at (8.3, 4.5)  {\LARGE \,$\cdot \,\frac{1}{h^2}$};
+
+\node [L2A]  (M1)   at ( 4.5, 2.5)  {$-4$};
+\node [L2A]  (S1)    at ( 4.5, 1.5)  {$1$};
+\node [L2A]  (W1)   at ( 3.5, 2.5)  {$1$};
+\node [L2A]  (E1)    at ( 5.5, 2.5)  {$1$};
+\node [L2A]  (N1)    at ( 4.5, 3.5)  {$1$};
+%
+\draw [thick]  (M1.south)  -- (S1.north) ;
+\draw [thick]  (M1.west) -- (W1.east) ;
+\draw [thick]  (M1.north) -- (N1.south) ;
+\draw [thick]  (M1.east) -- (E1.west) ;
+%
+\node [L2A]  (M2)   at ( 3.5, 6.5)  {$-4$};
+\node [L2A]  (S2)    at ( 3.5, 5.5)  {$1$};
+\node [L2A]  (W2)   at ( 2.5, 6.5)  {$1$};
+\node [L2A]  (E2)    at ( 4.5, 6.5)  {$1$};
+\node [L2A]  (N2)    at ( 3.5, 7.5)  {$1$};
+%
+\draw [thick]  (M2.south)  -- (S2.north) ;
+\draw [thick]  (M2.west) -- (W2.east) ;
+\draw [thick]  (M2.north) -- (N2.south) ;
+\draw [thick]  (M2.east) -- (E2.west) ;
+
+\node [box] (box) at (1.5,1.0){Mesh3};
+\node [box] (box) at (6.5,1.0){Mesh4};
+\node [box] (box) at (1.5,8.0){Mesh1};
+\node [box] (box) at (6.5,8.0){Mesh2};
+
+%
+\end{tikzpicture}

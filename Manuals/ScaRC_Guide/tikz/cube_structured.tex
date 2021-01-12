@@ -1,0 +1,65 @@
+\begin{tikzpicture}
+[
+ scale=0.8,
+ every node/.style ={scale=0.8},
+ inner sep=0.5mm,
+ BLUECIRC/.style={circle, draw=black!50, fill=blue!10, thin, minimum size=7.0mm},
+ REDCIRC/.style={circle, draw=black!50, fill=red!10, thin, minimum size=7.0mm},
+ OBST/.style={rectangle, draw=black!50, fill=black!30, thin, minimum size=10mm},
+ CELL/.style={rectangle, draw=black!50, fill=black!02,   thin, minimum size=10mm},
+ ],
+%
+\foreach \y in {1,2,3,4,5,6,7,8}
+   \foreach \x in {1,2,3,4,5,6,7,8}
+      {
+        \node [CELL]    at ( \x, \y)  {};
+       }
+\foreach \y in {4,5}
+   \foreach \x in {4,5} { \node [OBST]    at ( \x, \y)  {}; }
+%
+\node  at (9.0,4.5)  {\LARGE \,$\cdot \,\frac{1}{h^2}$};       
+%
+\node [BLUECIRC]  (XS)   at ( 4, 2)  {$-1$};
+\node [BLUECIRC]  (XW)   at ( 3, 3)  {$-1$};
+\node [BLUECIRC]  (XC)   at ( 4, 3)  {$4$};
+\node [BLUECIRC]  (XN)   at ( 4, 4)  {$-1$};
+\node [BLUECIRC]  (XE)   at ( 5, 3)  {$-1$};
+%
+\node [BLUECIRC]  (YS)   at ( 2, 5)  {$-1$};
+\node [BLUECIRC]  (YW)   at ( 1, 6)  {$-1$};
+\node [BLUECIRC]  (YC)   at ( 2, 6)  {$4$};
+\node [BLUECIRC]  (YN)   at ( 2, 7)  {$-1$};
+\node [BLUECIRC]  (YE)   at ( 3, 6)  {$-1$};
+%
+\node [BLUECIRC]  (ZS)   at ( 5, 4)  {$-1$};
+\node [BLUECIRC]  (ZW)   at ( 4, 5)  {$-1$};
+\node [BLUECIRC]  (ZC)   at ( 5, 5)  {$4$};
+\node [BLUECIRC]  (ZN)   at ( 5, 6)  {$-1$};
+\node [BLUECIRC]  (ZE)   at ( 6, 5)  {$-1$};
+%
+\draw [thick]  (XC.south)  -- (XS.north) ;
+\draw [thick]  (XC.west)   -- (XW.east) ;
+\draw [thick]  (XC.north)  -- (XN.south) ;
+\draw [thick]  (XC.east)  -- (XE.west) ;
+%
+\draw [thick]  (YC.south)  -- (YS.north) ;
+\draw [thick]  (YC.west)   -- (YW.east) ;
+\draw [thick]  (YC.north)  -- (YN.south) ;
+\draw [thick]  (YC.east)  -- (YE.west) ;
+%
+\draw [thick]  (ZC.south)  -- (ZS.north) ;
+\draw [thick]  (ZC.west)   -- (ZW.east) ;
+\draw [thick]  (ZC.north)  -- (ZN.south) ;
+\draw [thick]  (ZC.east)  -- (ZE.west) ;
+%
+\foreach \y in {0,1,2,3,4,5,6,7} {
+  \pgfmathsetmacro{\ypos}{(\y+0.63)}
+  \foreach \x in {0,1,2,3,4,5,6,7} {
+    \pgfmathsetmacro{\xpos}{(\x+0.66)}
+    \pgfmathsetmacro{\num}{int(8*\y+\x+1)}
+    \draw[color=black!60]   node at (\xpos,\ypos) {\tiny \num};
+  }
+}
+%
+\end{tikzpicture}
+

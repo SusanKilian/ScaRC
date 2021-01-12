@@ -1,0 +1,75 @@
+\begin{tikzpicture}[
+ inner sep=0.1mm,
+ scale=1.0,
+ font=\normalsize,
+ L4/.style={circle,       draw=black!80, fill=black!80,       thin, minimum size=2.5mm},
+ L3/.style={circle,       draw=black!60, fill=red!07,       thin, minimum size=12mm},
+ L2/.style={rectangle, draw=black!60, fill=black!04,   thin, minimum size=20mm},
+ L1/.style={rectangle, draw=black!40, dashed, fill=black!01,   thin, minimum size=20mm},
+ inner sep=0.6mm,
+ T1/.style={rectangle, draw=black!02,    thin, minimum size=0.1mm},
+ ],
+\definecolor{mycolor}{RGB}{255,51,76}
+\node (Dummy)   at ( -5, 1)  {};
+%
+\node [L1]            at ( 1, 1)  {};
+\node [L1]            at ( 3, 1)  {};
+\node [L1]            at ( 5, 1)  {};
+\node [L1]            at ( 7, 1)  {};
+%\node [L1]            at ( 9, 1)  {};
+\node [L1]            at ( 1, 3)  {};
+\node [L1]           at ( 1, 5)  {};
+\node [L1]           at ( 1, 7)  {};
+
+\node [L2]            at ( 3, 3)  {};
+\node [L2]            at ( 5, 3)  {};
+\node [L2]            at ( 7, 3)  {};
+%\node [L2]            at ( 9, 3)  {};
+%
+\node [L2]            at ( 3, 5)  {};
+\node [L2]            at ( 5, 5)  {};
+\node [L2]            at ( 7, 5)  {};
+%
+\node [L2]            at ( 3, 7)  {};
+\node [L2]            at ( 5, 7)  {};
+\node [L2]            at ( 7, 7)  {};
+
+\node [L3]  (HS)   at ( 3, 1)  {$\hp_{1,0}$};
+\node [L3]  (HW)  at ( 1, 3)  {$\hp_{0,1}$};
+\node [L3]  (HC)   at ( 3, 3)  {$\hp_{1,1}$};
+\node [L3]  (HO)  at ( 5, 3)  {$\hp_{2,1}$};
+\node [L3]  (HN)  at ( 3, 5)  {$\hp_{1,2}$};
+
+\node [L4]            at ( 2, 3)  {};
+
+%\node                  at ( 2.06, 2.5)  {$\hp_{\,\ha,k}$};
+%
+%\node [T1]  (DZS)  at ( 3.3,2.0)  {$\dz$};
+%\node [T1]  (DZN)  at ( 3.3,4.0)  {$\dz$};
+%\node [T1]  (DXW) at ( 2.0,3.3)  {$\dx$};
+%\node [T1]  (DXO) at ( 4.0,3.3)  {$\dx$};
+%
+\draw[->,dotted,thick,black!60] (1.2,1.2) -- (1.9, 2.8);
+\node                  at ( 1.0, 1.0)  {$\hp_{\ha,1}$};
+
+\draw [very thick, blue!80]  (2.0,2.0) -- (2.0,4.0);
+\draw [very thick, mycolor]  (2.0,2.0) -- (4.0,2.0);
+
+\draw [thick, black!80]  (HC.south) -- (HS.north) ;
+\draw [thick, black!80]  (HC.west) -- (HW.east) ;
+\draw [thick, black!80]  (HC.north) -- (HN.south) ;
+\draw [thick, black!80]  (HC.east) -- (HO.west) ;
+
+\node [anchor=west]   at (0.3, 7.8)  {\scriptsize Ghost cells};
+\node [anchor=west]   at (2.2, 7.8)  {\scriptsize Internal cells};
+\node [blue!80]    at (1.75, 3.75)  {D};
+\node [mycolor]  at (3.75, 1.75)  {N};
+
+\node [anchor=west,blue!80]   at (9, 5.7)  {Dirichlet boundary condition};
+\node [anchor=west]   at (9.1, 4.7)  {\qquad $\hp_{0,1} = 2 \hp_{\ha,1} - \hp_{1,1}$};
+
+\node [anchor=west,mycolor]   at (9, 3.1)  {Neumann boundary condition};
+\node [anchor=west]   at (9.1, 2.1)  {\qquad $\hp_{1,0}= \hp_{1,1} - h \, B_{1,0}$};
+
+%
+\end{tikzpicture}

@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Build/impi_intel_win_64_db/fds_impi_win_64_db.exe",
+            "args": ["Verification/Pressure_Solver/poisson2d_4mesh_scarc.fds"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "windows": {
+                "MIMode": "gdb",
+                // "miDebuggerPath": "c:\\program files (x86)\\microsoft visual studio\\2017\\enterprise\\common7\\ide\\vc\\linux\\bin\\gdb\\8.1\\x86_64-linux-gnu-gdb.exe",
+                // "miDebuggerPath": "C:\\Program Files\\Git\\mingw64\\bin\\gdb.exe",
+                // "miDebuggerPath": "C:\\MinGW\\bin\\gdb.exe",
+                // "miDebuggerPath": "x86_64-linux-gnu-gdb.exe",
+            },
+            "linux": {
+                "MIMode": "gdb",
+                // "miDebuggerPath": "C:\\Program Files\\Git\\mingw64\\bin\\gdb.exe",
+            },
+            "osx": {
+                "MIMode": "lldb",
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(Windows) Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Build/impi_intel_win_64_db/fds_impi_win_64_db.exe",
+            "args": ["Verification/Pressure_Solver/poisson2d_4mesh_scarc.fds"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false
+        }
+    ]
+}

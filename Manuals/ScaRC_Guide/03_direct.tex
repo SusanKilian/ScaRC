@@ -1,0 +1,184 @@
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% Direct solvers
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\section{Direct Poisson solvers in FDS} 
+\label{SEC_SCARC_direct_solvers}
+At a first glance, the ongoing improvements in the current computer technology motivate the use of direct methods such as the Gaussian elimination method and its variants for symmetric, positive definite matrices for the solution of the elliptic equations. Another extremely powerful class of direct methods which is successfully used in many different branches of science is based on spectral solvers. 
+Both classes will be explained in more detail below.
+
+Direct solvers compute the solution of a system of equations within a possibly very complex step without intermediate approximations. They may be performed with enormous speed and are often used for the demonstration of potential computer power, see e.g.\ the LINPACK-tests by~\cite{Dongarra:1998}.
+They have proven to be very robust even in the non-symmetric and ill-conditioned case. Besides, they are nearly independent of the  degree of grid distortion (except for rounding errors) and well suited for the application on unstructured grids.  
+In contrast to iterative methods, they are completely independent of whether a good starting solution exists or not, but they also do not benefit if this is already the case. They achieve a high level of computational accuracy, but they do not benefit if this is not required at all.
+
+However, as already mentioned, the development of corresponding parallel analogues is highly complicated.
+Most often, reasonably efficient strategies follow purely algebraic considerations
+and are not conforming with geometrically motivated domain decompositions strategies.
+Nevertheless, for  moderately sized problems, especially if only one or a few sub-meshes are used, direct solvers are incomparably fast and should generally be preferred over iterative ones.
+Typically, there is a critical number of subdomains for which the parallelization overhead dominates the numerical efficiency associated with the original serial methodology which should be analyzed carefully.
+ 
+ 
+
+% ------------------------------------------------------------------------------------------------------------------------------------------
+% FFT solver
+% ------------------------------------------------------------------------------------------------------------------------------------------
+\subsection{Parallel FFT with Pressure Iteration}
+\label{SEC_SCARC_fft_solver}
+
+Spectral solvers like the {\it Fast Fourier Transformation} (FFT) exploit a very special property of the underlying Poisson problem, namely that sine and cosine functions are eigenvectors of the Laplace operator. They expand the solution as a Fourier series which can be quickly performed at rather low complexity. In practice, this approach has proven to be highly efficient and is used in many different fields of application. However, FFT methods are restricted to structured grids which may impede the use for complex geometries.
+
+As described in detail in the FDS Technical Guide~\cite{McGrattan:2018:TG}, the pressure equation (\ref{EQ_SCARC_pressure}) is obtained from the momentum equation by a sequence of substitutions and simplifications. The major advantage of this derivation is that it finally leads to a system of equations which has constant coefficients (i.e.\ is separable). 
+Since FDS furthermore relies on the use of cubic meshes each with structured rectangular grids each, it is possible to use a highly optimized FFT solver from the CRAYFISHPAK~\cite{Sweet::Crayfishpak}.
+%
+In the single-mesh case only one globally acting FFT-method is performed which has proven to be extremely powerful and fast over the past years. 
+In the multi-mesh case every sub-mesh performs its own local FFT in order to compute an exact solution to the related local Poisson problem as illustrated in Fig.~\ref{FIG_SCARC_local_ffts}. The global solution is then composed from the local ones.
+\begin{figure}[ht]
+\begin{center}
+\input{\tikzPath/multi_pipe_fft.tex}
+\caption[Mesh-wise FFT-methods]{Mesh-wise FFT-methods for the 2D pipe geometry: First each mesh performs its own local FFT method to compute the solution of the respective local Poisson problem. Then, the global solution results from the composition of the local solutions.}
+\label{FIG_SCARC_local_ffts}
+\end{center}
+\end{figure}
+
+A drawback associated with this approach is that the mathematical solvability of the local problems requires the definition of appropriate boundary conditions all over the local boundary, i.e.\ along the new artificial boundaries between the single meshes where the true boundary conditions are not known at all. Instead, they are only approximately defined as Dirichlet boundary values, consisting of the mean values of neighboring cells in adjacent meshes taken from the last time step, which may lead to losses of accuracy.
+%
+On the other hand, this strictly local oriented approach possesses an extremely high parallel efficiency because the exchange of the internal boundary values only requires next-neighbor communications which can be performed with great computational efficiency on today's parallel architectures.
+
+As already described, the most fundamental characteristic of the pressure equation (\ref{EQ_SCARC_pressure})  is a very fast propagation speed for information. Only a single time step may suffice to spread new pressure information over the whole computational domain, i.e.\ local effects or perturbations have immediate impact on the overall solution. 
+
+Due to the purely local character of the mesh-wise FFT-solver, however, new information can only be transferred mesh-by-mesh, successively using the data exchanges between adjacent meshes  as illustrated in Fig.~\ref{FIG_SCARC_mesh_wise_transfer}.
+%
+This necessarily involves a time delay compared to the real physical propagation speed and brings dependencies on the number of subdomains into play.
+The higher the number of subdomains and the associated artificial fragmentation of the global connectivity is, the stronger this effect may be with corresponding negative impacts on the accuracy and stability of the whole method.
+Nevertheless, for small numbers of subdomains this effect has proven to be very weak and the efficiency of the local FFT-methodology mainly dominates.
+
+\begin{center}
+\begin{figure}[ht]
+\begin{minipage}{4.3cm}
+\input{\tikzPath/multi_pipe_fft_cycle1.tex}
+\end{minipage}
+\begin{minipage}{3.9cm}
+\input{\tikzPath/multi_pipe_fft_cycle2.tex}
+\end{minipage}
+\begin{minipage}{3.9cm}
+\input{\tikzPath/multi_pipe_fft_cycle3.tex}
+\end{minipage}
+\begin{minipage}{3.9cm}
+\input{\tikzPath/multi_pipe_fft_cycle4.tex}
+\end{minipage}
+\caption[Delayed information transfer of the mesh-wise FFT solver]{Delayed information transfer of the mesh-wise FFT solver for the 2D pipe geometry: New information can only be passed across the whole domain by successively using the next-neighbor communications between adjacent meshes.}
+\label{FIG_SCARC_mesh_wise_transfer}
+\end{figure}
+\end{center}
+
+
+
+There is yet another important issue regarding the treatment of internal obstructions that should be considered:
+Since the use of the FFT-solver is basically limited to structured meshes, it is not possible to specify internal boundary conditions and the velocity field may penetrate into internal solids as already explained in Section (\ref{SEC_SCARC_poisson}). 
+%
+In order to compensate this undesired effect an additional iterative correction strategy based on a {\it Direct Forcing Immersed Boundary Method}~\cite{Fadlun:2000} is used in FDS: In every time step the mesh-wise FFT algorithm is not applied only once but multiple times until a specified {\it velocity tolerance} for the remaining velocity error along internal obstructions has been reached. This iterative corrective process will be denoted as {\it pressure iteration} below.
+
+Furthermore, although the pressure term $\cH$ is continuous at mesh interfaces, the finite-difference of its gradient is not such that the normal components of velocity also may be different at common mesh interfaces. Thus, the above pressure iteration is also used to drive the velocity normals to match up to the specified velocity tolerance along common mesh interfaces.
+
+For both, the internal obstructions and the mesh interfaces, the required velocity tolerance and the maximum allowed number of correction iterations can be specified by the quantities {\ct VELOCITY\_TOLERANCE} and {\ct  MAX\_PRESSURE\_ITERATIONS} 
+in the {\ct \&PRES}-namelist. By default, a velocity tolerance of ''characteristic mesh size'' divided by 10 and a maximum of 10 iterations is used. Fig.~\ref{FIG_SCARC_multi_pipe_fft_presite} illustrates this procedure graphically.
+More detailed information about the underlying procedure can be obtained in the FDS Technical Reference Guide~\cite{McGrattan:2018:TG}.
+
+\begin{figure}[ht]
+\begin{center}
+\input{\tikzPath/multi_pipe_fft_presite.tex}
+\caption[Mesh-wise FFT-methods with pressure correction]{Repeated use of the FFT pressure solver for a 2D pipe geometry: In the scope of a surrounding pressure iteration the mesh-wise FFT's are performed multiple times until the error related to the normal components of velocity along internal obstructions and mesh interfaces has been driven below a specified velocity tolerance.}
+\label{FIG_SCARC_multi_pipe_fft_presite}
+\end{center}
+\end{figure}
+
+Certainly, the increased number of mesh-wise FFT solutions leads to a higher computational effort. Nevertheless, for a multitude of cases, especially for relatively small mesh numbers or in steady-state like situations, only less corrective iterations are needed and convergence is achieved very quickly.
+Increasing the number of subdomains may worsen the convergence and accuracy behaviour associated with a noticeable increase of computational costs.
+%, possibly up to divergence at a (problem-dependent) critical number of subdomains. 
+
+Especially, for extended geometries with a big number of meshes (i.e.\ tunnels) and/or transient boundary conditions this purely local strategy may experience difficulties to reproduce the rapid propagation of information for elliptic problems fast enough and convergence of the pressure iteration may be slow.
+In particular, these situations make the development of alternative solution concepts appear necessary and have driven their development forward.
+
+% ----------------------------------------------------------------------------------------------------------------------------------------
+% LU solver
+% ----------------------------------------------------------------------------------------------------------------------------------------
+\subsection{Parallel $\boldmath{LU}$-factorization}
+\label{SEC_SCARC_lu_decomposition}
+Within the framework of the Gaussian elimination algorithm, many direct algorithms rely on the 'lower-upper'-factorization of the system matrix, $LU = PAQ$, 
+with suitable permutation matrices $P$ and $Q$ and the triangular matrices $L$ and $U$, see Fig.~\ref{FIG_SCARC_lu_decomposition}. 
+The solution of Equation (\ref{EQ_SCARC_single_system}) can then be obtained using a forward substitution step, $Ly=P^Tb$, followed by a backward substitution step, $U(Q^Tx)=y$.
+If $A$ is symmetric, a {\it Cholesky factorization} $PAP^T=LL^T$ can be applied.
+
+The whole process can be subdivided into three phases: 
+(i) a {\it reordering phase}  where the matrix is analyzed to produce an ordering which allows a more efficient factorization,
+(ii) a {\it factorization phase} where the $LU$-factorization is actually computed and stored, 
+(iii) a {\it solution phase} where the forward and backward substitution is performed.
+Typically, the factorization phase (ii) requires the most computing time while the solution phase (iii) is an order of magnitude faster.
+
+\begin{figure}[ht]
+\begin{center}
+\input{\tikzPath/lu_decomposition.tex}
+\end{center}
+\caption{Decomposition of $A$ into a lower triangular matrix $L$ and an upper triangular matrix $U$}
+\label{FIG_SCARC_lu_decomposition}
+\end{figure}
+
+
+While $LU$-decomposition was originally developed for serial applications, there are optimized parallel variants today which calculate a distributed LU decomposition based on a global discretization with corresponding global Poisson matrix. In FDS a solver named \uglmat{} is used, which is built on the optimized parallel {\ct Cluster\_Sparse\_Solver} of the Intel\textsuperscript{\textregistered} MKL library.
+
+Due to its domain-spanning character the factorization phase (ii) is very communication-intensive which is reflected in long calculation times for initialization.
+However, as long as there are no geometric changes in the computational domain during the simulation (e.g. by the ``opening'' or ``closing'' of obstructions), this only has to be done once.
+In every FDS time iteration the solution of the respective Poisson equation is simply based on a forward and backward substitution step on every single mesh with respect to the stored factorization which can be done much faster.
+
+\newpage
+Figure \ref{FIG_SCARC_uglmat} illustrates the $LU$-decomposition for the 2D-pipe example. The dashed lines between the single meshes indicate that the whole method is based on the global Poisson matrix and the mutually required entries are communicated between the single meshes.
+
+\begin{figure}[ht]
+\centering\input{\tikzPath/multi_pipe_uglmat.tex}
+\caption{Decomposition of $A$ into a lower triangular matrix $L$ and an upper triangular matrix $U$}
+\label{FIG_SCARC_uglmat}
+\end{figure}
+
+A main disadvantage of this approach is that less benefit can be drawn from a very convenient property of 
+the Poisson matrix $A$, namely its intrinsic {\it sparsity}:
+Even though $A$ has only very few non-zero entries compared to the total number of possible entries $n^2$, 
+%which are grouped in single diagonal bands (7 bands in case of the 7-point stencil), 
+the $LU$-factorization process leads to {\it fill-in}, i.e.\ it produces non-zero entries in $L$ and $U$ where $A$ was zero before.
+This relation is illustrated in Fig.~\ref{FIG_SCARC_lu_memory_spy}.
+For a simple 3D-cube geometry which is refined into $16^3$ cells it shows the sparsity pattern of the Poisson matrix $A$
+and the lower triangular matrix $L$ of its $LU$-decomposition.
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{\figPath/spy_A.png}\qquad\qquad\qquad
+\includegraphics[width=0.4\textwidth]{\figPath/spy_L.png}\\
+\end{center}
+\caption[Sparsity patterns in case of a $LU$-decomposition for a refined 3D-cube with $16^3$ cells]{
+Sparsity patterns in case of the $LU$-decomposition for a refined 3D-cube with $16^3$ cells.
+(Left) Poisson matrix $A$ with about 27 thousand non-zeros; (Right) Lower triangular matrix $L$ with nearly 1 million non-zeros;
+}
+\label{FIG_SCARC_lu_memory_spy}
+\end{figure}
+
+\newpage
+The computing and storing of both triangular matrices can become prohibitively expensive, especially in case of huge systems of equations with many  millions of unknowns. This is true even if only the lower triangular matrix has to be stored for symmetric problems.
+
+The example of the 3D-cube is taken up again in order to show the magnitudes of memory requirements to be expected here.
+In case that the cube is refined from $16^3$ up to $128^3$ cells, Fig.~\ref{FIG_SCARC_lu_memory_need} compares
+the number of non-zero entries of $L$ with those of $A$. Apparently the ratio dramatically deteriorates as the grid is refined. 
+For the finest grid resolution of $128^3$ cells the matrix $L$ has about 2.18 billions %2,178,331,820 
+of non-zeros whereas $A$ only has about 8.34 millions of non-zeros, %8,339,456 
+corresponding to a ratio of about 238. Note, that for $A$ only its lower triangular and diagonal part must be stored due to its symmetry.
+
+\begin{figure}[ht]
+\centering\includegraphics[width=0.6\textwidth]{\figPath/lu_memory_needs.png}\\[2ex]
+\caption[Memory needs for the $LU$-decomposition]{
+Number of non-zero entries in the Poisson matrix $A$ (green) and the lower triangular matrix $L$ (blue) of its $LU$-decomposition for different refinements of a 3D-cube from $16^3$ up to $128^3$ cells. The resulting ratio of $L$ to  $A$ is indicated at top of the blue bars. 
+}
+\label{FIG_SCARC_lu_memory_need}
+\end{figure}
+
+For realistically large CFD-problems the resulting additional storage requirements can  exceed the capacity of the available computing system in the worst case.
+Thus, when considering the computational efficiency of $LU$-methods for a given application the resulting fill-in is a decisive criterion. 
+
+
