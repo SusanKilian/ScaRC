@@ -1118,7 +1118,7 @@ REAL (EB)     :: SCARC_RESIDUAL          =  0.0_EB              !< Residual of g
 
 ! ---------- Parameters for coarse grid method
  
-CHARACTER(40) :: SCARC_COARSE            = 'DIRECT'             !< Type of coarse grid solver (ITERATIVE/DIRECT)
+CHARACTER(40) :: SCARC_COARSE            = 'ITERATIVE'          !< Type of coarse grid solver (ITERATIVE/DIRECT)
 REAL (EB)     :: SCARC_COARSE_ACCURACY   = 1.E-14_EB            !< Requested accuracy for iterative solver
 INTEGER       :: SCARC_COARSE_ITERATIONS = 100                  !< Max number of iterations for iterative solver
 INTEGER       :: SCARC_COARSE_LEVEL      =  1                   !< Coarse grid level for twolevel-Krylov method
@@ -1222,7 +1222,7 @@ LOGICAL :: HAS_GMG_LEVELS       = .FALSE.                       !< Flag for GMG-
 ! ---------- Globally used types for description of different solvers
   
 INTEGER :: TYPE_ACCURACY           = NSCARC_ACCURACY_ABSOLUTE    !< Type of requested accuracy
-INTEGER :: TYPE_COARSE             = NSCARC_COARSE_DIRECT        !< Type of coarse grid solver 
+INTEGER :: TYPE_COARSE             = NSCARC_COARSE_ITERATIVE     !< Type of coarse grid solver 
 INTEGER :: TYPE_COARSENING         = NSCARC_COARSENING_CUBIC     !< Type of grid coarsening 
 INTEGER :: TYPE_CYCLING            = NSCARC_CYCLING_V            !< Type of cycling for multigrid method
 INTEGER :: TYPE_GRID               = NSCARC_GRID_STRUCTURED      !< Type of discretization 
@@ -6224,6 +6224,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
 #ifdef WITH_SCARC_MKL
                   TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
+                  WRITE(*,*) 'ERR1'
                   CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_PARDISO, SCARC_NONE, NSCARC_NONE)
 #endif
 
@@ -6231,6 +6232,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
 #ifdef WITH_SCARC_MKL
                   TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
+                  WRITE(*,*) 'ERR2'
                   CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_STORAGE, SCARC_NONE, NSCARC_NONE)
 #endif
             END SELECT
@@ -6352,7 +6354,6 @@ SELECT CASE (TRIM(SCARC_METHOD))
       END SELECT
 
    ! ------------------------- Global LU-decomposition solver -------------------------------
-#ifdef WITH_SCARC_MKL
    CASE ('MKL')
 
       TYPE_METHOD  = NSCARC_METHOD_LU
@@ -6369,12 +6370,13 @@ SELECT CASE (TRIM(SCARC_METHOD))
 #ifdef WITH_SCARC_MKL
             TYPE_MKL(0)   = NSCARC_MKL_LOCAL
 #else
+                  WRITE(*,*) 'ERR3'
             CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_PARDISO, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE DEFAULT
+                  WRITE(*,*) 'ERR4'
             CALL SCARC_SHUTDOWN(NSCARC_ERROR_PARSE_INPUT, SCARC_MKL_SCOPE, NSCARC_NONE)
       END SELECT
-#endif
 
    ! ------------------------- McKenny-Greengard-Mayo solver -------------------------
    CASE ('MGM')
@@ -6487,6 +6489,7 @@ END SELECT
 
 
 ! Set type of coarse grid solver
+      WRITE(*,*) 'SCARC_COARSE=', SCARC_COARSE
 SELECT CASE (TRIM(SCARC_COARSE))
    CASE ('ITERATIVE')
       TYPE_COARSE = NSCARC_COARSE_ITERATIVE
@@ -6495,6 +6498,7 @@ SELECT CASE (TRIM(SCARC_COARSE))
       TYPE_COARSE   = NSCARC_COARSE_DIRECT
       TYPE_MKL(0)   = NSCARC_MKL_COARSE
 #else
+      WRITE(*,*) 'HERE'
       CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_CLUSTER, SCARC_NONE, NSCARC_NONE)
 #endif
    CASE DEFAULT
@@ -6838,6 +6842,20 @@ IF (NMESHES > 1) THEN
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_NUMBERS, NSCARC_NONE, NLEVEL_MIN)
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_SIZES,   NSCARC_NONE, NLEVEL_MIN)
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_SOLIDS,       NSCARC_NONE, NLEVEL_MIN)
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SETTING UP EXCHANGE_CELL_NUMBERS, TYPE_GRID =', TYPE_GRID
+WRITE(MSG%LU_DEBUG,*) 'EXCHANGE_SOLIDS:'
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   CALL SCARC_POINT_TO_GRID(NM, NLEVEL_MIN)                          
+   DO J = L%NY+1,0,-1
+      DO K = L%NZ+1,0,-1
+         WRITE(MSG%LU_DEBUG,'(6I4)') (L%IS_SOLID(I, J, K), I=0,L%NX+1)
+      ENDDO
+      WRITE(MSG%LU_DEBUG,*) '----------------------------------------------------'
+   ENDDO
+ENDDO
+#endif
 
    IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
       DO NL = NLEVEL_MIN+1, NLEVEL_MAX
@@ -19337,8 +19355,6 @@ ENDDO
             ' , #MGM: ', I6,&
             ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
-#endif
-#ifdef WITH_SCARC_VERBOSE2
 1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
             ' , #POISSON: ', I6,&
             ' , #MGM: ', I6,&
@@ -19627,8 +19643,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG,'(A, 5I6,1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, IW
                IX = GWC%IXG ;  IZ = GWC%IZG
                IF (L%IS_SOLID(IX, 1, IZ)) MGM%HD(IX, 0:2, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I6,3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',&
-                                       IW, IX,IZ,MGM%HD(IX,0,IZ), MGM%HD(IX,1,IZ),MGM%HD(IX,2,IZ)
+WRITE(MSG%LU_DEBUG,'(A, 3I6,3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',IW, IX,IZ,MGM%HD(IX,0,IZ), MGM%HD(IX,1,IZ),MGM%HD(IX,2,IZ)
 #endif
             ENDDO
          ELSE
@@ -19857,6 +19872,9 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG,'(A, 3I6,1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H
 
 ENDDO
 
+#ifdef WITH_SCARC_DEBUG
+1000 FORMAT (A, ': IX, IY, IZ =', 3I4,': ICU =', I4, ': HP =', E14.6)
+#endif
 END SUBROUTINE SCARC_MGM_STORE_SOLUTION
 
 
@@ -21479,7 +21497,7 @@ CALL SCARC_SETUP_SOLVER(NS, NP)
 TYPE_GRID = NG
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
+WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD 'SIGMA0
 WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
 WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
 WRITE(MSG%LU_DEBUG,*) 'NRHS    =', NRHS
@@ -24649,7 +24667,7 @@ CPU(MYID)%SOLVER =CPU(MYID)%SOLVER+CURRENT_TIME()-TNOW
 CPU(MYID)%OVERALL=CPU(MYID)%OVERALL+CURRENT_TIME()-TNOW
 
 #ifdef WITH_SCARC_DEBUG
-1000 FORMAT(A10,' SCARC_SOLVER:  METHOD= ',I6,',  TPI= ', I6)
+1000 FORMAT(A10,' SCARC_SOLVER:  METHOD= ',I6,',  TPI= ', I6
 #endif
 END SUBROUTINE SCARC_SOLVER
 

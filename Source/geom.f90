@@ -6,6 +6,7 @@
 !
 ! Definitions for preprocessor:
 ! MPI:
+!#define WITH_MKL
 #define MPI_ENABLED
 ! Debug:
 !#define DEBUG_SET_CUTCELLS /* Debug cut-cell definition algorithm. */
