@@ -33,6 +33,34 @@ IMPLICIT NONE
 CONTAINS
 
 ! ------------------------------------------------------------------------------------------------
+!> \brief Allocate basic ScaRC-structures for all needed levels
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_TYPES
+USE SCARC_POINTERS, ONLY: S, SCARC_POINT_TO_MESH
+INTEGER :: NM
+
+! Basic information for all requested grid levels
+ALLOCATE (SCARC(NMESHES), STAT=IERROR)
+CALL CHKMEMERR ('SCARC_SETUP', 'SCARC', IERROR)
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_MESH(NM)
+
+   ! Needed information about other meshes
+   ALLOCATE (S%OSCARC(NMESHES), STAT=IERROR)
+   CALL CHKMEMERR ('SCARC_SETUP_TYPES', 'OSCARC', IERROR)
+
+   ! Information for single grid levels
+   ALLOCATE (S%LEVEL(NLEVEL_MIN:NLEVEL_MAX), STAT=IERROR)
+   CALL CHKMEMERR ('SCARC_SETUP_TYPES', 'LEVEL', IERROR)
+
+ENDDO MESHES_LOOP
+
+END SUBROUTINE SCARC_SETUP_TYPES
+
+
+! ------------------------------------------------------------------------------------------------
 !> \brief Determine number of grid levels 
 ! NLEVEL_MIN corresponds to finest grid resolution, NLEVEL_MAX to coarsest resolution
 ! ------------------------------------------------------------------------------------------------

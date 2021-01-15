@@ -12,26 +12,24 @@ USE PRECISION_PARAMETERS, ONLY: EB
 USE GLOBAL_CONSTANTS
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE SCARC_CONSTANTS
-USE SCARC_ERRORS
-USE SCARC_TIMINGS
-USE SCARC_MKL
-USE SCARC_TIMINGS
-USE SCARC_MESSAGES
-USE SCARC_SETUP
-USE SCARC_GRIDS
 USE SCARC_METHODS
 
 IMPLICIT NONE
 
-PUBLIC :: SCARC_SETUP_SOLVER, SCARC_SOLVER
+PUBLIC :: SCARC_SETUP, SCARC_SOLVER
 
 CONTAINS
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Initialize ScaRC structures based on SCARC-input parameters from &PRES namelist
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SOLVER
+SUBROUTINE SCARC_SETUP
+USE SCARC_PARSER
+USE SCARC_GRIDS
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEMS
+#ifdef WITH_MKL
+USE SCARC_MKL, ONLY: SCARC_SETUP_MKL_ENVIRONMENT
+#endif
 REAL(EB) :: TNOW
 
 TNOW = CURRENT_TIME()
@@ -112,7 +110,7 @@ CALL SCARC_SETUP_PRESSURE                             ; IF (STOP_STATUS==SETUP_S
 CPU(MYID)%SETUP   = CPU(MYID)%SETUP   + CURRENT_TIME() - TNOW
 CPU(MYID)%OVERALL = CPU(MYID)%OVERALL + CURRENT_TIME() - TNOW
 
-END SUBROUTINE SCARC_SETUP_SOLVER
+END SUBROUTINE SCARC_SETUP
 
 
 ! ------------------------------------------------------------------------------------------------------
