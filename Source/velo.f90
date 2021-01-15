@@ -3135,6 +3135,7 @@ ENDIF HEAT_TRANSFER_IF
 CFL = DT*UVWMAX
 PART_CFL = DT*PART_UVWMAX
 
+
 ! Determine max Von Neumann Number for fine grid calcs
 
 PARABOLIC_IF: IF (CHECK_VN) THEN

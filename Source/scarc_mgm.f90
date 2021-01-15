@@ -408,7 +408,7 @@ ENDDO
 
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 1000 FORMAT('================= IC : ', I2,' ===========================')
 1100 FORMAT('LSQ(',I2,',',I2,'):', E14.6)
 1200 FORMAT('LSQ(',I2,',',I2,'),  USQ(',I2,',',I2,') --> JC:', I2, ',  SCAL:', E14.6, ', VL, VU:', 2E14.6,', SCAL2:',E14.6)
@@ -549,6 +549,8 @@ ENDDO
             ' , #MGM: ', I6,&
             ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
+#endif
+#ifdef WITH_SCARC_VERBOSE2
 1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
             ' , #POISSON: ', I6,&
             ' , #MGM: ', I6,&
@@ -837,7 +839,8 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG,'(A, 5I6,1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, IW
                IX = GWC%IXG ;  IZ = GWC%IZG
                IF (L%IS_SOLID(IX, 1, IZ)) MGM%HD(IX, 0:2, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I6,3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',IW, IX,IZ,MGM%HD(IX,0,IZ), MGM%HD(IX,1,IZ),MGM%HD(IX,2,IZ)
+WRITE(MSG%LU_DEBUG,'(A, 3I6,3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',&
+                                       IW, IX,IZ,MGM%HD(IX,0,IZ), MGM%HD(IX,1,IZ),MGM%HD(IX,2,IZ)
 #endif
             ENDDO
          ELSE
@@ -1066,9 +1069,9 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG,'(A, 3I6,1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H
 
 ENDDO
 
-#ifdef WITH_SCARC_DEBUG
-1000 FORMAT (A, ': IX, IY, IZ =', 3I4,': ICU =', I4, ': HP =', E14.6)
-#endif
+!#ifdef WITH_SCARC_DEBUG
+!1000 FORMAT (A, ': IX, IY, IZ =', 3I4,': ICU =', I4, ': HP =', E14.6)
+!#endif
 END SUBROUTINE SCARC_MGM_STORE_SOLUTION
 
 

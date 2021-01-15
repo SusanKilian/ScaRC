@@ -260,6 +260,7 @@ END FUNCTION SCARC_GET_MAX_LEVEL
 SUBROUTINE SCARC_SETUP_GRIDS
 USE SCARC_POINTERS, ONLY: M, S, L, G, XCOR, YCOR, ZCOR, XMID, YMID, ZMID, &
                           SCARC_POINT_TO_MESH, SCARC_POINT_TO_GRID
+USE SCARC_MESSAGES, ONLY: SCARC_DEBUG_SETUP_FORMATS
 INTEGER :: NL, NM, NC, IX, IY, IZ, IO
 INTEGER :: IBAR, JBAR, KBAR
 
@@ -331,23 +332,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          XMID => M%XC;  YMID => M%YC;  ZMID => M%ZC
 
 #ifdef WITH_SCARC_DEBUG
-         IF (L%NX < 10) THEN
-            MSG%CFORM1 = "( E14.6)"  ; WRITE(MSG%CFORM1(2:2),'(I1.1)') L%NX
-            MSG%CFORM4 = "( I5)"  ; WRITE(MSG%CFORM4(2:2),'(I1.1)') L%NX
-         ELSE
-            MSG%CFORM1 = "(  E14.6)" ; WRITE(MSG%CFORM1(2:3),'(I2.2)') L%NX
-            MSG%CFORM4 = "(  I5)" ; WRITE(MSG%CFORM4(2:3),'(I2.2)') L%NX
-         ENDIF
-         IF (L%NX+1 < 10) THEN
-            MSG%CFORM2 = "( E14.6)"  ; WRITE(MSG%CFORM2(2:2),'(I1.1)') L%NX+1
-         ELSE
-            MSG%CFORM2 = "(  E14.6)" ; WRITE(MSG%CFORM2(2:3),'(I2.2)') L%NX+1
-         ENDIF
-         IF (L%NX+2 < 10) THEN
-            MSG%CFORM3 = "( E14.6)"  ; WRITE(MSG%CFORM3(2:2),'(I1.1)') L%NX+2
-         ELSE
-            MSG%CFORM3 = "(  E14.6)" ; WRITE(MSG%CFORM3(2:3),'(I2.2)') L%NX+2
-         ENDIF
+         CALL SCARC_DEBUG_SETUP_FORMATS(L%NX)
 #endif
 
       ELSE

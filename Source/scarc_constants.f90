@@ -8,20 +8,18 @@
 
 ! Use of different directives possible
 !
-!  - WITH_SCARC_MKL                 : use MKL routines PARDISO, CLUSTER_SPARSE_SOLVER, DDOT, DAXPY, DAXPBY, DCOPY, DSCAL (defined in geom.f90)
+!  - WITH_SCARC_MKL                 : use MKL routines PARDISO, CLUSTER_SPARSE_SOLVER, DDOT, DAXPY, DAXPBY, DCOPY, DSCAL 
 !  - WITH_SCARC_VERBOSE       : print more detailed information about ScaRC iterations and workspace allocation
 !  - WITH_SCARC_DEBUG         : print detaild debugging info (only for developing purposes)
 !  - WITH_SCARC_AMG           : include algebraic multigrid solver
 !  - WITH_SCARC_POSTPROCESSING: dump environment for separate ScaRC postprocessing program
 !
 !=========================================================================================================================
-#define WITH_SCARC_MKL
-#define WITH_SCARC_DEBUG
-#define WITH_SCARC_VERBOSE
-#define WITH_SCARC_AMG
-#undef WITH_SCARC_POSTPROCESSING
-
-
+!#define WITH_SCARC_MKL
+!#define WITH_SCARC_DEBUG
+!#define WITH_SCARC_VERBOSE
+!#define WITH_SCARC_AMG
+!#undef WITH_SCARC_POSTPROCESSING
 
 
 !//////////////////////////////////////////////////////////////////////////////////////////////////////

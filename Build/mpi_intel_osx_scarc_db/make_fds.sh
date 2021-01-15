@@ -6,4 +6,4 @@ target=${dir##*/}
 echo Building $target
 `ifort -v`
 
-make -j4 VPATH="../../Source" -f ../makefile_scarc $target
+make -j4 VPATH="../../Source" -f ../makefile $target

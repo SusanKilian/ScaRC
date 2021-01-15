@@ -46,6 +46,7 @@ ENDIF
 
 ! If verbose directive is set, open file for log-information
 #ifdef WITH_SCARC_VERBOSE
+WRITE(*,*) 'VERBOSE FLAG DEFINED'
 IF (MYID == 0) THEN
    WRITE (MSG%FILE_MEM, '(A,A)') TRIM(CHID),'_scarc.mem'
    MSG%LU_MEM = GET_FILE_NUMBER()
@@ -63,9 +64,12 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    OPEN (MSG%LU_VERBOSE, FILE=MSG%FILE_VERBOSE, ACTION = 'readwrite')
    LASTID = MYID
 ENDDO
+#else
+WRITE(*,*) 'VERBOSE FLAG NOT DEFINED'
 #endif
 
 #ifdef WITH_SCARC_DEBUG
+WRITE(*,*) 'DEBUG FLAG DEFINED!'
 LASTID = -NSCARC_HUGE_INT
 DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    IF (MYID == LASTID) CYCLE
@@ -74,6 +78,8 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    OPEN (MSG%LU_DEBUG, FILE=MSG%FILE_DEBUG, ACTION = 'readwrite')
    LASTID = MYID
 ENDDO
+#else
+WRITE(*,*) 'DEBUG FLAG NOT DEFINED'
 #endif
 
 #ifdef WITH_SCARC_VERBOSE
@@ -81,6 +87,7 @@ ENDDO
             A10,',',A10,',',A15,',',A15,',',A15,',',A15,',',A15)
 #endif
 END SUBROUTINE SCARC_SETUP_MESSAGES
+
 
 
 ! ====================================================================================================
@@ -445,6 +452,33 @@ END SUBROUTINE SCARC_VERBOSE_VECTOR3
 
 
 #ifdef WITH_SCARC_DEBUG
+! ----------------------------------------------------------------------------------------------------
+!> \brief Assign formats for debug messages dependent on length of mesh
+! ----------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_SETUP_FORMATS(NLEN)
+INTEGER, INTENT(IN) :: NLEN
+
+IF (NLEN < 10) THEN
+   MSG%CFORM1 = "( E12.4)"  ; WRITE(MSG%CFORM1(2:2),'(I1.1)') NLEN
+   MSG%CFORM4 = "( I5)"  ; WRITE(MSG%CFORM4(2:2),'(I1.1)') NLEN
+ELSE
+   MSG%CFORM1 = "(  E12.4)" ; WRITE(MSG%CFORM1(2:3),'(I2.2)') NLEN
+   MSG%CFORM4 = "(  I5)" ; WRITE(MSG%CFORM4(2:3),'(I2.2)') NLEN
+ENDIF
+IF (NLEN+1 < 10) THEN
+   MSG%CFORM2 = "( E12.4)"  ; WRITE(MSG%CFORM2(2:2),'(I1.1)') NLEN+1
+ELSE
+   MSG%CFORM2 = "(  E12.4)" ; WRITE(MSG%CFORM2(2:3),'(I2.2)') NLEN+1
+ENDIF
+IF (NLEN+2 < 10) THEN
+   MSG%CFORM3 = "( E12.4)"  ; WRITE(MSG%CFORM3(2:2),'(I1.1)') NLEN+2
+ELSE
+   MSG%CFORM3 = "(  E12.4)" ; WRITE(MSG%CFORM3(2:3),'(I2.2)') NLEN+2
+ENDIF
+
+END SUBROUTINE SCARC_DEBUG_SETUP_FORMATS
+
+
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Debug different vectors within a single method
 ! ------------------------------------------------------------------------------------------------
@@ -732,8 +766,8 @@ DO IC = 1, A%N_ROW-1
       ELSE
          CFORM = "(I8,A,40E10.2)"
       ENDIF
-   WRITE(MSG%LU_DEBUG,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
-   !WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   !WRITE(MSG%LU_DEBUG,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
 WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
 ENDIF
@@ -847,7 +881,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
    !ENDIF
    WRITE(MSG%LU_DEBUG, *) '---------------- Overlap ----------------'
-   WRITE(MSG%LU_DEBUG, '(4E14.6)') (VC(IC), IC = G%NC+1, G%NCE)
+   WRITE(MSG%LU_DEBUG, '(4E12.4)') (VC(IC), IC = G%NC+1, G%NCE)
    !ENDIF
 ENDDO
 
