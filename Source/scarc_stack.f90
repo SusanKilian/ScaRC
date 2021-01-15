@@ -22,16 +22,13 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Setup environent on specified stack level
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_STACK(NSTACK)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN):: NSTACK
-
-! Allocate basic solver stack
-ALLOCATE (STACK(NSCARC_STACK_MAX), STAT=IERROR)
-CALL CHKMEMERR ('SCARC_SETUP', 'STACK', IERROR)
 
 SV => STACK(NSTACK)%SOLVER
 

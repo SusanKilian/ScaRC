@@ -11,7 +11,7 @@ cat "scarc_storage.f90" >> scrc.f90
 cat "scarc_convergence.f90" >> scrc.f90
 cat "scarc_timings.f90" >> scrc.f90
 cat "scarc_stack.f90" >> scrc.f90
-cat "scarc_setup.f90" >> scrc.f90
+cat "scarc_parser.f90" >> scrc.f90
 cat "scarc_mpi.f90" >> scrc.f90
 echo "#ifdef WITH_MKL" >> scrc.f90
 cat "scarc_mkl.f90" >> scrc.f90

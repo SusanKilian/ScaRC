@@ -47,7 +47,7 @@ CALL SCARC_PARSE_INPUT                      ; IF (STOP_STATUS==SETUP_STOP) RETUR
 ! Setup different components of ScaRC solver
  
 CALL SCARC_SETUP_LEVELS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_TYPES                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_BASICS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_GRIDS                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_GLOBALS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_NEIGHBORS                            ; IF (STOP_STATUS==SETUP_STOP) RETURN
