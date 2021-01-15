@@ -341,7 +341,7 @@ scarc_storage.o : cons.o mesh.o scarc_constants.o scarc_types.o scarc_variables.
 scarc_convergence.o : prec.o scarc_constants.o scarc_variables.o scarc_messages.o
 scarc_timings.o : cons.o mesh.o func.o scarc_constants.o scarc_messages.o 
 scarc_stack.o : cons.o mesh.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_storage.o scarc_convergence.o
-scarc_initialization.o : cons.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_errors.o scarc_stack.o
+scarc_initialization.o : cons.o prec.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_errors.o scarc_stack.o
 scarc_mpi.o : cons.o prec.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_errors.o scarc_stack.o
 scarc_mkl.o : cons.o mesh.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_errors.o scarc_stack.o scarc_storage.o
 scarc_vectors.o : cons.o prec.o func.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_mpi.o
