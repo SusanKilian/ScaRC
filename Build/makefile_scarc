@@ -109,12 +109,12 @@ FFLAGS_SCARC_DB  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG
 # Objects to compile
 # -----------------------------------------------------------------------------------------------------------------------
 
-obj_scarc = scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o scarc_messages.o scarc_errors.o scarc_utilities.o scarc_storage.o scarc_convergence.o scarc_timings.o scarc_stack.o scarc_initialization.o scarc_mpi.o scarc_mkl.o scarc_vectors.o scarc_discretization.o scarc_matrices.o scarc_fft.o scarc_gmg.o scarc_amg.o scarc_mgm.o scarc_methods.o scrc.o
+obj_scarc = scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o scarc_messages.o scarc_errors.o scarc_utilities.o scarc_storage.o scarc_convergence.o scarc_timings.o scarc_stack.o scarc_setup.o scarc_mpi.o scarc_mkl.o scarc_vectors.o scarc_grids.o scarc_matrices.o scarc_fft.o scarc_gmg.o scarc_amg.o scarc_mgm.o scarc_methods.o scarc_solvers.o
 
 obj_fds1 =  prec.o cons.o devc.o type.o data.o mesh.o func.o gsmv.o smvv.o rcal.o turb.o soot.o ieva.o pois.o evac.o geom.o
 obj_fds2 =  radi.o part.o vege.o ctrl.o samr.o dump.o hvac.o mass.o read.o wall.o fire.o divg.o velo.o pres.o init.o main.o
 
-obj_mpi  =  $(obj_fds1) $(obj_fds2)
+obj_mpi  =  $(obj_fds1) scrc.o $(obj_fds2)
 obj_all  =  $(obj_fds1) $(obj_scarc) $(obj_fds2)
 
 
@@ -164,26 +164,16 @@ main.obj: FFLAGS += $(FOPENMPFLAGS)
 #
 # Intel Compiler for 
 #
-impi_intel_linux_64 : FFLAGS = -m64 -O2 -ipo -mt_mpi -traceback -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL)
-impi_intel_linux_64 : LFLAGSMKL = $(LFLAGSMKL_INTEL)
-impi_intel_linux_64 : LFLAGS = -static-intel
-impi_intel_linux_64 : FCOMPL = mpiifort
-impi_intel_linux_64 : FOPENMPFLAGS = -qopenmp -qopenmp-link static -liomp5
-impi_intel_linux_64 : obj = fds_impi_intel_linux_64
-impi_intel_linux_64 : setup $(obj_all)
+
+impi_intel_linux_scarc : FFLAGS = -m64 -O2 -ipo -mt_mpi -traceback -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL)
+impi_intel_linux_scarc : LFLAGSMKL = $(LFLAGSMKL_INTEL)
+impi_intel_linux_scarc : LFLAGS = -static-intel
+impi_intel_linux_scarc : FCOMPL = mpiifort
+impi_intel_linux_scarc : FOPENMPFLAGS = -qopenmp -qopenmp-link static -liomp5
+impi_intel_linux_scarc : obj = fds_impi_intel_linux_scarc
+impi_intel_linux_scarc : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-impi_intel_linux_64_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_DB)
-ifeq ($(shell expr $(INTELMAJOR_COMPVERSION) \> 19), 1)
-impi_intel_linux_64_db : FFLAGS += -warn noexternals
-endif
-impi_intel_linux_64_db : LFLAGSMKL = $(LFLAGSMKL_INTEL)
-impi_intel_linux_64_db : LFLAGS = -static-intel 
-impi_intel_linux_64_db : FCOMPL = mpiifort
-impi_intel_linux_64_db : FOPENMPFLAGS = -qopenmp -qopenmp-link static -liomp5
-impi_intel_linux_64_db : obj = fds_impi_intel_linux_64_db
-impi_intel_linux_64_db : setup $(obj_all) 
-	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 impi_intel_linux_scarc_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_DB)
 ifeq ($(shell expr $(INTELMAJOR_COMPVERSION) \> 19), 1)
@@ -205,21 +195,14 @@ impi_intel_linux_scarc_db : setup $(obj_all)
 # GNU Compiler
 #
 
-mpi_gnu_linux_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
-mpi_gnu_linux_64 : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
-mpi_gnu_linux_64 : FCOMPL = mpifort
-mpi_gnu_linux_64 : FOPENMPFLAGS = -fopenmp
-mpi_gnu_linux_64 : obj = fds_mpi_gnu_linux_64
-mpi_gnu_linux_64 : setup $(obj_all)
+mpi_gnu_linux_scarc : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
+mpi_gnu_linux_scarc : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
+mpi_gnu_linux_scarc : FCOMPL = mpifort
+mpi_gnu_linux_scarc : FOPENMPFLAGS = -fopenmp
+mpi_gnu_linux_scarc : obj = fds_mpi_gnu_linux_scarc
+mpi_gnu_linux_scarc : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_linux_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
-mpi_gnu_linux_64_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
-mpi_gnu_linux_64_db : FCOMPL = mpifort
-mpi_gnu_linux_64_db : FOPENMPFLAGS = -fopenmp
-mpi_gnu_linux_64_db : obj = fds_mpi_gnu_linux_64_db
-mpi_gnu_linux_64_db : setup $(obj_all)
-	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 mpi_gnu_linux_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 mpi_gnu_linux_scarc_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
@@ -240,24 +223,15 @@ mpi_gnu_linux_scarc_db : setup $(obj_all)
 #
 # Intel Compiler 
 #
-mpi_intel_osx_64 : FFLAGS = -m64 -O2 -ipo -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) 
-mpi_intel_osx_64 : LFLAGSMKL = $(LFLAGSMKL_CUSTOM)
-mpi_intel_osx_64 : LFLAGS = -static-intel
-mpi_intel_osx_64 : FOPENMPFLAGS = -qopenmp -qopenmp-link static
-mpi_intel_osx_64 : FCOMPL = mpifort
-mpi_intel_osx_64 : obj = fds_mpi_intel_osx_64
-mpi_intel_osx_64 : setup $(obj_all)
+mpi_intel_osx_scarc : FFLAGS = -m64 -O2 -ipo -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) 
+mpi_intel_osx_scarc : LFLAGSMKL = $(LFLAGSMKL_CUSTOM)
+mpi_intel_osx_scarc : LFLAGS = -static-intel
+mpi_intel_osx_scarc : FOPENMPFLAGS = -qopenmp -qopenmp-link static
+mpi_intel_osx_scarc : FCOMPL = mpifort
+mpi_intel_osx_scarc : obj = fds_mpi_intel_osx_scarc
+mpi_intel_osx_scarc : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_intel_osx_64_db : HERE=/Users/susannekilian/GIT/github/01_ScaRC/Build/mpi_intel_osx_64_db
-mpi_intel_osx_64_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_DB)
-mpi_intel_osx_64_db : LFLAGSMKL = $(LFLAGSMKL_CUSTOM) 
-mpi_intel_osx_64_db : LFLAGS = -static-intel 
-mpi_intel_osx_64_db : FOPENMPFLAGS = -qopenmp -qopenmp-link static
-mpi_intel_osx_64_db : FCOMPL = mpifort
-mpi_intel_osx_64_db : obj = fds_mpi_intel_osx_64_db
-mpi_intel_osx_64_db : setup $(obj_all) 
-	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 mpi_intel_osx_scarc_db : HERE=/Users/susannekilian/GIT/github/01_ScaRC/Build/mpi_intel_osx_scarc_db
 mpi_intel_osx_scarc_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_DB)
@@ -275,21 +249,14 @@ mpi_intel_osx_scarc_db : setup $(obj_all)
 #
 # GNU Compiler 
 #
-mpi_gnu_osx_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
-mpi_gnu_osx_64 : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
-mpi_gnu_osx_64 : FCOMPL = mpifort
-mpi_gnu_osx_64 : FOPENMPFLAGS =
-mpi_gnu_osx_64 : obj = fds_mpi_gnu_osx_64
-mpi_gnu_osx_64 : setup $(obj_all)
+mpi_gnu_osx_scarc : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
+mpi_gnu_osx_scarc : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
+mpi_gnu_osx_scarc : FCOMPL = mpifort
+mpi_gnu_osx_scarc : FOPENMPFLAGS =
+mpi_gnu_osx_scarc : obj = fds_mpi_gnu_osx_scarc
+mpi_gnu_osx_scarc : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_osx_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
-mpi_gnu_osx_64_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
-mpi_gnu_osx_64_db : FCOMPL = mpifort
-mpi_gnu_osx_64_db : FOPENMPFLAGS =
-mpi_gnu_osx_64_db : obj = fds_mpi_gnu_osx_64_db
-mpi_gnu_osx_64_db : setup $(obj_all)
-	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 mpi_gnu_osx_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 #mpi_gnu_osx_scarc_db : LFLAGS = libscarc.o
@@ -341,18 +308,18 @@ scarc_storage.o : cons.o mesh.o scarc_constants.o scarc_types.o scarc_variables.
 scarc_convergence.o : prec.o scarc_constants.o scarc_variables.o scarc_messages.o
 scarc_timings.o : cons.o mesh.o func.o scarc_constants.o scarc_messages.o 
 scarc_stack.o : cons.o mesh.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_storage.o scarc_convergence.o
-scarc_initialization.o : cons.o prec.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_errors.o scarc_stack.o
+scarc_setup.o : cons.o prec.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_errors.o scarc_stack.o scarc_methods.o
 scarc_mpi.o : cons.o prec.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_errors.o scarc_stack.o
 scarc_mkl.o : cons.o mesh.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_errors.o scarc_stack.o scarc_storage.o
 scarc_vectors.o : cons.o prec.o func.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_mpi.o
-scarc_discretization.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_storage.o scarc_mpi.o scarc_utilities.o
-scarc_matrices.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_storage.o scarc_discretization.o scarc_vectors.o
+scarc_grids.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_storage.o scarc_mpi.o scarc_utilities.o
+scarc_matrices.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_storage.o scarc_grids.o scarc_vectors.o
 scarc_fft.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_vectors.o scarc_matrices.o scarc_convergence.o
 scarc_gmg.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_stack.o scarc_convergence.o scarc_vectors.o scarc_matrices.o
 scarc_amg.o : cons.o mesh.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_stack.o scarc_convergence.o scarc_vectors.o scarc_matrices.o
 scarc_mgm.o : cons.o mesh.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_utilities.o scarc_mpi.o scarc_storage.o scarc_convergence.o scarc_vectors.o scarc_matrices.o
 scarc_methods.o : prec.o cons.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_timings.o scarc_errors.o scarc_utilities.o scarc_stack.o scarc_vectors.o scarc_matrices.o scarc_convergence.o scarc_gmg.o scarc_amg.o scarc_mgm.o scarc_fft.o scarc_mkl.o
-scrc.o : prec.o cons.o func.o scarc_constants.o scarc_errors.o scarc_timings.o scarc_mkl.o scarc_stack.o scarc_messages.o scarc_initialization.o scarc_discretization.o scarc_methods.o
+scarc_solvers.o : prec.o cons.o func.o scarc_constants.o scarc_errors.o scarc_timings.o scarc_mkl.o scarc_stack.o scarc_messages.o scarc_setup.o scarc_grids.o scarc_methods.o
 evac.o : func.o prec.o cons.o type.o mesh.o ieva.o data.o
 geom.o : gsmv.o func.o prec.o cons.o mesh.o turb.o
 radi.o : func.o prec.o cons.o type.o mesh.o rcal.o geom.o
@@ -360,17 +327,17 @@ part.o : func.o prec.o cons.o type.o mesh.o devc.o data.o geom.o soot.o
 vege.o : func.o prec.o cons.o type.o mesh.o geom.o
 ctrl.o : prec.o cons.o type.o mesh.o func.o
 samr.o : prec.o cons.o mesh.o turb.o
-dump.o : func.o prec.o cons.o type.o mesh.o devc.o evac.o smvv.o turb.o scrc.o data.o radi.o soot.o geom.o
+dump.o : func.o prec.o cons.o type.o mesh.o devc.o evac.o smvv.o turb.o scarc_solvers.o data.o radi.o soot.o geom.o
 hvac.o : func.o prec.o cons.o type.o mesh.o ctrl.o
 mass.o : func.o prec.o cons.o type.o mesh.o turb.o soot.o geom.o
-read.o : func.o prec.o cons.o type.o mesh.o devc.o ctrl.o radi.o evac.o hvac.o scrc.o data.o geom.o mass.o soot.o
+read.o : func.o prec.o cons.o type.o mesh.o devc.o ctrl.o radi.o evac.o hvac.o scarc_solvers.o data.o geom.o mass.o soot.o
 wall.o : func.o prec.o cons.o type.o mesh.o hvac.o mass.o soot.o geom.o
 fire.o : func.o prec.o cons.o type.o mesh.o mass.o soot.o
-divg.o : func.o prec.o cons.o type.o mesh.o scrc.o evac.o mass.o
-velo.o : func.o prec.o cons.o type.o mesh.o turb.o geom.o scrc.o
-pres.o : func.o prec.o cons.o type.o mesh.o pois.o velo.o scrc.o geom.o
+divg.o : func.o prec.o cons.o type.o mesh.o scarc_solvers.o evac.o mass.o
+velo.o : func.o prec.o cons.o type.o mesh.o turb.o geom.o scarc_solvers.o
+pres.o : func.o prec.o cons.o type.o mesh.o pois.o velo.o scarc_solvers.o geom.o
 init.o : func.o prec.o cons.o type.o mesh.o devc.o radi.o pois.o data.o evac.o pres.o geom.o
-main.o : func.o prec.o cons.o type.o mesh.o devc.o smvv.o mass.o divg.o velo.o wall.o fire.o ieva.o radi.o evac.o part.o vege.o dump.o read.o init.o pres.o pois.o ctrl.o turb.o hvac.o scrc.o data.o geom.o soot.o
+main.o : func.o prec.o cons.o type.o mesh.o devc.o smvv.o mass.o divg.o velo.o wall.o fire.o ieva.o radi.o evac.o part.o vege.o dump.o read.o init.o pres.o pois.o ctrl.o turb.o hvac.o scarc_solvers.o data.o geom.o soot.o
 
 
 
