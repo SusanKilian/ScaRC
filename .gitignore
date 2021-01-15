@@ -6,6 +6,8 @@ VisualStudio
 Develop
 C++
 MyDoxyfile
+CMakeBuildIntel
+Source.bak
 
 .DS_Store
 .*.swp
