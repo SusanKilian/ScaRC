@@ -5401,16 +5401,13 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Setup environent on specified stack level
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_STACK(NSTACK)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN):: NSTACK
-
-! Allocate basic solver stack
-ALLOCATE (STACK(NSCARC_STACK_MAX), STAT=IERROR)
-CALL CHKMEMERR ('SCARC_SETUP', 'STACK', IERROR)
 
 SV => STACK(NSTACK)%SOLVER
 
@@ -10059,29 +10056,31 @@ CONTAINS
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate basic ScaRC-structures for all needed levels
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_TYPES
+SUBROUTINE SCARC_SETUP_BASICS
 USE SCARC_POINTERS, ONLY: S, SCARC_POINT_TO_MESH
 INTEGER :: NM
 
-! Basic information for all requested grid levels
 ALLOCATE (SCARC(NMESHES), STAT=IERROR)
 CALL CHKMEMERR ('SCARC_SETUP', 'SCARC', IERROR)
+
+ALLOCATE (STACK(NSCARC_STACK_MAX), STAT=IERROR)
+CALL CHKMEMERR ('SCARC_SETUP', 'STACK', IERROR)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MESH(NM)
 
-   ! Needed information about other meshes
+   ! Needed information about other neighboring meshes
    ALLOCATE (S%OSCARC(NMESHES), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_SETUP_TYPES', 'OSCARC', IERROR)
+   CALL CHKMEMERR ('SCARC_SETUP_BASICS', 'OSCARC', IERROR)
 
    ! Information for single grid levels
    ALLOCATE (S%LEVEL(NLEVEL_MIN:NLEVEL_MAX), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_SETUP_TYPES', 'LEVEL', IERROR)
+   CALL CHKMEMERR ('SCARC_SETUP_BASICS', 'LEVEL', IERROR)
 
 ENDDO MESHES_LOOP
 
-END SUBROUTINE SCARC_SETUP_TYPES
+END SUBROUTINE SCARC_SETUP_BASICS
 
 
 ! ------------------------------------------------------------------------------------------------
@@ -24535,7 +24534,7 @@ CALL SCARC_PARSE_INPUT                      ; IF (STOP_STATUS==SETUP_STOP) RETUR
 ! Setup different components of ScaRC solver
  
 CALL SCARC_SETUP_LEVELS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_TYPES                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_BASICS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_GRIDS                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_GLOBALS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
 CALL SCARC_SETUP_NEIGHBORS                            ; IF (STOP_STATUS==SETUP_STOP) RETURN
