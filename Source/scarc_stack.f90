@@ -1,11 +1,11 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_STACK_ADMINISTRAION
 !
 !> \brief Introduce stack hierarchy for the different consecutive solution methods and
 !   organize their alternate calls
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_STACK
   
 USE GLOBAL_CONSTANTS
@@ -319,7 +319,7 @@ SELECT CASE (SV%TYPE_STAGE)
       IF (BY) SV%Y = NSCARC_VECTOR_ONE_Y
       IF (BZ) SV%Z = NSCARC_VECTOR_ONE_Z
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
         IF (BX) SV%X_FB = NSCARC_VECTOR_ONE_X
         IF (BB) SV%B_FB = NSCARC_VECTOR_ONE_B
@@ -346,7 +346,7 @@ SELECT CASE (SV%TYPE_STAGE)
       SV%E = NSCARC_VECTOR_TWO_E
 #endif
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
         IF (BX) SV%X_FB = NSCARC_VECTOR_TWO_X
         IF (BB) SV%B_FB = NSCARC_VECTOR_TWO_B
@@ -406,7 +406,7 @@ SELECT CASE(TYPE_PRECON)
       SV%OMEGA = 1.0_EB
    CASE (NSCARC_RELAX_MULTIGRID)
       SV%CNAME = 'SCARC_PRECON_MG'
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CASE (NSCARC_RELAX_MKL)
       SV%OMEGA = 1.0_EB
       IF (NSCOPE == NSCARC_SCOPE_LOCAL) THEN
@@ -499,7 +499,7 @@ SELECT CASE(TYPE_SMOOTH)
    CASE (NSCARC_RELAX_FFTO)
       SV%CNAME = 'SCARC_SMOOTH_FFTO'
       SV%OMEGA = 1.0_EB
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CASE (NSCARC_RELAX_MKL)
       SV%OMEGA = 1.0_EB
       IF (NSCOPE == NSCARC_SCOPE_GLOBAL) THEN

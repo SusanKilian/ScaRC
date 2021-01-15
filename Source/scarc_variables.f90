@@ -1,10 +1,10 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_VARIABLES
 !
 !> \brief Define the variables used in the different routines of ScaRC/UScaRC
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_VARIABLES
 
 USE PRECISION_PARAMETERS
@@ -281,7 +281,7 @@ TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSSOR        !< Solver structur
 TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG
 TYPE (SCARC_CPU_TYPE), SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: CPU
 
-!#ifdef WITH_SCARC_MKL
+!#ifdef WITH_MKL
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_LU             !< Solver structure for LU-decomposition main solver 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_CLUSTER      !< Solver structure for CLUSTER_SPARSE_SOLVER coarse grid solver 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_PARDISO      !< Solver structure for PARDISO coarse grid solver

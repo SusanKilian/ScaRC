@@ -1,34 +1,10 @@
-!=========================================================================================================================
-!
-!> \brief Scalable Recursive Clustering (ScaRC): Collection of alternative solvers for the FDS pressure equation
-!
-!  Basic setup and call of different variants of ScaRC/UScaRC ---
-!
-!=========================================================================================================================
-
-! Use of different directives possible
-!
-!  - WITH_SCARC_MKL                 : use MKL routines PARDISO, CLUSTER_SPARSE_SOLVER, DDOT, DAXPY, DAXPBY, DCOPY, DSCAL 
-!  - WITH_SCARC_VERBOSE       : print more detailed information about ScaRC iterations and workspace allocation
-!  - WITH_SCARC_DEBUG         : print detaild debugging info (only for developing purposes)
-!  - WITH_SCARC_AMG           : include algebraic multigrid solver
-!  - WITH_SCARC_POSTPROCESSING: dump environment for separate ScaRC postprocessing program
-!
-!=========================================================================================================================
-!#define WITH_SCARC_MKL
-!#define WITH_SCARC_DEBUG
-!#define WITH_SCARC_VERBOSE
-!#define WITH_SCARC_AMG
-!#undef WITH_SCARC_POSTPROCESSING
-
-
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_CONSTANTS
 !
 !> \brief Define all constants needed in for the different solution strategies in ScaRC/UScaRC
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_CONSTANTS
 
 USE PRECISION_PARAMETERS
@@ -204,29 +180,28 @@ INTEGER, PARAMETER :: NSCARC_MKL_COARSE              =  3         !< Type of MKL
 
 INTEGER, PARAMETER :: NSCARC_MGM_POISSON             =  1         !< Type of MGM pass: First (inhomogeneous Poisson)
 INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE             =  2         !< Type of MGM pass: Second (homogeneous Laplace)
-INTEGER, PARAMETER :: NSCARC_MGM_BC_EXPOL            = 11         !< Type of internal MGM boundary: linear extrapolatioln
-INTEGER, PARAMETER :: NSCARC_MGM_BC_MEAN             = 12         !< Type of internal MGM boundary: simple mean value 
+INTEGER, PARAMETER :: NSCARC_MGM_BC_EXPOL            = 11         !< Type of internal MGM boundary: Linear extrapolatioln
+INTEGER, PARAMETER :: NSCARC_MGM_BC_MEAN             = 12         !< Type of internal MGM boundary: Simple mean value 
 INTEGER, PARAMETER :: NSCARC_MGM_BC_TAYLOR           = 13         !< Type of internal MGM boundary: Taylor expansion
-INTEGER, PARAMETER :: NSCARC_MGM_BC_TRUE             = 14         !< Type of internal MGM boundary: true approximate
-INTEGER, PARAMETER :: NSCARC_MGM_FAILURE        = 21         !< Type of MGM convergence: failed
-INTEGER, PARAMETER :: NSCARC_MGM_SUCCESS        = 22         !< Type of MGM convergende: succeeded
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_HS_TO_H1       = 31     
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_HU_TO_H3       = 32    
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_HD_TO_H2       = 33         
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_HD_TO_H4       = 34        
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_H2_TO_H4       = 35        
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_H1_TO_H3       = 36       
-INTEGER, PARAMETER :: NSCARC_MGM_COPY_OH1_TO_OH2     = 37     
-INTEGER, PARAMETER :: NSCARC_MGM_DIFF_H2_VS_HD       = 41      
-INTEGER, PARAMETER :: NSCARC_MGM_DIFF_H3_VS_HU       = 42     
-INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_LINEAR     = 51     
-INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_SQUARE     = 52     
-INTEGER, PARAMETER :: NSCARC_MGM_DIFFERENCE          = 61         !< Type of MGM operation: Build difference
-INTEGER, PARAMETER :: NSCARC_MGM_MERGE               = 62         !< Type of MGM pass: First (inhomogeneous Poisson)
-INTEGER, PARAMETER :: NSCARC_MGM_RESOLUTION          = 63         !< Type of internal MGM boundary: linear extrapolatioln
-INTEGER, PARAMETER :: NSCARC_MGM_TERMINATE           = 65         !< Type of MGM pass: First (inhomogeneous Poisson)
-INTEGER, PARAMETER :: NSCARC_MGM_SCARC               = 66         !< Type of MGM pass: First (inhomogeneous Poisson)
-INTEGER, PARAMETER :: NSCARC_MGM_USCARC              = 67         !< Type of MGM pass: First (inhomogeneous Poisson)
+INTEGER, PARAMETER :: NSCARC_MGM_BC_TRUE             = 14         !< Type of internal MGM boundary: True approximate
+INTEGER, PARAMETER :: NSCARC_MGM_FAILURE             = 21         !< Type of MGM convergence: Failure
+INTEGER, PARAMETER :: NSCARC_MGM_SUCCESS             = 22         !< Type of MGM convergence: Success
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_HS_TO_H1       = 31         !< Type of MGM copy: Copy HS to H1
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_HU_TO_H3       = 32         !< Type of MGM copy: Copy HU to H3   
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_HD_TO_H2       = 33         !< Type of MGM copy: Copy HD to H2         
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_HD_TO_H4       = 34         !< Type of MGM copy: Copy HD to H4        
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_H2_TO_H4       = 35         !< Type of MGM copy: Copy H2 to H4        
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_H1_TO_H3       = 36         !< Type of MGM copy: Copy H1 to H3       
+INTEGER, PARAMETER :: NSCARC_MGM_COPY_OH1_TO_OH2     = 37         !< Type of MGM copy: Copy OH1 to OH2     
+INTEGER, PARAMETER :: NSCARC_MGM_DIFF_HU_VS_HS       = 41         !< Type of MGM difference: Build difference of HU and HS
+INTEGER, PARAMETER :: NSCARC_MGM_DIFF_H2_VS_HD       = 42         !< Type of MGM difference: Build difference of H2 and HD
+INTEGER, PARAMETER :: NSCARC_MGM_DIFF_H3_VS_HU       = 43         !< Type of MGM difference: Build difference of HS and H1     
+INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_LINEAR     = 51         !< Type of MGM interpolation: Use linear interpolation
+INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_SQUARE     = 52         !< Type of MGM interpolation: Use quadratic interpolation
+INTEGER, PARAMETER :: NSCARC_MGM_MERGE               = 62         !< Type of MGM pass: Merge first and second pass
+INTEGER, PARAMETER :: NSCARC_MGM_TERMINATE           = 65         !< Type of MGM pass: Terminate current MGM  
+INTEGER, PARAMETER :: NSCARC_MGM_SCARC               = 71         !< Type of MGM pass: Process structured ScaRC solution
+INTEGER, PARAMETER :: NSCARC_MGM_USCARC              = 72         !< Type of MGM pass: Process unstructured UScaRC solution
 
 INTEGER, PARAMETER :: NSCARC_MULTIGRID_GEOMETRIC     =  1         !< Type of multigrid method: geometric multigrid
 INTEGER, PARAMETER :: NSCARC_MULTIGRID_ALGEBRAIC     =  2         !< Type of multigrid method: algebraic multigrid

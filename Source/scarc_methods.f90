@@ -1,4 +1,4 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 ! 
 ! MODULE SCARC_METHODS
 !
@@ -11,7 +11,7 @@
 !  - FFT method (Crayfish Pak)
 !  - IntelMKL methods (Pardiso/Cluster_Sparse_Solver)
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_METHODS
   
 USE GLOBAL_CONSTANTS
@@ -36,7 +36,7 @@ USE SCARC_AMG
 #endif
 USE SCARC_MGM
 USE SCARC_FFT
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 USE SCARC_MKL
 #endif
 
@@ -47,8 +47,9 @@ CONTAINS
 ! -----------------------------------------------------------------------------------------------------------------
 !> \brief  Setup environment for Krylov methods
 ! -----------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT(NSTACK)
-INTEGER, INTENT(INOUT) :: NSTACK
+SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
+USE SCARC_STACK, ONLY: N_STACK_TOTAL
+INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
 STACK(NSTACK)%SOLVER => MAIN_CG
@@ -135,7 +136,7 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MIN)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    ! LU-preconditioning based on MKL (either locally or globally acting depending on user specification)
 
    CASE (NSCARC_RELAX_MKL)
@@ -232,7 +233,7 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
             STACK(NSTACK)%SOLVER => SMOOTH_FFTO
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MAX-1)
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
          ! LU-smoothing (acting locally by default)
 
          CASE (NSCARC_RELAX_MKL)
@@ -260,6 +261,10 @@ IF (HAS_TWO_LEVELS) THEN
    CALL SCARC_SETUP_COARSE_SOLVER(NSCARC_STAGE_ONE, NSCARC_SCOPE_GLOBAL, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
 
 ENDIF
+
+! Store final number of stacks
+
+N_STACK_TOTAL = NSTACK
 
 END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 
@@ -471,8 +476,9 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 ! ------------------------------------------------------------------------------------------------
 !> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT(NSTACK)
-INTEGER, INTENT(INOUT) :: NSTACK
+SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
+USE SCARC_STACK, ONLY: N_STACK_TOTAL
+INTEGER :: NSTACK
 
 ! Allocate velocity vectors along internal obstructions for the setting of internal BC's
 
@@ -511,7 +517,7 @@ CALL SCARC_SETUP_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ON
 
 NSTACK = NSTACK + 1
 IF (TYPE_PRECON == NSCARC_RELAX_MKL .AND. TYPE_MATRIX == NSCARC_MATRIX_COMPACT) THEN
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    STACK(NSTACK)%SOLVER => PRECON_MKL
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
    CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)          ! use global PARDISO from MKL
@@ -527,6 +533,10 @@ IF (TYPE_PRECON == NSCARC_RELAX_MKL .AND. TYPE_MATRIX == NSCARC_MATRIX_COMPACT) 
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
    !CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MAX)
  ENDIF
+
+! Store final number of stacks
+
+N_STACK_TOTAL = NSTACK
 
 END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 
@@ -596,7 +606,7 @@ ELSE
       CALL SCARC_MGM_STORE_SOLUTION (NSCARC_MGM_USCARC)      ! store unstructured solution in HU
       CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)
 
-      CALL SCARC_MGM_STORE_SOLUTION (NSCARC_MGM_DIFFERENCE)  ! build difference HD = HU - HS
+      CALL SCARC_MGM_STORE_SOLUTION (NSCARC_MGM_DIFF_HU_VS_HS)  ! build difference HD = HU - HS
    
 #ifdef WITH_SCARC_DEBUG
       CALL SCARC_MGM_DUMP('HS',0)
@@ -724,8 +734,9 @@ END SUBROUTINE SCARC_METHOD_MGM
 ! ------------------------------------------------------------------------------------------------
 !> \brief Setup environment for multigrid method
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT(NSTACK)
-INTEGER, INTENT(INOUT) :: NSTACK
+SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
+USE SCARC_STACK, ONLY: N_STACK_TOTAL
+INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
 STACK(NSTACK)%SOLVER => MAIN_GMG
@@ -795,7 +806,7 @@ SELECT CASE(TYPE_SMOOTH)
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MAX-1)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    ! Smoothing by LU-decomposition
 
    CASE (NSCARC_RELAX_MKL)
@@ -824,6 +835,10 @@ END SELECT
 
 NSTACK = NSTACK + 1
 CALL SCARC_SETUP_COARSE_SOLVER(NSCARC_STAGE_ONE, NSCARC_SCOPE_GLOBAL, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
+
+! Store final number of stacks
+
+N_STACK_TOTAL = NSTACK
 
 END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 
@@ -1380,7 +1395,7 @@ SELECT_COARSE: SELECT CASE (TYPE_COARSE)
       CALL SCARC_SETUP_PRECON(NSTACK, NSCOPE)
 
    ! -------------- LU-decomposition (from MKL) is used as direct coarse grid solver
-#ifdef WITH_SCARC_MKL 
+#ifdef WITH_MKL 
    CASE (NSCARC_COARSE_DIRECT)
 
       ! Global scope in the multi-mesh case:
@@ -1620,7 +1635,7 @@ END SUBROUTINE SCARC_METHOD_MULTIGRID
 SUBROUTINE SCARC_METHOD_MKL(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 SELECT_MKL: SELECT CASE (TYPE_MKL(0))
    CASE (NSCARC_MKL_GLOBAL)
       CALL SCARC_METHOD_CLUSTER(NSTACK, NPARENT, NLEVEL)
@@ -1646,7 +1661,7 @@ SELECT CASE (TYPE_COARSE)
       CALL SCARC_METHOD_KRYLOV (NSTACK, NPARENT, NSCARC_RHS_DEFECT, NLEVEL)
 
    CASE (NSCARC_COARSE_DIRECT)
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
       !IF (STACK(NPARENT)%SOLVER%TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. NMESHES > 1) THEN
       IF (NMESHES > 1) THEN
          CALL SCARC_METHOD_CLUSTER (NSTACK, NPARENT, NLEVEL)
@@ -1745,7 +1760,7 @@ END SUBROUTINE SCARC_METHOD_FFT
 
 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 ! ------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
 ! ------------------------------------------------------------------------------------------------
@@ -1828,7 +1843,7 @@ END SUBROUTINE SCARC_METHOD_CLUSTER
 #endif
 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 ! ------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
 ! ------------------------------------------------------------------------------------------------
@@ -2545,7 +2560,7 @@ SMOOTH_LOOP: DO ITE=1, NIT
 
    CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    IF (TYPE_SMOOTH == NSCARC_RELAX_MKL) THEN
       CALL SCARC_VECTOR_COPY(V, Z, 1.0_EB, NL)                          !  use additional auxiliary vector Z
       CALL SCARC_RELAXATION (Z, V, NS, NP, NL)                          !  v := Relax(z)
@@ -2596,7 +2611,7 @@ SUBROUTINE SCARC_RELAXATION (NV1, NV2, NS, NP, NL)
 USE SCARC_POINTERS, ONLY: L, G, A, AB, FFT, V1, V2, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 USE SCARC_POINTERS, ONLY: AS, MKL, V1_FB, V2_FB
 #endif
 USE POIS, ONLY: H2CZSS, H3CZSS
@@ -3146,7 +3161,7 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR_MEAN, NV2, NL)
 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
  
    ! --------- Preconditioning by LU-decomposition
  

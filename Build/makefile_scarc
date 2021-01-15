@@ -103,7 +103,6 @@ endif
 endif # OS test
 endif # MKLROOT test
 
-FFLAGS_SCARC_MKL = -DWITH_SCARC_MKL
 FFLAGS_SCARC_DB  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG
 
 # -----------------------------------------------------------------------------------------------------------------------
@@ -165,7 +164,7 @@ main.obj: FFLAGS += $(FOPENMPFLAGS)
 #
 # Intel Compiler for 
 #
-impi_intel_linux_64 : FFLAGS = -m64 -O2 -ipo -mt_mpi -traceback -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_MKL)
+impi_intel_linux_64 : FFLAGS = -m64 -O2 -ipo -mt_mpi -traceback -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL)
 impi_intel_linux_64 : LFLAGSMKL = $(LFLAGSMKL_INTEL)
 impi_intel_linux_64 : LFLAGS = -static-intel
 impi_intel_linux_64 : FCOMPL = mpiifort
@@ -174,7 +173,7 @@ impi_intel_linux_64 : obj = fds_impi_intel_linux_64
 impi_intel_linux_64 : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-impi_intel_linux_64_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+impi_intel_linux_64_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_DB)
 ifeq ($(shell expr $(INTELMAJOR_COMPVERSION) \> 19), 1)
 impi_intel_linux_64_db : FFLAGS += -warn noexternals
 endif
@@ -186,7 +185,7 @@ impi_intel_linux_64_db : obj = fds_impi_intel_linux_64_db
 impi_intel_linux_64_db : setup $(obj_all) 
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-impi_intel_linux_scarc_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_MKL)  $(FFLAGS_SCARC_DB)
+impi_intel_linux_scarc_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_DB)
 ifeq ($(shell expr $(INTELMAJOR_COMPVERSION) \> 19), 1)
 impi_intel_linux_scarc_db : FFLAGS += -warn noexternals
 endif
@@ -206,7 +205,7 @@ impi_intel_linux_scarc_db : setup $(obj_all)
 # GNU Compiler
 #
 
-mpi_gnu_linux_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL)
+mpi_gnu_linux_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
 mpi_gnu_linux_64 : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 mpi_gnu_linux_64 : FCOMPL = mpifort
 mpi_gnu_linux_64 : FOPENMPFLAGS = -fopenmp
@@ -214,7 +213,7 @@ mpi_gnu_linux_64 : obj = fds_mpi_gnu_linux_64
 mpi_gnu_linux_64 : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_linux_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_gnu_linux_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 mpi_gnu_linux_64_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 mpi_gnu_linux_64_db : FCOMPL = mpifort
 mpi_gnu_linux_64_db : FOPENMPFLAGS = -fopenmp
@@ -222,7 +221,7 @@ mpi_gnu_linux_64_db : obj = fds_mpi_gnu_linux_64_db
 mpi_gnu_linux_64_db : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_linux_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_gnu_linux_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 mpi_gnu_linux_scarc_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 #mpi_gnu_linux_scarc_db : LFLAGS = libscarc.a
 mpi_gnu_linux_scarc_db : FCOMPL = mpifort
@@ -241,7 +240,7 @@ mpi_gnu_linux_scarc_db : setup $(obj_all)
 #
 # Intel Compiler 
 #
-mpi_intel_osx_64 : FFLAGS = -m64 -O2 -ipo -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) $(FFLAGS_SCARC_MKL)
+mpi_intel_osx_64 : FFLAGS = -m64 -O2 -ipo -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) 
 mpi_intel_osx_64 : LFLAGSMKL = $(LFLAGSMKL_CUSTOM)
 mpi_intel_osx_64 : LFLAGS = -static-intel
 mpi_intel_osx_64 : FOPENMPFLAGS = -qopenmp -qopenmp-link static
@@ -251,7 +250,7 @@ mpi_intel_osx_64 : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 mpi_intel_osx_64_db : HERE=/Users/susannekilian/GIT/github/01_ScaRC/Build/mpi_intel_osx_64_db
-mpi_intel_osx_64_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_intel_osx_64_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_DB)
 mpi_intel_osx_64_db : LFLAGSMKL = $(LFLAGSMKL_CUSTOM) 
 mpi_intel_osx_64_db : LFLAGS = -static-intel 
 mpi_intel_osx_64_db : FOPENMPFLAGS = -qopenmp -qopenmp-link static
@@ -261,7 +260,7 @@ mpi_intel_osx_64_db : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 mpi_intel_osx_scarc_db : HERE=/Users/susannekilian/GIT/github/01_ScaRC/Build/mpi_intel_osx_scarc_db
-mpi_intel_osx_scarc_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_intel_osx_scarc_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC_DB)
 mpi_intel_osx_scarc_db : LFLAGSMKL = $(LFLAGSMKL_CUSTOM) 
 mpi_intel_osx_scarc_db : LFLAGS = -static-intel 
 #mpi_intel_osx_scarc_db : LFLAGS = -static-intel libscarc.a
@@ -276,7 +275,7 @@ mpi_intel_osx_scarc_db : setup $(obj_all)
 #
 # GNU Compiler 
 #
-mpi_gnu_osx_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL) 
+mpi_gnu_osx_64 : FFLAGS = -m64 -O2 -std=f2008 -ffpe-summary=none -fall-intrinsics -frecursive $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) 
 mpi_gnu_osx_64 : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 mpi_gnu_osx_64 : FCOMPL = mpifort
 mpi_gnu_osx_64 : FOPENMPFLAGS =
@@ -284,7 +283,7 @@ mpi_gnu_osx_64 : obj = fds_mpi_gnu_osx_64
 mpi_gnu_osx_64 : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_osx_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_gnu_osx_64_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 mpi_gnu_osx_64_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 mpi_gnu_osx_64_db : FCOMPL = mpifort
 mpi_gnu_osx_64_db : FOPENMPFLAGS =
@@ -292,7 +291,7 @@ mpi_gnu_osx_64_db : obj = fds_mpi_gnu_osx_64_db
 mpi_gnu_osx_64_db : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
-mpi_gnu_osx_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_MKL) $(FFLAGS_SCARC_DB)
+mpi_gnu_osx_scarc_db : FFLAGS = -m64 -O0 -std=f2008 -ggdb -Wall -Wcharacter-truncation -Wno-target-lifetime -fcheck=all -fbacktrace -frecursive -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fall-intrinsics $(GITINFOGNU) $(GNU_COMPINFO) $(FFLAGSMKL_GNU_OPENMPI) $(GFORTRAN_OPTIONS) $(FFLAGS_SCARC_DB)
 #mpi_gnu_osx_scarc_db : LFLAGS = libscarc.o
 mpi_gnu_osx_scarc_db : LFLAGSMKL = $(LFLAGSMKL_GNU_OPENMPI)
 mpi_gnu_osx_scarc_db : FCOMPL = mpifort

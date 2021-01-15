@@ -1,4 +1,4 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_DISCRETIZATION
 !
@@ -8,7 +8,7 @@
 !   This includes information w.r.t the mesh faces and the wall cells along external, interface and
 !   internal boundaries
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_DISCRETIZATION
   
 USE GLOBAL_CONSTANTS
@@ -40,7 +40,7 @@ CONTAINS
 ! NLEVEL_MIN corresponds to finest grid resolution, NLEVEL_MAX to coarsest resolution
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LEVELS
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 INTEGER :: NL
 #endif
 
@@ -53,7 +53,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
       SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
  
          ! Preconditioning by defect correction based on LU-decomposition
          ! If two-level method, also use coarse grid level, otherwise only use single (finest) grid level
@@ -81,7 +81,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
  
          CASE (NSCARC_RELAX_MULTIGRID)
             CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_MKL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
 
@@ -92,7 +92,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
          CASE DEFAULT
             IF (HAS_TWO_LEVELS) THEN
                CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
                IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_MKL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
             ELSE
@@ -110,7 +110,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
          CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 
          ! In case of smoothing by different MKL solvers, mark levels for the use of MKL,
          ! either by locally acting PARDISO solvers or Globally acting CLUSTER_SPARSE_SOLVER
@@ -150,7 +150,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 END SELECT SELECT_SCARC_METHOD
 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
  
 ! Define MKL related logical short names based on number of levels
  
@@ -1290,16 +1290,21 @@ END SUBROUTINE SCARC_SETUP_FACE_BASICS
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Setup wall related structures and boundary conditions
 ! ----------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_WALLS
+SUBROUTINE SCARC_SETUP_WALLS(NGRID_TYPE)
 USE SCARC_POINTERS, ONLY: M, L, LF, LC, FF, FC, OL, OLF, OLC, G, GC, GF, OG, OGC, OGF, GWC, MWC, EWC, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MULTIGRID, &  
                           SCARC_POINT_TO_OTHER_MULTIGRID
+INTEGER, INTENT(IN) :: NGRID_TYPE
 INTEGER :: NL, NM, NOM
 INTEGER :: IREFINE, IFACE, IOR0, JOR0, INBR, IWG, IWC, ICW, IW
 LOGICAL :: IS_KNOWN(-3:3), IS_DIRIC, IS_OPEN
 
 CROUTINE = 'SCARC_SETUP_WALLS'
  
+! -------- Setup pointers for chosen grid type (structured/unstructured)
+
+CALL SCARC_SET_GRID_TYPE (NGRID_TYPE)
+
 ! -------- Get dimensionings for wall cells
  
 MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX

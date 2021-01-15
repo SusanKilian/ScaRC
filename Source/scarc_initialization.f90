@@ -1,10 +1,10 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 ! 
 ! MODULE SCARC_INITIALIZATION
 ! 
 !> \brief Parse ScaRC related input parameters and initialize basic ScaRC structures
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_INITIALIZATION
   
 USE GLOBAL_CONSTANTS
@@ -15,6 +15,7 @@ USE SCARC_VARIABLES
 USE SCARC_MESSAGES, ONLY: MSG
 USE SCARC_ERRORS, ONLY: SCARC_SHUTDOWN
 USE SCARC_STACK, ONLY: STACK
+USE SCARC_METHODS
 
 IMPLICIT NONE
 
@@ -163,7 +164,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
                      TYPE_SMOOTH = NSCARC_RELAX_FFTO
                   ENDIF
                CASE ('PARDISO')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
                   TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
                   WRITE(*,*) 'ERR1'
@@ -171,7 +172,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
 #endif
 
                CASE ('CLUSTER')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
                   TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
                   WRITE(*,*) 'ERR2'
@@ -189,7 +190,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
                TYPE_PRECON = NSCARC_RELAX_FFTO
             ENDIF
          CASE ('PARDISO')                                            ! LU preconditioner based on MKL-PARDISO
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_PRECON   = NSCARC_RELAX_MKL
             TYPE_MKL(0)   = NSCARC_MKL_LOCAL
             TYPE_SCOPE(1) = NSCARC_SCOPE_LOCAL
@@ -198,7 +199,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
             !CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_PARDISO, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE ('CLUSTER')                            !  LU-preconditioner based on MKL Cluster_Sparse_Solver
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_PRECON   = NSCARC_RELAX_MKL
             TYPE_MKL(0)   = NSCARC_MKL_GLOBAL
             TYPE_SCOPE(1) = NSCARC_SCOPE_GLOBAL
@@ -268,14 +269,14 @@ SELECT CASE (TRIM(SCARC_METHOD))
                TYPE_SMOOTH = NSCARC_RELAX_FFTO
             ENDIF
          CASE ('PARDISO')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
             !CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_PARDISO, SCARC_NONE, NSCARC_NONE)
             TYPE_SMOOTH = NSCARC_RELAX_SSOR
 #endif
          CASE ('CLUSTER')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_SMOOTH = NSCARC_RELAX_MKL
 #else
             !CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_CLUSTER, SCARC_NONE, NSCARC_NONE)
@@ -303,13 +304,13 @@ SELECT CASE (TRIM(SCARC_METHOD))
       ! Set type of MKL method (global/local)
       SELECT CASE (TRIM(SCARC_MKL_SCOPE))                  
          CASE ('GLOBAL')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_MKL(0)   = NSCARC_MKL_GLOBAL
 #else
             CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_CLUSTER, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE ('LOCAL')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             TYPE_MKL(0)   = NSCARC_MKL_LOCAL
 #else
                   WRITE(*,*) 'ERR3'
@@ -436,7 +437,7 @@ SELECT CASE (TRIM(SCARC_COARSE))
    CASE ('ITERATIVE')
       TYPE_COARSE = NSCARC_COARSE_ITERATIVE
    CASE ('DIRECT')
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
       TYPE_COARSE   = NSCARC_COARSE_DIRECT
       TYPE_MKL(0)   = NSCARC_MKL_COARSE
 #else
@@ -506,6 +507,40 @@ IS_MGM = TYPE_METHOD == NSCARC_METHOD_MGM
 
 END SUBROUTINE SCARC_PARSE_INPUT
 
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Setup environment for requested solver
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_ENVIRONMENT
+
+! Setup information for algebraic multigrid if needed as preconditioner or main solver
+
+#ifdef WITH_SCARC_AMG
+IF (HAS_AMG_LEVELS) CALL SCARC_SETUP_ALGEBRAIC_MULTIGRID          
+#endif
+
+SELECT_METHOD: SELECT CASE(TYPE_METHOD)
+
+   ! Global Krylov method
+   CASE (NSCARC_METHOD_KRYLOV)
+      CALL SCARC_SETUP_KRYLOV_ENVIRONMENT
+
+   ! Global multigrid method
+    CASE (NSCARC_METHOD_MULTIGRID)
+       CALL SCARC_SETUP_MULTIGRID_ENVIRONMENT
+
+   ! Global McKeeney-Greengard-Mayo method
+   CASE (NSCARC_METHOD_MGM)
+       CALL SCARC_SETUP_MGM_ENVIRONMENT
+
+#ifdef WITH_MKL
+   ! Global Intel-MKL related method
+   CASE (NSCARC_METHOD_LU)
+       CALL SCARC_SETUP_MKL_ENVIRONMENT
+#endif
+END SELECT SELECT_METHOD
+
+END SUBROUTINE SCARC_SETUP_ENVIRONMENT
 
 
 ! ------------------------------------------------------------------------------------------------

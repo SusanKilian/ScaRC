@@ -1,10 +1,10 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_VECTORS
 !
 !> \brief Define a set of Linear Algebra operations based on vectors and matrices
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_VECTORS
   
 USE GLOBAL_CONSTANTS
@@ -133,7 +133,7 @@ USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
 REAL(EB) :: TNOW, RANK_REAL
 INTEGER :: NM
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 REAL(EB) :: DDOT
 EXTERNAL :: DDOT
 #else
@@ -152,7 +152,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    MESH_REAL(NM) = DDOT(G%NC, V1, 1, V2, 1)
 #else
    MESH_REAL(NM) = 0.0_EB
@@ -203,7 +203,7 @@ USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
 REAL(EB), INTENT(IN) :: SCAL1, SCAL2
 INTEGER :: NM
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 EXTERNAL :: DAXPBY
 #endif
 
@@ -214,7 +214,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CALL DAXPBY(G%NCE, SCAL1, V1, 1, SCAL2, V2, 1)
 #else
    CALL SCARC_DAXPY_CONSTANT_DOUBLE(G%NCE, SCAL1, V1, SCAL2, V2)
@@ -233,7 +233,7 @@ USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
 REAL(EB), INTENT(IN) :: SCAL1
 INTEGER :: NM
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 EXTERNAL :: DCOPY, DSCAL
 #endif
 
@@ -244,7 +244,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CALL DCOPY(G%NCE, V1, 1, V2, 1)
    CALL DSCAL(G%NCE, SCAL1, V2, 1)
 #else
@@ -488,7 +488,7 @@ REAL(EB) :: TNOW
 INTEGER :: NM, NOM, IC, JC, IOR0, ICOL, INBR, ICE, ICW, ICG
 INTEGER :: I, J, K, IW, IS=0, IT=0, IL=0, INUM1, INUM2
 REAL(EB) :: TMP, VSAVE
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 EXTERNAL :: DAXPBY, DAXPY
 #endif
 
@@ -645,7 +645,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
                   IT = AB%TARGET(IOR0)
                   IL = AB%LENGTH(IOR0)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
                   CALL DAXPY(IL, AB%STENCIL(IOR0), AB%AUX(1:IL), 1, V2(IT:IT+IL-1), 1)
 #else
                   WRITE(*,*) 'TODO: MATVEC: CONSTANT: NO-MKL: CHECK HERE'

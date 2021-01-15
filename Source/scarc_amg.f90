@@ -1,4 +1,4 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_AMG
 !
@@ -14,7 +14,8 @@
 !   define its nullspace and perform relaxation to define the respective Prolongation matrix
 !   Define Poisson matrix on coarser level by Galerkin approach: A_coarse = R * A_fine * P
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
+#ifdef WITH_SCARC_AMG
 MODULE SCARC_AMG
   
 USE GLOBAL_CONSTANTS
@@ -1379,7 +1380,7 @@ SUBROUTINE SCARC_RELAX_NULLSPACE(NL)
 USE SCARC_POINTERS, ONLY: L, G, A, MG, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
 INTEGER :: IC, ICOL, NM, JC, JCG
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 EXTERNAL :: DAXPBY
 #endif
 
@@ -1505,7 +1506,7 @@ WRITE(MSG%LU_DEBUG,*) 'RELAXING NULLSPACE: IC, DIAG, AUX2:', IC, G%DIAG(IC), G%A
    
   ! Get new iterate:   x = x - d
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
   CALL DAXPBY(G%NC, -1.0_EB, G%AUX2, 1, 1.0_EB, G%NULLSPACE, 1)
 #else
   CALL SCARC_DAXPY_CONSTANT_DOUBLE(G%NC, -1.0_EB, G%AUX2, 1.0_EB, G%NULLSPACE)
@@ -2799,7 +2800,7 @@ ENDDO
 IF (N_MPI_PROCESSES>1) &
    CALL MPI_ALLREDUCE(MPI_IN_PLACE, RANK_INT, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, IERROR)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 IF (TYPE_MKL(NL+1) == NSCARC_MKL_LOCAL .OR. TYPE_MKL(NL+1) == NSCARC_MKL_GLOBAL) THEN
    DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_SETUP_POISSON_MKL(NM, NL+1)
@@ -2934,5 +2935,6 @@ ENDDO
 END SUBROUTINE SCARC_RESORT_MATRIX_ROWS
 
 END MODULE SCARC_AMG
+#endif
 
 

@@ -1,11 +1,11 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_POINTERS
 !
 !> \brief Define and organize a series of pointers to specify the different meshes, grid levels, 
 !   discretizations and matrices, etc. in combination with corresponding methods to set them
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_POINTERS
 
 USE GLOBAL_CONSTANTS
@@ -330,7 +330,7 @@ SELECT CASE(NTYPE)
       SCARC_POINT_TO_CMATRIX => G%CONNECTION
    CASE (NSCARC_MATRIX_POISSON)
       SCARC_POINT_TO_CMATRIX => G%POISSON
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CASE (NSCARC_MATRIX_POISSON_SYM)
       SCARC_POINT_TO_CMATRIX => G%POISSON_SYM
 #endif
@@ -384,7 +384,7 @@ SELECT CASE(NTYPE)
       SCARC_POINT_TO_OTHER_CMATRIX => OG%CONNECTION
    CASE (NSCARC_MATRIX_POISSON)
       SCARC_POINT_TO_OTHER_CMATRIX => OG%POISSON
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CASE (NSCARC_MATRIX_POISSON_SYM)
       SCARC_POINT_TO_OTHER_CMATRIX => OG%POISSON_SYM
 #endif

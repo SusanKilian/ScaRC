@@ -1,10 +1,11 @@
-! ================================================================================================================
+! /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 !
 !> \brief Scalable Recursive Clustering (ScaRC): Collection of alternative solvers for the FDS pressure equation
 !
-!  Basic setup and call of different variants of ScaRC/UScaRC ---
+!  Basic setup and call of different variants of ScaRC/UScaRC 
 !
-! ================================================================================================================
+! /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 !#include "Modules/scarc_constants.f90"
 !#include "Modules/scarc_types.f90"
 !#include "Modules/scarc_variables.f90"
@@ -41,10 +42,7 @@ USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE SCARC_CONSTANTS
 USE SCARC_ERRORS
 USE SCARC_TIMINGS
-#ifdef WITH_SCARC_MKL
 USE SCARC_MKL
-#endif
-USE SCARC_STACK, ONLY: N_STACK_TOTAL
 USE SCARC_TIMINGS
 USE SCARC_MESSAGES
 USE SCARC_INITIALIZATION
@@ -71,72 +69,46 @@ CALL SCARC_SETUP_STORAGE
 CALL SCARC_SETUP_MESSAGES
 CALL SCARC_SETUP_TIMINGS
 
-! Parse all ScaRC parameters which have been read in read.f90
-!WRITE(*,*) MYID
-!IF (MYID == 0) THEN
-  !WRITE(*,*) 'HALLO SUSI'
-  !READ(*,*) NSUSI
-!END IF
+! Parse ScaRC related input parameters in &PRES namelist
 
 CALL SCARC_PARSE_INPUT                      ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
-! Setup different basic components of ScaRC solver
+! Setup different components of ScaRC solver
  
-CALL SCARC_SETUP_LEVELS                     ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_TYPES                      ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_GRIDS                      ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_GLOBALS                    ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_NEIGHBORS                  ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_FACES                      ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_SUBDIVISION                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_LEVELS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_TYPES                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_GRIDS                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_GLOBALS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_NEIGHBORS                            ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_FACES                                ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_SUBDIVISION                          ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
 ! Setup wall information according to specified discretization type/method
  
 IF (HAS_MULTIPLE_GRIDS) THEN
-   CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
-   CALL SCARC_SETUP_WALLS                   ; IF (STOP_STATUS==SETUP_STOP) RETURN
-   CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
-   CALL SCARC_SETUP_WALLS                   ; IF (STOP_STATUS==SETUP_STOP) RETURN
+   CALL SCARC_SETUP_WALLS (NSCARC_GRID_STRUCTURED)    ; IF (STOP_STATUS==SETUP_STOP) RETURN
+   CALL SCARC_SETUP_WALLS (NSCARC_GRID_UNSTRUCTURED)  ; IF (STOP_STATUS==SETUP_STOP) RETURN
 ELSE
-   CALL SCARC_SET_GRID_TYPE (TYPE_GRID)
-   CALL SCARC_SETUP_WALLS                   ; IF (STOP_STATUS==SETUP_STOP) RETURN
+   CALL SCARC_SETUP_WALLS (TYPE_GRID)                 ; IF (STOP_STATUS==SETUP_STOP) RETURN
 ENDIF
 
 ! Setup information for data exchanges and matrix systems
  
-CALL SCARC_SETUP_EXCHANGES                  ; IF (STOP_STATUS==SETUP_STOP) RETURN
-CALL SCARC_SETUP_SYSTEMS                    ; IF (STOP_STATUS==SETUP_STOP) RETURN
-
-! Setup information for algebraic multigrid if requested
-
-#ifdef WITH_SCARC_AMG
-IF (HAS_AMG_LEVELS) &
-   CALL SCARC_SETUP_ALGEBRAIC_MULTIGRID     ; IF (STOP_STATUS==SETUP_STOP) RETURN
-#endif
+CALL SCARC_SETUP_EXCHANGES                            ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_SYSTEMS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
 ! Setup environments for the requested methods 
 
-SELECT_METHOD: SELECT CASE(TYPE_METHOD)
-   CASE (NSCARC_METHOD_KRYLOV)
-      CALL SCARC_SETUP_KRYLOV_ENVIRONMENT(N_STACK_TOTAL)
-    CASE (NSCARC_METHOD_MULTIGRID)
-       CALL SCARC_SETUP_MULTIGRID_ENVIRONMENT(N_STACK_TOTAL)
-   CASE (NSCARC_METHOD_MGM)
-       CALL SCARC_SETUP_MGM_ENVIRONMENT(N_STACK_TOTAL)
-#ifdef WITH_SCARC_MKL
-   CASE (NSCARC_METHOD_LU)
-       CALL SCARC_SETUP_MKL_ENVIRONMENT(N_STACK_TOTAL)
-#endif
-END SELECT SELECT_METHOD
+CALL SCARC_SETUP_ENVIRONMENT                          ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
 ! Setup vectors for the requested methods 
 
-CALL SCARC_SETUP_VECTORS                    ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_VECTORS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
 ! Perform some error statistics for pressure if requested
  
 #ifdef WITH_SCARC_POSTPROCESSING
-CALL SCARC_SETUP_PRESSURE                   ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_PRESSURE                             ; IF (STOP_STATUS==SETUP_STOP) RETURN
 #endif
 
 CPU(MYID)%SETUP   = CPU(MYID)%SETUP   + CURRENT_TIME() - TNOW
@@ -173,7 +145,7 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
    CASE (NSCARC_METHOD_MGM)
       CALL SCARC_METHOD_MGM(NSCARC_STACK_ROOT)
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
    CASE (NSCARC_METHOD_LU)
       CALL SCARC_METHOD_MKL(NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
 #endif

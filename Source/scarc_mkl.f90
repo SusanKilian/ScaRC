@@ -1,11 +1,12 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! Module SCARC_MKL:
 !
 !> \brief Setup environment necessary for the call of the IntelMKL local and global LU-solvers
 !   PARDISO and CLUSTER_SPARSE_SOLVER
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
+#ifdef WITH_MKL
 MODULE SCARC_MKL
   
 USE GLOBAL_CONSTANTS
@@ -30,8 +31,8 @@ CONTAINS
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
 ! ----------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT(NSTACK)
-INTEGER, INTENT(INOUT) :: NSTACK
+SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
+INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
 STACK(NSTACK)%SOLVER => MAIN_LU
@@ -311,5 +312,6 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_PARDISO
 
 END MODULE SCARC_MKL
+#endif
 
 

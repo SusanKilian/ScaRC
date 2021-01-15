@@ -1,4 +1,4 @@
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 !
 ! MODULE SCARC_MATRICES
 !
@@ -7,7 +7,7 @@
 !   This inlcudes local/global Poisson and Laplace matrices, their boundary conditions and 
 !   a corresponding condensing in the purely Neumann case
 !
-!//////////////////////////////////////////////////////////////////////////////////////////////////////
+!=======================================================================================================================
 MODULE SCARC_MATRICES
   
 USE GLOBAL_CONSTANTS
@@ -38,7 +38,7 @@ CONTAINS
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEMS
 INTEGER :: NM, NL
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 INTEGER :: TYPE_SCOPE_BACKUP, TYPE_GRID_BACKUP
 #endif
   
@@ -125,7 +125,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   ENDDO
                ENDIF
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
             ! In case of LU-decomposition as preconditioner
             ! locally acting: PARDISO from MKL as preconditioners on fine level with possible coarse grid correction
 
@@ -203,7 +203,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDIF
          CALL SCARC_SETUP_BOUNDARY_WITH_INTERFACES(NM, NLEVEL_MIN) 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
          TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
 #endif
 
@@ -259,7 +259,7 @@ ENDIF MULTI_LEVEL_IF
   
 ! ------ IF MKL-solver is used on specific levels, then setup symmetric Poisson matrix there
   
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 IF (IS_MGM) THEN
    TYPE_SCOPE_BACKUP = TYPE_SCOPE(0)
    TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
@@ -1297,7 +1297,7 @@ WRITE(MSG%LU_DEBUG,*) 'GET_STENCIL_MAX:', A%N_STENCIL_MAX
 END SUBROUTINE SCARC_GET_MATRIX_STENCIL_MAX
 
 
-#ifdef WITH_SCARC_MKL
+#ifdef WITH_MKL
 ! ------------------------------------------------------------------------------------------------
 !> \brief Setup symmetric version of Poisson matrix for MKL solver in double precision
 ! ------------------------------------------------------------------------------------------------
