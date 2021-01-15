@@ -147,10 +147,10 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_VECTORS
 
 ! ------------------------------------------------------------------------------------------------
-!> \brief  Setup environement for current solver 
+!> \brief  Setup scope for current solver 
 ! i.e. set pointers to used vectors related to current position in stack
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SOLVER(NS, NP)
+SUBROUTINE SCARC_SETUP_SCOPE(NS, NP)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN) :: NS, NP                          ! references to current stack and parent
  
@@ -216,7 +216,7 @@ E = SV%E
 
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) ITE_TOTAL = 0
 
-END SUBROUTINE SCARC_SETUP_SOLVER
+END SUBROUTINE SCARC_SETUP_SCOPE
 
 
 ! ------------------------------------------------------------------------------------------------

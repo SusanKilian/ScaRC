@@ -46,7 +46,6 @@ ENDIF
 
 ! If verbose directive is set, open file for log-information
 #ifdef WITH_SCARC_VERBOSE
-WRITE(*,*) 'VERBOSE FLAG DEFINED'
 IF (MYID == 0) THEN
    WRITE (MSG%FILE_MEM, '(A,A)') TRIM(CHID),'_scarc.mem'
    MSG%LU_MEM = GET_FILE_NUMBER()
@@ -64,12 +63,9 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    OPEN (MSG%LU_VERBOSE, FILE=MSG%FILE_VERBOSE, ACTION = 'readwrite')
    LASTID = MYID
 ENDDO
-#else
-WRITE(*,*) 'VERBOSE FLAG NOT DEFINED'
 #endif
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(*,*) 'DEBUG FLAG DEFINED!'
 LASTID = -NSCARC_HUGE_INT
 DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    IF (MYID == LASTID) CYCLE
@@ -78,8 +74,6 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    OPEN (MSG%LU_DEBUG, FILE=MSG%FILE_DEBUG, ACTION = 'readwrite')
    LASTID = MYID
 ENDDO
-#else
-WRITE(*,*) 'DEBUG FLAG NOT DEFINED'
 #endif
 
 #ifdef WITH_SCARC_VERBOSE
@@ -455,7 +449,7 @@ END SUBROUTINE SCARC_VERBOSE_VECTOR3
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Assign formats for debug messages dependent on length of mesh
 ! ----------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_SETUP_FORMATS(NLEN)
+SUBROUTINE SCARC_DEBUG_FORMATS(NLEN)
 INTEGER, INTENT(IN) :: NLEN
 
 IF (NLEN < 10) THEN
@@ -476,7 +470,7 @@ ELSE
    MSG%CFORM3 = "(  E12.4)" ; WRITE(MSG%CFORM3(2:3),'(I2.2)') NLEN+2
 ENDIF
 
-END SUBROUTINE SCARC_DEBUG_SETUP_FORMATS
+END SUBROUTINE SCARC_DEBUG_FORMATS
 
 
 ! ------------------------------------------------------------------------------------------------

@@ -163,10 +163,10 @@ INTEGER, PARAMETER :: NSCARC_MAX_FACE_NEIGHBORS      = 10         !< Maximum set
 INTEGER, PARAMETER :: NSCARC_MAX_STENCIL             =  7         !< Maximum settings: Number of legs in Poisson stencil
 INTEGER, PARAMETER :: NSCARC_MAX_BUFFER0             = 10         !< Maximum settings: Buffer size for initial data exchanges
 
-INTEGER, PARAMETER :: NSCARC_STORAGE_CREATE           =  1         !< Type of memory operation: create array
-INTEGER, PARAMETER :: NSCARC_STORAGE_REMOVE           =  2         !< Type of memory operation: remove array
-INTEGER, PARAMETER :: NSCARC_STORAGE_RESIZE           =  3         !< Type of memory operation: resize array
-INTEGER, PARAMETER :: NSCARC_STORAGE_MAX              = 10000      !< Current maximum of allocatable arrays (may be increased)
+INTEGER, PARAMETER :: NSCARC_STORAGE_CREATE           =  1        !< Type of memory operation: create array
+INTEGER, PARAMETER :: NSCARC_STORAGE_REMOVE           =  2        !< Type of memory operation: remove array
+INTEGER, PARAMETER :: NSCARC_STORAGE_RESIZE           =  3        !< Type of memory operation: resize array
+INTEGER, PARAMETER :: NSCARC_STORAGE_MAX              = 10000     !< Current maximum of allocatable arrays (may be increased)
                    
 INTEGER, PARAMETER :: NSCARC_METHOD_KRYLOV           =  1         !< Global ScaRC method: Krylov solver
 INTEGER, PARAMETER :: NSCARC_METHOD_MULTIGRID        =  2         !< Global ScaRC method: Multigrid solver

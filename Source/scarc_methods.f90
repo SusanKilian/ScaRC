@@ -22,23 +22,10 @@ USE MPI
 USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
-USE SCARC_MESSAGES
-USE SCARC_TIMINGS, ONLY: CPU
-USE SCARC_ERRORS
-USE SCARC_UTILITIES
-USE SCARC_STACK
+USE SCARC_SETUP
 USE SCARC_VECTORS
-USE SCARC_MATRICES
 USE SCARC_CONVERGENCE
-USE SCARC_GMG
-#ifdef WITH_SCARC_AMG
-USE SCARC_AMG
-#endif
-USE SCARC_MGM
-USE SCARC_FFT
-#ifdef WITH_MKL
-USE SCARC_MKL
-#endif
+USE SCARC_STACK
 
 IMPLICIT NONE
 
@@ -49,6 +36,10 @@ CONTAINS
 ! -----------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 USE SCARC_STACK, ONLY: N_STACK_TOTAL
+#ifdef WITH_MKL
+USE SCARC_MKL
+#endif
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
@@ -273,7 +264,7 @@ END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 !> \brief Perform global conjugate gradient method based on global Possion-matrix
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NRHS, NLEVEL)
-USE SCARC_CONVERGENCE
+USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NRHS, NLEVEL
 INTEGER :: NSTATE, NS, NP, NL, NG
 REAL (EB) :: ALPHA0, BETA0, SIGMA0, SIGMA1=0.0_EB
@@ -301,7 +292,7 @@ ENDIF
 !   - Get parameters for current scope (note: NL denotes the finest level)
 !   - Get right hand side vector and clear solution vectors
 
-CALL SCARC_SETUP_SOLVER(NS, NP)
+CALL SCARC_SETUP_SCOPE(NS, NP)
 TYPE_GRID = NG
 
 #ifdef WITH_SCARC_DEBUG
@@ -478,6 +469,11 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 USE SCARC_STACK, ONLY: N_STACK_TOTAL
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
+#ifdef WITH_MKL
+USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO
+#endif
 INTEGER :: NSTACK
 
 ! Allocate velocity vectors along internal obstructions for the setting of internal BC's
@@ -545,6 +541,7 @@ END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 !> \brief Perform global conjugate gradient method based on global Possion-matrix
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM(NSTACK)
+USE SCARC_MGM
 INTEGER, INTENT(IN) :: NSTACK
 INTEGER :: ITE_MGM, STATE_MGM
 LOGICAL :: COMPARE_SCARC_VS_USCARC = .TRUE., USE_OVERLAPS = .TRUE.
@@ -736,6 +733,10 @@ END SUBROUTINE SCARC_METHOD_MGM
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 USE SCARC_STACK, ONLY: N_STACK_TOTAL
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
+#ifdef WITH_MKL
+USE SCARC_MKL
+#endif
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
@@ -894,6 +895,7 @@ END SUBROUTINE SCARC_SETUP_MJAC
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGS(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
+USE SCARC_UTILITIES, ONLY: SCARC_GET_MATRIX_TYPE
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
 INTEGER :: NM, NL, IC, JC, IPTR
 
@@ -1373,6 +1375,9 @@ END SUBROUTINE SCARC_SETUP_ILU
 !> \brief Allocate and initialize vectors for MKL-methods
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSE_SOLVER(NSTAGE, NSCOPE, NSTACK, NLMIN, NLMAX)
+#ifdef WITH_MKL
+USE SCARC_MKL
+#endif
 INTEGER, INTENT(IN)    :: NSCOPE, NSTAGE, NLMIN, NLMAX
 INTEGER, INTENT(INOUT) :: NSTACK
 
@@ -1462,6 +1467,8 @@ END SUBROUTINE SCARC_SETUP_INTERPOLATION
 !> \brief Perform geometric multigrid method based on global possion-matrix
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NRHS, NLEVEL)
+USE SCARC_UTILITIES, ONLY: SCARC_CYCLING_CONTROL
+USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NRHS, NLEVEL
 INTEGER :: NS, NP, NL
 INTEGER :: NSTATE, ICYCLE
@@ -1483,7 +1490,7 @@ NL = NLEVEL
 !   - Define parameters for current scope (note: NL denotes the finest level)
 !   - Initialize solution, right hand side vector
   
-CALL SCARC_SETUP_SOLVER(NS, NP)
+CALL SCARC_SETUP_SCOPE(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
 
   
@@ -1778,7 +1785,7 @@ NL = NLEVEL
 
 TNOW = CURRENT_TIME()
 
-CALL SCARC_SETUP_SOLVER(NS, NP)
+CALL SCARC_SETUP_SCOPE(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL, NSCARC_RHS_INHOMOGENEOUS)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -1861,7 +1868,7 @@ NS = NSTACK
 NP = NPARENT
 NL = NLEVEL
 
-CALL SCARC_SETUP_SOLVER(NS, NP)
+CALL SCARC_SETUP_SCOPE(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL, NSCARC_RHS_INHOMOGENEOUS)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -1943,6 +1950,7 @@ USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, SCARC_POINT_TO
 #ifdef WITH_SCARC_POSTPROCESSING
 USE SCARC_POINTERS, ONLY: PR
 #endif
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM_OBSTRUCTIONS, SCARC_SETUP_MGM_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL, NRHS
 REAL(EB) :: VAL
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
@@ -2409,6 +2417,7 @@ END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
 !  -                  l=L denotes the coarset grid level NLEVEL_MAX
 ! -----------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRECONDITIONER(NS, NP, NL)
+USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
 INTEGER, INTENT(IN) :: NS, NP, NL     
 INTEGER :: IL
 
@@ -2516,7 +2525,7 @@ NS = NSTACK
 NP = NPARENT
 NL = NLEVEL
 
-CALL SCARC_SETUP_SOLVER(NS, NP)
+CALL SCARC_SETUP_SCOPE(NS, NP)
  
 ! Calculate initial defect on l2-norm on level NL (only if BMATVEC and Bl2NORM are set to .TRUE.)
 ! Because initial vector in MG is set to zero, this defect corresponds to F
@@ -2614,6 +2623,7 @@ USE SCARC_POINTERS, ONLY: L, G, A, AB, FFT, V1, V2, &
 #ifdef WITH_MKL
 USE SCARC_POINTERS, ONLY: AS, MKL, V1_FB, V2_FB
 #endif
+USE SCARC_UTILITIES, ONLY: SCARC_GET_MATRIX_TYPE
 USE POIS, ONLY: H2CZSS, H3CZSS
 REAL(EB) :: AUX, OMEGA_SSOR = 1.5_EB 
 REAL (EB) :: TNOW

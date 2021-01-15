@@ -2,7 +2,7 @@
 !
 ! MODULE SCARC_TYPES
 !
-!> \brief Collection of self-defined data types needed for the different ScaRC/UScaRC solvers
+!> \brief Collection of data types used for the different ScaRC/UScaRC solvers
 !
 !=======================================================================================================================
 MODULE SCARC_TYPES
@@ -10,10 +10,10 @@ MODULE SCARC_TYPES
 USE PRECISION_PARAMETERS
 USE SCARC_CONSTANTS
 
-!#ifdef WITH_MKL
+#ifdef WITH_MKL
 USE MKL_PARDISO
 USE MKL_CLUSTER_SPARSE_SOLVER
-!#endif
+#endif
 
 IMPLICIT NONE
 
@@ -74,18 +74,18 @@ TYPE SCARC_MESSAGE_TYPE
    INTEGER :: LU_MEM                                       !< Logical unit for memory management information
    INTEGER :: LU_STAT                                      !< Logical unit for convergence statistics
  
-!#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG
    CHARACTER(60) :: FILE_DEBUG                             !< Output file name for debugging information
    CHARACTER(60) :: FILE_DUMP                              !< Output file name for dumping information
    INTEGER :: LU_DEBUG                                     !< Logical unit for debugging information
    INTEGER :: LU_DUMP                                      !< Logical unit for dumping information
    CHARACTER(20) :: CFORM1, CFORM2, CFORM3, CFORM4
-!#endif
+#endif
 
-!#ifdef WITH_SCARC_VERBOSE
+#ifdef WITH_SCARC_VERBOSE
    CHARACTER(60)  :: FILE_VERBOSE                          !< Output file name for verbose messages
    INTEGER :: LU_VERBOSE                                   !< Logical unit for verbose messages
-!#endif
+#endif
 
 #ifdef WITH_SCARC_POSTPROCESSING
    INTEGER :: LU_SCARC                                                !< Logical unit for dump of complete ScaRC environment
@@ -156,7 +156,6 @@ TYPE SCARC_WALL_TYPE
 END TYPE SCARC_WALL_TYPE
 
 
- 
 !> \brief Obstruction information
  
 TYPE SCARC_OBST_TYPE
@@ -323,7 +322,7 @@ TYPE SCARC_FFT_TYPE
 
 END TYPE SCARC_FFT_TYPE
 
-!#ifdef WITH_MKL
+#ifdef WITH_MKL
 !> \brief MKL information needed for IntelMKL PARDISO and CLUSTER_SPARSE_SOLVER solvers
   
 TYPE SCARC_MKL_TYPE
@@ -338,7 +337,7 @@ TYPE SCARC_MKL_TYPE
    TYPE (MKL_CLUSTER_SPARSE_SOLVER_HANDLE), ALLOCATABLE :: CT_H(:), CT(:)     !< Handles for CLUSTER_SPARSE_SOLVER 
 
 END TYPE SCARC_MKL_TYPE
-!#endif
+#endif
 
 !> \brief Different scopes for solution, rhs and auxiliary vectors of different solvers
   
@@ -357,9 +356,9 @@ TYPE SCARC_STAGE_TYPE
    REAL (FB), ALLOCATABLE, DIMENSION (:) :: R_FB            !< Residual vector in single precision
    REAL (FB), ALLOCATABLE, DIMENSION (:) :: V_FB            !< Auxiliary vector in single precision
 
-!#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG
    REAL (EB), ALLOCATABLE, DIMENSION (:) :: E               !< Error vector double precision
-!#endif
+#endif
 
 END TYPE SCARC_STAGE_TYPE
 
@@ -389,10 +388,10 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN                       !< Galerkin matrix (AMG only)
-!#ifdef WITH_MKL
+#ifdef WITH_MKL
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                   !< Symmetric part of compact Poisson matrix (only for MKL)
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN_SYM                   !< Galerkin matrix symmetric version (AMG only)
-!#endif
+#endif
 
    TYPE (SCARC_CMATRIX_TYPE) :: PROLONGATION                   !< Prolongation matrix
    TYPE (SCARC_CMATRIX_TYPE) :: RESTRICTION                    !< Restriction matrix
@@ -544,12 +543,12 @@ TYPE SCARC_LEVEL_TYPE
    TYPE (SCARC_FFT_TYPE)       :: FFT                          !< FFT preconditioner based on CRAYFISHPAK
    TYPE (SCARC_MGM_TYPE)       :: MGM                          !< McKenney-Greengard-Mayo method 
    TYPE (SCARC_MULTIGRID_TYPE) :: MG                           !< Multigrid method information
-!#ifdef WITH_MKL
+#ifdef WITH_MKL
    TYPE (SCARC_MKL_TYPE)       :: MKL                          !< MKL preconditioner based on Intel MKL
+#endif
 #ifdef WITH_SCARC_POSTPROCESSING
    TYPE (SCARC_PRESSURE_TYPE)  :: PRESSURE                     !< Postprocessing of pressure information
 #endif
-!#endif
 
    ! Coordinate information
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: XCOR, YCOR, ZCOR    !< Coordinate vectors in x-, y- and z-direction

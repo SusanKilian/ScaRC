@@ -15,7 +15,6 @@ USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
 
-
 IMPLICIT NONE
 
 TYPE (MESH_TYPE), POINTER :: M=>NULL()                  !< Pointer to specified mesh (based on MESHES from base code)
