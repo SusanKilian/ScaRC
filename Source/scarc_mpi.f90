@@ -25,6 +25,7 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! -------------------------------------------------------------------------------------------------
 !> \brief Setup dimensions for data exchanges
 ! -------------------------------------------------------------------------------------------------
@@ -668,6 +669,7 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 1000 FORMAT('SCARC_RECV_MESSAGE_INT  : Receiving ',A20, ' in length =', I8,' from ',I8, ' to ', I8, ' on level ', I4)
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_INT
+
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Receive data of type real

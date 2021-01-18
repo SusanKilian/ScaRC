@@ -159,11 +159,11 @@ TYPE (SCARC_CMATRIX_TYPE), POINTER :: OAFS=>NULL()     !< Pointer to fine neighb
 REAL(FB), DIMENSION(:), POINTER :: V1_FB=>NULL()       !< Pointer to first single precision vector
 REAL(FB), DIMENSION(:), POINTER :: V2_FB=>NULL()       !< Pointer to second single precision vector
 
-!TYPE (SCARC_PRESSURE_TYPE), POINTER :: PR=>NULL()                       !< Pointer to pressure type
+#ifdef WITH_SCARC_POSTPROCESSING
+TYPE (SCARC_PRESSURE_TYPE), POINTER :: PRES=>NULL()    !< Pointer to pressure type
+#endif
 
 CONTAINS
-
-
 
 
 ! -----------------------------------------------------------------------------

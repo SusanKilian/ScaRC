@@ -1,3 +1,4 @@
+#ifdef WITH_SCARC_POSTPROCESSING
 !=======================================================================================================================
 !
 ! MODULE SCARC_POSTPROCESSING
@@ -6,7 +7,6 @@
 !   a separate stand-alone program
 !
 !=======================================================================================================================
-#ifdef WITH_SCARC_POSTPROCESSING
 MODULE SCARC_POSTPROCESSING
   
 USE GLOBAL_CONSTANTS
@@ -14,20 +14,20 @@ USE PRECISION_PARAMETERS, ONLY: EB, FB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 USE MPI
 USE SCARC_CONSTANTS
-USE SCARC_TYPES
 USE SCARC_VARIABLES
 USE SCARC_MESSAGES
 USE SCARC_CONVERGENCE
+USE SCARC_STORAGE
 
 IMPLICIT NONE
 
 CONTAINS
 
-! ------------------------------------------------------------------------------------------------
-!> \brief POSTPROCESSING version only: Dump matrix and vectors belonging to pressure system 
-! ------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------
+!> \brief POSTPROCESSING version only: Dump matrix and vectors belonging to current pressure system 
+! --------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_SYSTEM (NSTACK, ITYPE)
-USE SCARC_POINTERS, ONLY: SV, ST, G, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: SV, ST, S, L, G, A, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NSTACK, ITYPE
 INTEGER  :: NM, IC, JC, JCG, IP, IW, IOR0, N
 INTEGER  :: COLUMNSL(7), COLUMNSG(7)
@@ -194,6 +194,7 @@ WRITE(MSG%LU_DEBUG,'(A,7I84,7E14.6)') 'COLUMNS, VALUES:', COLUMNSL(1:7), VALUES(
 ENDDO
 
 END SUBROUTINE SCARC_DUMP_SYSTEM
+
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Dump complete FDS environment needed for ScaRC-setup (only for developping purposes)
@@ -755,7 +756,7 @@ END SUBROUTINE SCARC_RESTORE_ENVIRONMENT
 !> \brief POSTPROCESSING version only: Allocate and initialize vectors pressure diagnostics (only for developping purposes)
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PRESSURE()
-USE SCARC_POINTERS, ONLY: L, G, PR,SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: L, G, PRES, SCARC_POINT_TO_GRID
 INTEGER :: NM
 
 CROUTINE = 'SCARC_SETUP_PRESSURE'
@@ -763,18 +764,18 @@ CROUTINE = 'SCARC_SETUP_PRESSURE'
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
-   PR => L%PRESSURE
+   PRES => L%PRESSURE
 
-   CALL SCARC_ALLOCATE_REAL1(PR%B_OLD, 1, G%NC, NSCARC_INIT_ZERO, 'PR%B_OLD', CROUTINE)
-   CALL SCARC_ALLOCATE_REAL1(PR%B_NEW, 1, G%NC, NSCARC_INIT_ZERO, 'PR%B_NEW', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(PRES%B_OLD, 1, G%NC, NSCARC_INIT_ZERO, 'PRES%B_OLD', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(PRES%B_NEW, 1, G%NC, NSCARC_INIT_ZERO, 'PRES%B_NEW', CROUTINE)
 
-   CALL SCARC_ALLOCATE_REAL3(PR%H_OLD, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PR%H_OLD', CROUTINE)
-   CALL SCARC_ALLOCATE_REAL3(PR%H_NEW, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PR%H_NEW', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(PRES%H_OLD, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PRES%H_OLD', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(PRES%H_NEW, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PRES%H_NEW', CROUTINE)
 
-   CALL SCARC_ALLOCATE_REAL3(PR%HS_OLD, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PR%HS_OLD', CROUTINE)
-   CALL SCARC_ALLOCATE_REAL3(PR%HS_NEW, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PR%HS_NEW', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(PRES%HS_OLD, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PRES%HS_OLD', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(PRES%HS_NEW, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'PRES%HS_NEW', CROUTINE)
 
-   !CALL SCARC_ALLOCATE_REAL3(PR%PRHS, 1, L%NX+1, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'PR%PRHS', CROUTINE)
+   !CALL SCARC_ALLOCATE_REAL3(PRES%PRHS, 1, L%NX+1, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'PRES%PRHS', CROUTINE)
 
 ENDDO
 
@@ -785,7 +786,7 @@ END SUBROUTINE SCARC_SETUP_PRESSURE
 !> \brief POSTPROCESSING version only: Compute Differences between old and new pressure solutions - only for developping purposes
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRESSURE_DIFFERENCE(NL)
-USE SCARC_POINTERS, ONLY: L, PR, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: M, L, PRES, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, IX, IY, IZ
 
@@ -796,46 +797,45 @@ INTEGER :: NM, IX, IY, IZ
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)     
-   PR => L%PRESSURE
+   PRES => L%PRESSURE
 
    IF (PREDICTOR) THEN
    
-      PR%H_NEW  = M%H
-      PR%DIFF_H = 0.0_EB
+      PRES%H_NEW  = M%H
+      PRES%DIFF_H = 0.0_EB
       DO IZ = 1, L%NZ
          DO IY = 1, L%NY
             DO IX = 1, L%NX
-               PR%DIFF_H = PR%DIFF_H + (PR%H_NEW(IX, IY, IZ) - PR%H_OLD(IX, IY, IZ))**2         
+               PRES%DIFF_H = PRES%DIFF_H + (PRES%H_NEW(IX, IY, IZ) - PRES%H_OLD(IX, IY, IZ))**2         
             ENDDO
          ENDDO
       ENDDO
-      PR%DIFF_H = PR%DIFF_H / REAL(L%N_CELLS, EB)
+      PRES%DIFF_H = PRES%DIFF_H / REAL(L%N_CELLS, EB)
 
    ELSE
 
-      PR%HS_NEW = M%HS
-      PR%DIFF_HS = 0.0_EB
+      PRES%HS_NEW = M%HS
+      PRES%DIFF_HS = 0.0_EB
       DO IZ = 1, L%NZ
          DO IY = 1, L%NY
             DO IX = 1, L%NX
-               PR%DIFF_HS = PR%DIFF_HS + (PR%HS_NEW(IX, IY, IZ) - PR%HS_OLD(IX, IY, IZ))**2         
+               PRES%DIFF_HS = PRES%DIFF_HS + (PRES%HS_NEW(IX, IY, IZ) - PRES%HS_OLD(IX, IY, IZ))**2         
             ENDDO
          ENDDO
       ENDDO
-      PR%DIFF_HS = PR%DIFF_HS / REAL(L%N_CELLS, EB)
+      PRES%DIFF_HS = PRES%DIFF_HS / REAL(L%N_CELLS, EB)
 
    ENDIF
 
 ENDDO
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'Differences of pressure vectors on mesh ', NM,' : ', PR%DIFF_H, PR%DIFF_HS
+WRITE(MSG%LU_DEBUG,*) 'Differences of pressure vectors on mesh ', NM,' : ', PRES%DIFF_H, PRES%DIFF_HS
 #endif
 
 END SUBROUTINE SCARC_PRESSURE_DIFFERENCE
 
-
 END MODULE SCARC_POSTPROCESSING
+
+
 #endif
-
-

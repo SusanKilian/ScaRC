@@ -295,13 +295,6 @@ REAL(FB), PARAMETER:: NSCARC_UNDEF_REAL_FB           = -1.0_FB    !< Flag for un
 REAL(FB), PARAMETER:: NSCARC_ZERO_REAL_FB            =  0.0_FB    !< Flag for zero single precision value
 REAL(FB), PARAMETER:: NSCARC_ONE_REAL_FB             =  1.0_FB    !< Flag for one single precision value
 
-#ifdef WITH_SCARC_POSTPROCESSING
-INTEGER, PARAMETER :: NSCARC_DUMP_A                  =  1         !< Flag for the dumping of matrix A
-INTEGER, PARAMETER :: NSCARC_DUMP_B                  =  2         !< Flag for the dumping of right hand side B
-INTEGER, PARAMETER :: NSCARC_DUMP_X                  =  3         !< Flag for the dumping of solution X
-INTEGER, PARAMETER :: NSCARC_DUMP_MESH               =  4         !< Flag for the dumping of mesh information
-#endif
-
 CHARACTER(40), PARAMETER :: SCARC_NONE = 'NONE'                   !< Flag for a dummy character value 
 INTEGER, PARAMETER  :: NSCARC_NONE = -123456789                   !< Flag for a dummy integer value 
 
@@ -320,6 +313,13 @@ REAL(EB), PARAMETER :: W4     =  4.0_EB                           !< Weighting p
 REAL(EB), PARAMETER :: W9     =  9.0_EB                           !< Weighting parameter for geometric multigrid method
 REAL(EB), PARAMETER :: W12    = 12.0_EB                           !< Weighting parameter for geometric multigrid method
 REAL(EB), PARAMETER :: W16    = 16.0_EB                           !< Weighting parameter for geometric multigrid method
+
+#ifdef WITH_SCARC_POSTPROCESSING
+INTEGER, PARAMETER :: NSCARC_DUMP_A                  =  1         !< Flag for the dumping of matrix A
+INTEGER, PARAMETER :: NSCARC_DUMP_B                  =  2         !< Flag for the dumping of right hand side B
+INTEGER, PARAMETER :: NSCARC_DUMP_X                  =  3         !< Flag for the dumping of solution X
+INTEGER, PARAMETER :: NSCARC_DUMP_MESH               =  4         !< Flag for the dumping of mesh information
+#endif
 
 END MODULE SCARC_CONSTANTS
 

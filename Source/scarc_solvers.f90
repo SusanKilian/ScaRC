@@ -30,6 +30,9 @@ USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEMS
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_MKL_ENVIRONMENT
 #endif
+#ifdef WITH_SCARC_AMG
+USE SCARC_AMG, ONLY: SCARC_SETUP_AMG_ENVIRONMENT
+#endif
 REAL(EB) :: TNOW
 
 TNOW = CURRENT_TIME()
@@ -71,7 +74,7 @@ CALL SCARC_SETUP_SYSTEMS                              ; IF (STOP_STATUS==SETUP_S
 ! Setup information for algebraic multigrid if needed as preconditioner or main solver
 
 #ifdef WITH_SCARC_AMG
-IF (HAS_AMG_LEVELS) CALL SCARC_SETUP_ALGEBRAIC_MULTIGRID          
+IF (HAS_AMG_LEVELS) CALL SCARC_SETUP_AMG_ENVIRONMENT          
 #endif
 
 ! Setup environment for requested solver

@@ -1,3 +1,4 @@
+#ifdef WITH_MKL
 !=======================================================================================================================
 !
 ! Module SCARC_MKL:
@@ -6,7 +7,6 @@
 !   PARDISO and CLUSTER_SPARSE_SOLVER
 !
 !=======================================================================================================================
-#ifdef WITH_MKL
 MODULE SCARC_MKL
   
 USE GLOBAL_CONSTANTS
@@ -314,6 +314,6 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_PARDISO
 
 END MODULE SCARC_MKL
+
+
 #endif
-
-

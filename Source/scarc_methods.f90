@@ -24,6 +24,12 @@ USE SCARC_TYPES
 USE SCARC_VARIABLES
 USE SCARC_STACK
 USE SCARC_VECTORS
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_MESSAGES
+#endif
+#ifdef WITH_SCARC_POSTPROCESSING
+USE SCARC_POSTPROCESSING
+#endif
 USE SCARC_CONVERGENCE
 
 IMPLICIT NONE
@@ -34,7 +40,6 @@ CONTAINS
 !> \brief  Setup environment for Krylov methods
 ! -----------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
-USE SCARC_STACK, ONLY: N_STACK_TOTAL
 #ifdef WITH_MKL
 USE SCARC_MKL
 #endif
@@ -467,7 +472,6 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 !> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-USE SCARC_STACK, ONLY: N_STACK_TOTAL
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
 #ifdef WITH_MKL
@@ -731,7 +735,6 @@ END SUBROUTINE SCARC_METHOD_MGM
 !> \brief Setup environment for multigrid method
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
-USE SCARC_STACK, ONLY: N_STACK_TOTAL
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 #ifdef WITH_MKL
 USE SCARC_MKL
@@ -1947,7 +1950,7 @@ END SUBROUTINE SCARC_METHOD_PARDISO
 SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
 USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, SCARC_POINT_TO_GRID
 #ifdef WITH_SCARC_POSTPROCESSING
-USE SCARC_POINTERS, ONLY: PR
+USE SCARC_POINTERS, ONLY: PRES
 #endif
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM_OBSTRUCTIONS, SCARC_SETUP_MGM_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL, NRHS
@@ -1981,13 +1984,13 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
 
 #ifdef WITH_SCARC_POSTPROCESSING
-               PR => L%PRESSURE
+               PRES => L%PRESSURE
                IF (PREDICTOR) THEN
-                  PR%H_OLD = PR%H_NEW
+                  PRES%H_OLD = PRES%H_NEW
                ELSE
-                  PR%HS_OLD = PR%HS_NEW
+                  PRES%HS_OLD = PRES%HS_NEW
                ENDIF
-               PR%B_OLD = ST%B
+               PRES%B_OLD = ST%B
 #endif
          
                ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
@@ -2128,7 +2131,7 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
  
 
 #ifdef WITH_SCARC_POSTPROCESSING
-               PR%B_NEW = ST%B
+               PRES%B_NEW = ST%B
 #endif
          
             ENDDO MAIN_MESHES_LOOP

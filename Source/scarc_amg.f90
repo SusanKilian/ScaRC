@@ -1,3 +1,4 @@
+#ifdef WITH_SCARC_AMG
 !=======================================================================================================================
 !
 ! MODULE SCARC_AMG
@@ -15,7 +16,6 @@
 !   Define Poisson matrix on coarser level by Galerkin approach: A_coarse = R * A_fine * P
 !
 !=======================================================================================================================
-#ifdef WITH_SCARC_AMG
 MODULE SCARC_AMG
   
 USE GLOBAL_CONSTANTS
@@ -26,12 +26,14 @@ USE MPI
 USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
+USE SCARC_STORAGE
 USE SCARC_UTILITIES
 USE SCARC_MESSAGES
 USE SCARC_TIMINGS, ONLY: CPU
-USE SCARC_STACK
-USE SCARC_CONVERGENCE
-USE SCARC_VECTORS
+USE SCARC_MPI, ONLY: SCARC_EXCHANGE
+#ifdef WITH_SCARC_POSTPROCESSING
+USE SCARC_POSTPROCESSING
+#endif
 USE SCARC_MATRICES
 
 IMPLICIT NONE
@@ -41,7 +43,7 @@ CONTAINS
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Setup structures needed for the use of the algebraic multigrid method
 ! ----------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_ALGEBRAIC_MULTIGRID
+SUBROUTINE SCARC_SETUP_AMG_ENVIRONMENT
 INTEGER :: NL
 LOGICAL :: FURTHER_COARSENING_REQUIRED
 
@@ -97,7 +99,7 @@ WRITE(MSG%LU_DEBUG,*) '========================================================'
 
 ENDDO COARSENING_LOOP
 
-END SUBROUTINE SCARC_SETUP_ALGEBRAIC_MULTIGRID
+END SUBROUTINE SCARC_SETUP_AMG_ENVIRONMENT
 
 
 ! ------------------------------------------------------------------------------------------------------
@@ -2935,6 +2937,6 @@ ENDDO
 END SUBROUTINE SCARC_RESORT_MATRIX_ROWS
 
 END MODULE SCARC_AMG
+
+
 #endif
-
-

@@ -84,9 +84,6 @@ END SUBROUTINE SCARC_SETUP_MESSAGES
 
 
 #ifdef WITH_SCARC_VERBOSE
-
-
-
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Verbose version only: Print out Verbose information for compactly stored matrix
 ! ------------------------------------------------------------------------------------------------------
@@ -871,7 +868,7 @@ END SUBROUTINE SCARC_DEBUG_LEVEL_MESH
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_PRESSURE (HP, NM, CNAME)
+SUBROUTINE SCARC_DEBUG_PRESSURE (HP, NM, CNAME)
 INTEGER, INTENT(IN) :: NM
 REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
 CHARACTER(*), INTENT(IN) :: CNAME
@@ -933,7 +930,7 @@ DO IZ = MESHES(NM)%KBP1, 0, -1
    ENDIF
 ENDDO
 
-END SUBROUTINE SCARC_VERBOSE_PRESSURE
+END SUBROUTINE SCARC_DEBUG_PRESSURE
 
 
 ! ------------------------------------------------------------------------------------------------
