@@ -1,4 +1,3 @@
-#ifdef WITH_SCARC_AMG
 !=======================================================================================================================
 !
 ! MODULE SCARC_AMG
@@ -2939,4 +2938,3 @@ END SUBROUTINE SCARC_RESORT_MATRIX_ROWS
 END MODULE SCARC_AMG
 
 
-#endif

@@ -30,6 +30,9 @@ USE SCARC_MESSAGES
 #ifdef WITH_SCARC_POSTPROCESSING
 USE SCARC_POSTPROCESSING
 #endif
+#ifdef WITH_MKL
+USE SCARC_MKL
+#endif
 USE SCARC_CONVERGENCE
 
 IMPLICIT NONE
@@ -40,9 +43,6 @@ CONTAINS
 !> \brief  Setup environment for Krylov methods
 ! -----------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
-#ifdef WITH_MKL
-USE SCARC_MKL
-#endif
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 INTEGER :: NSTACK
 
@@ -474,8 +474,6 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
-#ifdef WITH_MKL
-USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO
 #endif
 INTEGER :: NSTACK
 
@@ -736,9 +734,6 @@ END SUBROUTINE SCARC_METHOD_MGM
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
-#ifdef WITH_MKL
-USE SCARC_MKL
-#endif
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
@@ -1377,9 +1372,6 @@ END SUBROUTINE SCARC_SETUP_ILU
 !> \brief Allocate and initialize vectors for MKL-methods
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSE_SOLVER(NSTAGE, NSCOPE, NSTACK, NLMIN, NLMAX)
-#ifdef WITH_MKL
-USE SCARC_MKL
-#endif
 INTEGER, INTENT(IN)    :: NSCOPE, NSTAGE, NLMIN, NLMAX
 INTEGER, INTENT(INOUT) :: NSTACK
 

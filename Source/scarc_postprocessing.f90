@@ -1,4 +1,3 @@
-#ifdef WITH_SCARC_POSTPROCESSING
 !=======================================================================================================================
 !
 ! MODULE SCARC_POSTPROCESSING
@@ -838,4 +837,3 @@ END SUBROUTINE SCARC_PRESSURE_DIFFERENCE
 END MODULE SCARC_POSTPROCESSING
 
 
-#endif

@@ -50,12 +50,14 @@ INTEGER, PARAMETER :: NSCARC_DATA_LOGICAL            =  4         !< Type of all
 INTEGER, PARAMETER :: NSCARC_DATA_REAL_EB            =  5         !< Type of allocated structure: double precision array
 INTEGER, PARAMETER :: NSCARC_DATA_REAL_FB            =  6         !< Type of allocated structure: single precision array
 
+#ifdef WITH_SCARC_DEBUG
 INTEGER, PARAMETER :: NSCARC_DEBUG_FACE              =  1         !< Type of debugging message: show face information
 INTEGER, PARAMETER :: NSCARC_DEBUG_GRID              =  2         !< Type of debugging message: show grid information
 INTEGER, PARAMETER :: NSCARC_DEBUG_CMATRIX           =  3         !< Type of debugging message: show specified matrix
 INTEGER, PARAMETER :: NSCARC_DEBUG_PRESSURE          =  4         !< Type of debugging message: show pressure quantities
 INTEGER, PARAMETER :: NSCARC_DEBUG_STACK             =  5         !< Type of debugging message: show matrix
 INTEGER, PARAMETER :: NSCARC_DEBUG_WALL              =  6         !< Type of debugging message: show wall information
+#endif
 
 INTEGER, PARAMETER :: NSCARC_ERROR_BOUNDARY_SUM      =  3         !< Type of error message: wrong sum of boundary elements
 INTEGER, PARAMETER :: NSCARC_ERROR_BOUNDARY_TYPE     =  4         !< Type of error message: wrong boundary type

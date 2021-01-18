@@ -1,4 +1,3 @@
-#ifdef WITH_MKL
 !=======================================================================================================================
 !
 ! Module SCARC_MKL:
@@ -316,4 +315,3 @@ END SUBROUTINE SCARC_SETUP_PARDISO
 END MODULE SCARC_MKL
 
 
-#endif
