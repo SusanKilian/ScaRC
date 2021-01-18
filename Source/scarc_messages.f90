@@ -83,11 +83,158 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_MESSAGES
 
 
-
-! =====================================================================================================================
-! Start VERBOSE routines
-! =====================================================================================================================
 #ifdef WITH_SCARC_VERBOSE
+
+
+
+! ------------------------------------------------------------------------------------------------------
+!> \brief Verbose version only: Print out Verbose information for compactly stored matrix
+! ------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_CMATRIX(A, CNAME, CTEXT)
+CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
+INTEGER :: IC, ICOL
+CHARACTER(40) :: CFORM
+
+WRITE(MSG%LU_VERBOSE,*)
+WRITE(MSG%LU_VERBOSE,*) '============ START VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_VERBOSE,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
+WRITE(MSG%LU_VERBOSE,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
+WRITE(MSG%LU_VERBOSE,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
+
+WRITE(MSG%LU_VERBOSE,*)
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%ROW:'
+WRITE(MSG%LU_VERBOSE,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COL:'
+DO IC = 1, A%N_ROW-1
+   IF (A%ROW(IC) == 0) CYCLE
+   IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+      CFORM = "(I8,A,10I12)"
+   ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+      CFORM = "(I8,A,20I12)"
+   ELSE IF (A%ROW(IC+1)-A%ROW(IC)  < 30) THEN
+      CFORM = "(I8,A,30I12)"
+   ELSE
+      CFORM = "(I8,A,40I12)"
+   ENDIF
+   WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+ENDDO
+IF (ALLOCATED(A%COLG)) THEN
+   WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COLG:'
+   DO IC = 1, A%N_ROW-1
+      IF (A%ROW(IC) == 0) CYCLE
+      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+         CFORM = "(I8,A,10I12)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+         CFORM = "(I8,A,20I12)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
+         CFORM = "(I8,A,30I12)"
+      ELSE
+         CFORM = "(I8,A,40I12)"
+      ENDIF
+      WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%COLG(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   ENDDO
+ENDIF
+IF (ALLOCATED(A%VAL)) THEN
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%VAL:'
+DO IC = 1, A%N_ROW-1
+   IF (A%ROW(IC) == 0) CYCLE
+      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+         CFORM = "(I8,A,10E10.2)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+         CFORM = "(I8,A,20E10.2)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
+         CFORM = "(I8,A,30E10.2)"
+      ELSE
+         CFORM = "(I8,A,40E10.2)"
+      ENDIF
+   !WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   WRITE(MSG%LU_VERBOSE,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+ENDDO
+WRITE(MSG%LU_VERBOSE,*) '============ END VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+ENDIF
+
+END SUBROUTINE SCARC_VERBOSE_CMATRIX
+
+
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Verbose version only: Dump out information for specified 1-dimensional vector
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_VECTOR1 (VC, NM, NL, NG, CNAME)
+USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
+INTEGER, INTENT(IN) :: NM, NL, NG
+REAL(EB), DIMENSION(:), INTENT(IN) :: VC
+REAL(EB), DIMENSION(0:100) :: VALUES
+CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(80) :: FN_DUMP
+INTEGER :: IC, IX, IY, IZ
+INTEGER, SAVE :: LU_DUMP
+
+CALL SCARC_POINT_TO_GRID (NM, NL)                    
+   
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+
+LU_DUMP = GET_FILE_NUMBER()
+OPEN (LU_DUMP, FILE=FN_DUMP)
+!WRITE(LU_DUMP,*) '============================================================='
+!WRITE(LU_DUMP,*) ' DEBUG vector ', CNAME
+!WRITE(LU_DUMP,*) '============================================================='
+DO IZ = L%NZ, 1, -1
+   IF (.NOT.TWO_D) WRITE(LU_DUMP,*) '-------- IZ = ', IZ,' ------------------------------------------'
+   DO IY = L%NY, 1, -1
+      DO IX = 1, L%NX
+         IF (NG == NSCARC_GRID_UNSTRUCTURED .AND. L%IS_SOLID(IX,IY,IZ)) THEN
+            VALUES(IX)=0.0_EB
+         ELSE
+            IF (NG == NSCARC_GRID_STRUCTURED) THEN
+               IC=L%STRUCTURED%CELL_NUMBER(IX,IY,IZ)
+            ELSE
+               IC=L%UNSTRUCTURED%CELL_NUMBER(IX,IY,IZ)
+            ENDIF
+            IF (ABS(VC(IC))<1.0E-14_EB) THEN
+               VALUES(IX)=0.0_EB
+            ELSE
+               VALUES(IX)=VC(IC)
+            ENDIF
+         ENDIF
+      ENDDO
+      WRITE(LU_DUMP,'(E14.6)') VALUES(1:L%NX)
+   ENDDO
+ENDDO
+!WRITE(LU_DUMP,*) '============================================================='
+CLOSE(LU_DUMP)
+
+END SUBROUTINE SCARC_VERBOSE_VECTOR1
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Verbose version only: Dump out information for specified 3-dimensional vector
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_VECTOR3 (HP, CNAME)
+USE SCARC_POINTERS, ONLY: L
+REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
+CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(80) :: FN_DUMP
+INTEGER :: IX, IY, IZ
+INTEGER, SAVE :: LU_DUMP
+
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+
+LU_DUMP = GET_FILE_NUMBER()
+OPEN (LU_DUMP, FILE=FN_DUMP)
+DO IZ = 1, L%NZ
+   DO IY = 1, L%NY
+      DO IX = 1, L%NX
+         WRITE(LU_DUMP,*) HP(IX, IY, IZ)
+      ENDDO
+   ENDDO
+ENDDO
+CLOSE(LU_DUMP)
+
+END SUBROUTINE SCARC_VERBOSE_VECTOR3
+
+
+#ifdef WITH_SCARC_AMG
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for BLENDER
 ! ----------------------------------------------------------------------------------------------------
@@ -227,221 +374,8 @@ CLOSE(MAGG)
 1003 FORMAT(E14.6,',',  E14.6,',', E14.6)
 1000 FORMAT(I8,',', I8,',', E14.6,',',  E14.6,',', E14.6)
 END SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES
-
-
-! ------------------------------------------------------------------------------------------------
-!> \brief Debugging version only: Dump out information for specified quantity
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_PRESSURE (HP, NM, CNAME)
-INTEGER, INTENT(IN) :: NM
-REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
-CHARACTER(*), INTENT(IN) :: CNAME
-CHARACTER(80) :: FN_DUMP, FN_DEBUG1
-INTEGER :: LU_DUMP, IX, IY, IZ
-INTEGER, SAVE :: LU_DEBUG1
-LOGICAL :: BFIRST = .TRUE.
-
-IF (BFIRST) THEN
-   WRITE (FN_DEBUG1, '(A,A,A,i3.3)') 'debug/',TRIM(CHID),'_',ICYC
-   LU_DEBUG1 = GET_FILE_NUMBER()
-   OPEN (LU_DEBUG1, FILE=FN_DEBUG1)
-   BFIRST = .FALSE.
-ENDIF
-
-WRITE(LU_DEBUG1,*) '==========================================================================='
-IF (PREDICTOR) THEN
-   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: H'
-ELSE
-   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: HS'
-ENDIF
-WRITE(LU_DEBUG1,*) '==========================================================================='
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
-
-LU_DUMP = GET_FILE_NUMBER()
-OPEN (LU_DUMP, FILE=FN_DUMP)
-DO IZ = 0, MESHES(NM)%KBP1
-   IF (TWO_D) THEN
-      DO IY = 1, MESHES(NM)%JBAR
-         DO IX = 0, MESHES(NM)%IBP1
-            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
-         ENDDO
-      ENDDO
-   ELSE
-      DO IY = 0, MESHES(NM)%JBP1
-         DO IX = 0, MESHES(NM)%IBP1
-            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
-         ENDDO
-      ENDDO
-   ENDIF
-ENDDO
-CLOSE(LU_DUMP)
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'DUMP_PRESSURE: HP'
 #endif
-DO IZ = MESHES(NM)%KBP1, 0, -1
-   IF (TWO_D) THEN
-      DO IY = MESHES(NM)%JBAR, 1, -1
-         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#endif
-      ENDDO
-   ELSE
-      DO IY = MESHES(NM)%JBP1, 0, -1
-         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#endif
-      ENDDO
-   ENDIF
-ENDDO
 
-END SUBROUTINE SCARC_VERBOSE_PRESSURE
-
-
-! ------------------------------------------------------------------------------------------------------
-!> \brief Verbose version only: Print out Verbose information for compactly stored matrix
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_CMATRIX(A, CNAME, CTEXT)
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
-TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
-INTEGER :: IC, ICOL
-CHARACTER(40) :: CFORM
-
-WRITE(MSG%LU_VERBOSE,*)
-WRITE(MSG%LU_VERBOSE,*) '============ START VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
-WRITE(MSG%LU_VERBOSE,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
-WRITE(MSG%LU_VERBOSE,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
-WRITE(MSG%LU_VERBOSE,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
-
-WRITE(MSG%LU_VERBOSE,*)
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%ROW:'
-WRITE(MSG%LU_VERBOSE,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COL:'
-DO IC = 1, A%N_ROW-1
-   IF (A%ROW(IC) == 0) CYCLE
-   IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
-      CFORM = "(I8,A,10I12)"
-   ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
-      CFORM = "(I8,A,20I12)"
-   ELSE IF (A%ROW(IC+1)-A%ROW(IC)  < 30) THEN
-      CFORM = "(I8,A,30I12)"
-   ELSE
-      CFORM = "(I8,A,40I12)"
-   ENDIF
-   WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
-ENDDO
-IF (ALLOCATED(A%COLG)) THEN
-   WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COLG:'
-   DO IC = 1, A%N_ROW-1
-      IF (A%ROW(IC) == 0) CYCLE
-      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
-         CFORM = "(I8,A,10I12)"
-      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
-         CFORM = "(I8,A,20I12)"
-      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
-         CFORM = "(I8,A,30I12)"
-      ELSE
-         CFORM = "(I8,A,40I12)"
-      ENDIF
-      WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%COLG(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
-   ENDDO
-ENDIF
-IF (ALLOCATED(A%VAL)) THEN
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%VAL:'
-DO IC = 1, A%N_ROW-1
-   IF (A%ROW(IC) == 0) CYCLE
-      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
-         CFORM = "(I8,A,10E10.2)"
-      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
-         CFORM = "(I8,A,20E10.2)"
-      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
-         CFORM = "(I8,A,30E10.2)"
-      ELSE
-         CFORM = "(I8,A,40E10.2)"
-      ENDIF
-   !WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
-   WRITE(MSG%LU_VERBOSE,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
-ENDDO
-WRITE(MSG%LU_VERBOSE,*) '============ END VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
-ENDIF
-
-END SUBROUTINE SCARC_VERBOSE_CMATRIX
-
-
-
-! ------------------------------------------------------------------------------------------------
-!> \brief Debugging version only: Dump out information for specified quantity
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_VECTOR1 (VC, NM, NL, NG, CNAME)
-USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
-INTEGER, INTENT(IN) :: NM, NL, NG
-REAL(EB), DIMENSION(:), INTENT(IN) :: VC
-REAL(EB), DIMENSION(0:100) :: VALUES
-CHARACTER(*), INTENT(IN) :: CNAME
-CHARACTER(80) :: FN_DUMP
-INTEGER :: IC, IX, IY, IZ
-INTEGER, SAVE :: LU_DUMP
-
-CALL SCARC_POINT_TO_GRID (NM, NL)                    
-   
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
-
-LU_DUMP = GET_FILE_NUMBER()
-OPEN (LU_DUMP, FILE=FN_DUMP)
-!WRITE(LU_DUMP,*) '============================================================='
-!WRITE(LU_DUMP,*) ' DEBUG vector ', CNAME
-!WRITE(LU_DUMP,*) '============================================================='
-DO IZ = L%NZ, 1, -1
-   IF (.NOT.TWO_D) WRITE(LU_DUMP,*) '-------- IZ = ', IZ,' ------------------------------------------'
-   DO IY = L%NY, 1, -1
-      DO IX = 1, L%NX
-         IF (NG == NSCARC_GRID_UNSTRUCTURED .AND. L%IS_SOLID(IX,IY,IZ)) THEN
-            VALUES(IX)=0.0_EB
-         ELSE
-            IF (NG == NSCARC_GRID_STRUCTURED) THEN
-               IC=L%STRUCTURED%CELL_NUMBER(IX,IY,IZ)
-            ELSE
-               IC=L%UNSTRUCTURED%CELL_NUMBER(IX,IY,IZ)
-            ENDIF
-            IF (ABS(VC(IC))<1.0E-14_EB) THEN
-               VALUES(IX)=0.0_EB
-            ELSE
-               VALUES(IX)=VC(IC)
-            ENDIF
-         ENDIF
-      ENDDO
-      WRITE(LU_DUMP,'(E14.6)') VALUES(1:L%NX)
-   ENDDO
-ENDDO
-!WRITE(LU_DUMP,*) '============================================================='
-CLOSE(LU_DUMP)
-
-END SUBROUTINE SCARC_VERBOSE_VECTOR1
-
-SUBROUTINE SCARC_VERBOSE_VECTOR3 (HP, CNAME)
-USE SCARC_POINTERS, ONLY: L
-REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
-CHARACTER(*), INTENT(IN) :: CNAME
-CHARACTER(80) :: FN_DUMP
-INTEGER :: IX, IY, IZ
-INTEGER, SAVE :: LU_DUMP
-
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
-
-LU_DUMP = GET_FILE_NUMBER()
-OPEN (LU_DUMP, FILE=FN_DUMP)
-DO IZ = 1, L%NZ
-   DO IY = 1, L%NY
-      DO IX = 1, L%NX
-         WRITE(LU_DUMP,*) HP(IX, IY, IZ)
-      ENDDO
-   ENDDO
-ENDDO
-CLOSE(LU_DUMP)
-
-END SUBROUTINE SCARC_VERBOSE_VECTOR3
 #endif
 
 
@@ -933,6 +867,73 @@ WRITE(MSG%LU_DEBUG, '(4E14.6)') (X(IC), IC = GG%NC+1, GG%NCE)
 2001 FORMAT('=== ',A,' on mesh ',I8,' on level ',I8)
 2002 FORMAT('=== NC = ',I6, ': NX, NY, NZ=',3I6)
 END SUBROUTINE SCARC_DEBUG_LEVEL_MESH
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Debugging version only: Dump out information for specified quantity
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_PRESSURE (HP, NM, CNAME)
+INTEGER, INTENT(IN) :: NM
+REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
+CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(80) :: FN_DUMP, FN_DEBUG1
+INTEGER :: LU_DUMP, IX, IY, IZ
+INTEGER, SAVE :: LU_DEBUG1
+LOGICAL :: BFIRST = .TRUE.
+
+IF (BFIRST) THEN
+   WRITE (FN_DEBUG1, '(A,A,A,i3.3)') 'debug/',TRIM(CHID),'_',ICYC
+   LU_DEBUG1 = GET_FILE_NUMBER()
+   OPEN (LU_DEBUG1, FILE=FN_DEBUG1)
+   BFIRST = .FALSE.
+ENDIF
+
+WRITE(LU_DEBUG1,*) '==========================================================================='
+IF (PREDICTOR) THEN
+   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: H'
+ELSE
+   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: HS'
+ENDIF
+WRITE(LU_DEBUG1,*) '==========================================================================='
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+
+LU_DUMP = GET_FILE_NUMBER()
+OPEN (LU_DUMP, FILE=FN_DUMP)
+DO IZ = 0, MESHES(NM)%KBP1
+   IF (TWO_D) THEN
+      DO IY = 1, MESHES(NM)%JBAR
+         DO IX = 0, MESHES(NM)%IBP1
+            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
+         ENDDO
+      ENDDO
+   ELSE
+      DO IY = 0, MESHES(NM)%JBP1
+         DO IX = 0, MESHES(NM)%IBP1
+            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
+         ENDDO
+      ENDDO
+   ENDIF
+ENDDO
+CLOSE(LU_DUMP)
+
+DO IZ = MESHES(NM)%KBP1, 0, -1
+   IF (TWO_D) THEN
+      DO IY = MESHES(NM)%JBAR, 1, -1
+         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+#ifdef WITH_SCARC_DEBUG
+         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+#endif
+      ENDDO
+   ELSE
+      DO IY = MESHES(NM)%JBP1, 0, -1
+         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+#ifdef WITH_SCARC_DEBUG
+         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+#endif
+      ENDDO
+   ENDIF
+ENDDO
+
+END SUBROUTINE SCARC_VERBOSE_PRESSURE
 
 
 ! ------------------------------------------------------------------------------------------------
@@ -1492,9 +1493,6 @@ CLOSE(MAGG)
 1002 FORMAT(I8)
 END SUBROUTINE SCARC_PYTHON_ZONES
 
-! =================================================================================================================
-! End  WITH_SCARC_DEBUG  - Part
-! =================================================================================================================
 #endif
 
 END MODULE SCARC_MESSAGES
