@@ -51,80 +51,80 @@ STACK(NSTACK)%SOLVER => MAIN_CG
 CALL SCARC_SETUP_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
 
  
-! Setup preconditioner for Krylov solver
+! Setup preconditioner for Krylov solver, all acting locally by default
  
 NSTACK = NSTACK + 1
 SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
-   ! Jacobi-preconditioning (acting locally by default)
+   ! Jacobi-preconditioning 
 
    CASE (NSCARC_RELAX_JAC)
       STACK(NSTACK)%SOLVER => PRECON_JAC
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! SSOR-preconditioning (acting locally by default)
+   ! SSOR-preconditioning 
 
    CASE (NSCARC_RELAX_SSOR)
       STACK(NSTACK)%SOLVER => PRECON_SSOR
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! JACOBI-preconditioning in matrix form (acting locally by default)
+   ! JACOBI-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MJAC)
       STACK(NSTACK)%SOLVER => PRECON_MJAC
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! GS-preconditioning in matrix form (acting locally by default)
+   ! GS-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MGS)
       STACK(NSTACK)%SOLVER => PRECON_MGS
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SGS-preconditioning in matrix form (acting locally by default)
+   ! SGS-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSGS)
       STACK(NSTACK)%SOLVER => PRECON_MSGS
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SOR-preconditioning in matrix form (acting locally by default)
+   ! SOR-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSOR)
       STACK(NSTACK)%SOLVER => PRECON_MSOR
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! SSOR-preconditioning in matrix form (acting locally by default)
+   ! SSOR-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSSOR)
       STACK(NSTACK)%SOLVER => PRECON_MSSOR
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! LU-preconditioning in matrix form (acting locally by default)
+   ! LU-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_LU)
       STACK(NSTACK)%SOLVER => PRECON_LU
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! ILU(0)-preconditioning in matrix form (acting locally by default)
+   ! ILU(0)-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_ILU)
       STACK(NSTACK)%SOLVER => PRECON_ILU
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_ILU(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! FFT-preconditioning (acting locally by default)
+   ! FFT-preconditioning 
 
    CASE (NSCARC_RELAX_FFT)
       STACK(NSTACK)%SOLVER => PRECON_FFT
       CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
 
-   ! FFT-preconditioning (acting locally by default)
+   ! FFT-preconditioning 
 
    CASE (NSCARC_RELAX_FFTO)
       STACK(NSTACK)%SOLVER => PRECON_FFT
@@ -139,13 +139,13 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
       SELECT CASE(TYPE_SCOPE(1))
 
-         ! Globally acting - call global CLUSTER_SPARSE_SOLVER from MKL
+         ! acting globally - call global CLUSTER_SPARSE_SOLVER from MKL
 
          CASE (NSCARC_SCOPE_GLOBAL)
             CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_GLOBAL)
             CALL SCARC_SETUP_CLUSTER(NLEVEL_MIN, NLEVEL_MIN)
 
-         ! locally acting - call global PARDISO solver from MKL
+         ! acting locally - call local PARDISO solvers from MKL
 
          CASE (NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
@@ -155,8 +155,7 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 #endif
 
  
-   ! Preconditioning by Geometric multigrid,
-   ! either locally or Globally acting, depending on user specification stored in TYPE_SCOPE(1)
+   ! Preconditioning by Geometric multigrid, smoothers act locally
  
    CASE (NSCARC_RELAX_MULTIGRID)
 
@@ -168,68 +167,68 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
       NSTACK = NSTACK + 1
       SELECT CASE (TYPE_SMOOTH)
 
-         ! Jacobi-smoothing (acting locally by default)
+         ! Jacobi-smoothing 
 
          CASE (NSCARC_RELAX_JAC)
             STACK(NSTACK)%SOLVER => SMOOTH_JAC
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-         ! SSOR-smoothing (acting locally by default)
+         ! SSOR-smoothing 
 
          CASE (NSCARC_RELAX_SSOR)
             STACK(NSTACK)%SOLVER => SMOOTH_SSOR
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-         ! Jacobi-preconditioning in matrix form (acting locally by default)
+         ! Jacobi-preconditioning in matrix form 
 
          CASE (NSCARC_RELAX_MJAC)
             STACK(NSTACK)%SOLVER => SMOOTH_MJAC
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX-1)
 
-         ! GS-preconditioning in matrix form (acting locally by default)
+         ! GS-preconditioning in matrix form 
 
          CASE (NSCARC_RELAX_MGS)
             STACK(NSTACK)%SOLVER => SMOOTH_MGS
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX-1)
 
-         ! SGS-preconditioning in matrix form (acting locally by default)
+         ! SGS-preconditioning in matrix form 
 
          CASE (NSCARC_RELAX_MSGS)
             STACK(NSTACK)%SOLVER => SMOOTH_MSGS
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX-1)
 
-         ! SOR-preconditioning in matrix form (acting locally by default)
+         ! SOR-preconditioning in matrix form 
 
          CASE (NSCARC_RELAX_MSOR)
             STACK(NSTACK)%SOLVER => SMOOTH_MSOR
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX-1, NSTACK)
 
-         ! SSOR-preconditioning in matrix form (acting locally by default)
+         ! SSOR-preconditioning in matrix form 
 
          CASE (NSCARC_RELAX_MSSOR)
             STACK(NSTACK)%SOLVER => SMOOTH_MSSOR
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX-1, NSTACK)
 
-         ! FFT-smoothing (acting locally by default)
+         ! FFT-smoothing 
 
          CASE (NSCARC_RELAX_FFT)
             STACK(NSTACK)%SOLVER => SMOOTH_FFT
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MAX-1)
 
-         ! FFTO-smoothing (acting locally by default)
+         ! FFTO-smoothing 
 
          CASE (NSCARC_RELAX_FFTO)
             STACK(NSTACK)%SOLVER => SMOOTH_FFTO
             CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MAX-1)
 #ifdef WITH_MKL
-         ! LU-smoothing (acting locally by default)
+         ! LU-smoothing 
 
          CASE (NSCARC_RELAX_MKL)
             STACK(NSTACK)%SOLVER => SMOOTH_MKL
@@ -476,17 +475,19 @@ USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
 INTEGER :: NSTACK
 
-! Allocate velocity vectors along internal obstructions for the setting of internal BC's
+! Allocate workspace and define variables for the different boundary settings in MGM-method
 
 CALL SCARC_SETUP_MGM(NLEVEL_MIN, NLEVEL_MIN)
 
 ! ------- First part of method: Setup CG solver for inhomogeneous problem on structured discretization
 !         Use FFT-preconditioning by default
 
-WRITE(*,*) 'CAUTION: TODO: PRECON SCARC MGM!'
+
 TYPE_PRECON = NSCARC_RELAX_FFT
 TYPE_PRECON = NSCARC_RELAX_SSOR
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
+
+CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, 'Structured Pass', NSCARC_NONE)
 
 NSTACK = NSCARC_STACK_ROOT
 STACK(NSTACK)%SOLVER => MAIN_CG_STRUCTURED
@@ -502,10 +503,12 @@ CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
 !         Only working for compact matrix storage technique (because of the unstructured grid)
 !         Use LU-preconditioning by default
 
-WRITE(*,*) 'CAUTION: TODO: PRECON USCARC MGM!'
+
 TYPE_PRECON = NSCARC_RELAX_SSOR
 TYPE_MATRIX = NSCARC_MATRIX_COMPACT
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+
+CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, 'Unstructured Pass', NSCARC_NONE)
 
 NSTACK = NSTACK + 1
 STACK(NSTACK)%SOLVER => MAIN_CG_UNSTRUCTURED
@@ -518,10 +521,10 @@ IF (TYPE_PRECON == NSCARC_RELAX_MKL .AND. TYPE_MATRIX == NSCARC_MATRIX_COMPACT) 
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
    CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)          ! use global PARDISO from MKL
 #else
-   WRITE(*,*) 'MGM-method: MKL-preconditioning required, MKL library not available, using LU preconditioning'
    STACK(NSTACK)%SOLVER => PRECON_SSOR
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
    !CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MIN)
+   CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_LU, 'Unstructured Pass', NSCARC_NONE)
 #endif
 
 ELSE
@@ -538,7 +541,7 @@ END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 
 
 ! ------------------------------------------------------------------------------------------------
-!> \brief Perform global conjugate gradient method based on global Possion-matrix
+!> \brief Perform McKeeney-Greengard-Mayo method
 ! ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM(NSTACK)
 USE SCARC_MGM
@@ -560,7 +563,7 @@ CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, N
 CALL SCARC_MGM_STORE_SOLUTION (NSCARC_MGM_POISSON)             ! store solution in MGM%H1
 CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)
 
-CALL SCARC_MGM_COPY (NSCARC_MGM_COPY_H1_TO_H3)             ! first use MGM%H1 as solution MGM%H3
+CALL SCARC_MGM_COPY (NSCARC_MGM_COPY_H1_TO_H3)                 ! first use MGM%H1 as solution MGM%H3
 CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)
 CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)
 
@@ -635,10 +638,8 @@ ELSE
        ELSE 
            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
        ENDIF
+
        IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: SAVING ALSO H4'
-#endif
           CALL SCARC_MGM_COPY (NSCARC_MGM_COPY_H2_TO_H4)
           CALL SCARC_MGM_COPY (NSCARC_MGM_COPY_OH1_TO_OH2)
        ENDIF
@@ -648,8 +649,8 @@ ELSE
       CALL SCARC_MGM_DUMP('H3',0)
 #endif
 
-    ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
-    ! Define BC's along mesh interfaces by 'simple mean' or 'true approximate' based on previous Laplace solutions
+   ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
+   ! Define BC's along mesh interfaces by 'simple mean' or 'true approximate' based on previous Laplace solutions
    ELSE
 
 #ifdef WITH_SCARC_DEBUG
@@ -658,7 +659,6 @@ ELSE
 
       MGM_CORRECTION_LOOP: DO ITE_MGM = 1, SCARC_MGM_ITERATIONS
       
-
 #ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,*) '=============> SUSI: STARTING MGM-iteration ', ITE_MGM, TOTAL_PRESSURE_ITERATIONS
 #endif
@@ -683,9 +683,6 @@ ELSE
 #ifdef WITH_SCARC_DEBUG
          CALL SCARC_MGM_DUMP('H2',ITE_MGM)
          CALL SCARC_MGM_DUMP('H3',ITE_MGM)
-#endif
-
-#ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
          CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
 #endif
@@ -742,66 +739,59 @@ CALL SCARC_SETUP_MULTIGRID(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE
 NSTACK = NSTACK + 1
 SELECT CASE(TYPE_SMOOTH)
 
-   ! Jacobi-smoothing (acting locally by default)
+   ! Jacobi-smoothing 
 
    CASE (NSCARC_RELAX_JAC)
       STACK(NSTACK)%SOLVER => SMOOTH_JAC
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! SSOR-smoothing (acting locally by default)
+   ! SSOR-smoothing 
 
    CASE (NSCARC_RELAX_SSOR)
       STACK(NSTACK)%SOLVER => SMOOTH_SSOR
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! Jacobi-preconditioning in matrix form (acting locally by default)
+   ! Jacobi-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MJAC)
       STACK(NSTACK)%SOLVER => SMOOTH_MJAC
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX)
 
-    ! GS-preconditioning in matrix form (acting locally by default)
+    ! GS-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MGS)
       STACK(NSTACK)%SOLVER => SMOOTH_MGS
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SGS-preconditioning in matrix form (acting locally by default)
+   ! SGS-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSGS)
       STACK(NSTACK)%SOLVER => SMOOTH_MSGS
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SOR-preconditioning in matrix form (acting locally by default)
+   ! SOR-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSOR)
       STACK(NSTACK)%SOLVER => SMOOTH_MSOR
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! SSOR-preconditioning in matrix form (acting locally by default)
+   ! SSOR-preconditioning in matrix form 
 
    CASE (NSCARC_RELAX_MSSOR)
       STACK(NSTACK)%SOLVER => SMOOTH_MSSOR
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! FFT-smoothing (acting locally by default)
+   ! FFT-smoothing 
 
    CASE (NSCARC_RELAX_FFT)
       STACK(NSTACK)%SOLVER => SMOOTH_FFT
       CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MAX-1)
-
-   ! FFTO-smoothing (acting locally by default)
-
-   CASE (NSCARC_RELAX_FFTO)
-      STACK(NSTACK)%SOLVER => SMOOTH_FFTO
-      CALL SCARC_SETUP_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-      CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MAX-1)
 
 #ifdef WITH_MKL
    ! Smoothing by LU-decomposition
@@ -903,7 +893,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
- 
          ! ---------- Matrix in compact storage technique
  
          CASE (NSCARC_MATRIX_COMPACT)
@@ -973,7 +962,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   IF (JC < IC)  A%RELAX(IPTR) = A%VAL(IPTR) / A%VAL(A%ROW(JC))
                ENDDO
             ENDDO 
-
  
          ! ---------- Matrix in bandwise storage technique
  
@@ -1421,7 +1409,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP COARSE_SOLVER: PARDISO'
 
    ! -------------- Otherwise: print error message
    CASE DEFAULT
-      CALL SCARC_SHUTDOWN(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, TYPE_COARSE)
+      CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, TYPE_COARSE)
 
 END SELECT SELECT_COARSE
 END SUBROUTINE SCARC_SETUP_COARSE_SOLVER
@@ -1582,7 +1570,7 @@ CALL SCARC_DEBUG_LEVEL (X, 'MG POST: X', NL)
 
    ENDDO CYCLE_LOOP
 
-   IF (NL /= NLEVEL_MIN) CALL SCARC_SHUTDOWN(NSCARC_ERROR_MULTIGRID_LEVEL, SCARC_NONE, NL)
+   IF (NL /= NLEVEL_MIN) CALL SCARC_ERROR(NSCARC_ERROR_MULTIGRID_LEVEL, SCARC_NONE, NL)
 
  
    ! Compute norm of new residual on finest level and  leave loop correspondingly
@@ -1669,7 +1657,7 @@ SELECT CASE (TYPE_COARSE)
          CALL SCARC_METHOD_PARDISO (NSTACK, NPARENT, NLEVEL)
       ENDIF
 #else
-      CALL SCARC_SHUTDOWN(NSCARC_ERROR_DIRECT_NOMKL, SCARC_NONE, NLEVEL)
+      CALL SCARC_ERROR(NSCARC_ERROR_DIRECT_NOMKL, SCARC_NONE, NLEVEL)
 #endif
 
 END SELECT
@@ -1820,7 +1808,7 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
                                    MKL%MSGLVL, V1, V2, MPI_COMM_WORLD, MKL%ERROR)
    ENDIF
 
-   IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V1:'
@@ -1912,7 +1900,7 @@ WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
                      MKL%MSGLVL, V1, V2, MKL%ERROR)
    ENDIF
 
-   IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'PARDISO, POST, V1:'
@@ -2019,7 +2007,7 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
                            J = GWC%IYW
                            K = GWC%IZW
                
-                           IF (TWO_D .AND. J /= 1) CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+                           IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
                
                            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
                
@@ -3213,7 +3201,7 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
                                             AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
                                             MKL%MSGLVL, V1, V2, MPI_COMM_WORLD, MKL%ERROR)
             ENDIF
-            IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+            IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
          ENDDO MKL_SCOPE_GLOBAL_LOOP
 
@@ -3268,7 +3256,7 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'MKL%ERROR:', MKL%ERROR
 #endif
-            IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+            IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
          ENDDO MKL_SCOPE_LOCAL_LOOP
 

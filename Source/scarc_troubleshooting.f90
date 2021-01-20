@@ -20,7 +20,7 @@ CONTAINS
 ! ------------------------------------------------------------------------------------------------
 !> \brief Shutdown ScaRC with error message
 ! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SHUTDOWN(NERROR, CPARAM, NPARAM)
+SUBROUTINE SCARC_ERROR(NERROR, CPARAM, NPARAM)
 CHARACTER(*), INTENT(IN) :: CPARAM
 INTEGER, INTENT(IN) :: NERROR, NPARAM
 CHARACTER(80) :: CERROR
@@ -126,10 +126,62 @@ WRITE(*,*) 'ERROR: NOT WITH_SCARC_DEBUG'
 STOP_STATUS = SETUP_STOP
 RETURN
 
-1000 FORMAT('Stop in ScaRC-solver: ', A,' : ',   A, ' (CHID: ',A,')' )
-2000 FORMAT('Stop in ScaRC-solver: ', A,' : ', I12, ' (CHID: ',A,')' )
-3000 FORMAT('Stop in ScaRC-solver: ', A, ' (CHID: ',A,')' )
-END SUBROUTINE SCARC_SHUTDOWN
+1000 FORMAT('Error in ScaRC-solver: ', A,' : ',   A, ' (CHID: ',A,')' )
+2000 FORMAT('Error in ScaRC-solver: ', A,' : ', I12, ' (CHID: ',A,')' )
+3000 FORMAT('Error in ScaRC-solver: ', A, ' (CHID: ',A,')' )
+END SUBROUTINE SCARC_ERROR
+
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Print ScaRC warning message
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_WARNING(NWARNING, CPARAM, NPARAM)
+CHARACTER(*), INTENT(IN) :: CPARAM
+INTEGER, INTENT(IN) :: NWARNING, NPARAM
+CHARACTER(80) :: CWARNING
+
+! Assign warning message according to specified error
+
+SELECT CASE (NWARNING)
+   CASE (NSCARC_WARNING_NO_MKL_PRECON)
+      CWARNING = 'Intel MKL library missing - only SSOR preconditioner is used'
+   CASE (NSCARC_WARNING_NO_MKL_SMOOTH)
+      CWARNING = 'Intel MKL library missing - only SSOR smoother is used'
+   CASE (NSCARC_WARNING_NO_MKL_LU)
+      CWARNING = 'Intel MKL library missing - using LU instead'
+END SELECT
+
+
+! Specify more detailed information if available
+
+IF (CPARAM /= SCARC_NONE) THEN
+   IF (MYID == 0) WRITE(LU_ERR,1000)  CWARNING, CPARAM, TRIM(CHID)
+ELSE IF (NPARAM /= NSCARC_NONE) THEN
+   IF (MYID == 0) WRITE(LU_ERR,2000)  CWARNING, NPARAM, TRIM(CHID)
+ELSE
+   IF (MYID == 0) WRITE(LU_ERR,3000)  CWARNING, TRIM(CHID)
+ENDIF
+
+
+! Also print verbose message if enabled
+
+#ifdef WITH_SCARC_VERBOSE
+WRITE(*,*) 'ERROR: WITH_SCARC_VERBOSE'
+IF (CPARAM /= SCARC_NONE) THEN
+   WRITE(MSG%LU_VERBOSE,1000)  CWARNING, CPARAM, TRIM(CHID)
+ELSE IF (NPARAM /= NSCARC_NONE) THEN
+   WRITE(MSG%LU_VERBOSE,2000)  CWARNING, NPARAM, TRIM(CHID)
+ELSE
+   WRITE(MSG%LU_VERBOSE,3000)  CWARNING, TRIM(CHID)
+ENDIF
+#endif
+
+RETURN
+
+1000 FORMAT('Warning in ScaRC-solver: ', A,' : ',   A, ' (CHID: ',A,')' )
+2000 FORMAT('Warning in ScaRC-solver: ', A,' : ', I12, ' (CHID: ',A,')' )
+3000 FORMAT('Warning in ScaRC-solver: ', A, ' (CHID: ',A,')' )
+END SUBROUTINE SCARC_WARNING
 
 END MODULE SCARC_TROUBLESHOOTING
 
