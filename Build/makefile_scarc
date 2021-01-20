@@ -289,7 +289,7 @@ impi_intel_win_scarc : FOPENMPFLAGS = /Qopenmp
 impi_intel_win_scarc : FCOMPL = ifort
 impi_intel_win_scarc : obj = fds_impi_win_scarc
 impi_intel_win_scarc : setup_win $(objwin_mpi)
-   $(FCOMPL) -o $(obj) $(FFLAGS) $(FOPENMPFLAGS) /F1000000000 $(objwin_mpi) $(MPILIB) $(LFLAGSMKL_INTEL)
+	$(FCOMPL) -o $(obj) $(FFLAGS) $(FOPENMPFLAGS) /F1000000000 $(objwin_mpi) $(MPILIB) $(LFLAGSMKL_INTEL)
 
 impi_intel_win_scarc_db : MPILIB = "$(I_MPI_DEBUG_ROOT)\impi.lib"
 impi_intel_win_scarc_db : MPIINCLUDE = "$(I_MPI_ROOT)\intel64\include"
@@ -298,7 +298,7 @@ impi_intel_win_scarc_db : FOPENMPFLAGS = /Qopenmp
 impi_intel_win_scarc_db : FCOMPL = ifort
 impi_intel_win_scarc_db : obj = fds_impi_win_scarc_db
 impi_intel_win_scarc_db : setup_win $(objwin_mpi)
-   $(FCOMPL) -o $(obj) $(FFLAGS) $(FOPENMPFLAGS) /F1000000000 $(objwin_mpi) $(MPILIB) $(LFLAGSMKL_INTEL)
+	$(FCOMPL) -o $(obj) $(FFLAGS) $(FOPENMPFLAGS) /F1000000000 $(objwin_mpi) $(MPILIB) $(LFLAGSMKL_INTEL)
 
 
 # -----------------------------------------------------------------------------------------------------------------------
