@@ -1081,7 +1081,7 @@ END SUBROUTINE SCARC_MGM_STORE_SOLUTION
 !> \brief Copy solution vector in McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM
 INTEGER:: IX, IY, IZ
