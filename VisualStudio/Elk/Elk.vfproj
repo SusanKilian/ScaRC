@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Application" Version="11.0" ProjectIdGuid="{9ED9CB00-4B14-4701-9606-23338BDFB8BD}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Debug|x64" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Z7 &#xA;/F4000000000 /map&#xA;-fpp /DGITHASH_PP=\&quot;true\&quot; /DGITDATE_PP=\&quot;&quot;true\&quot;&quot;  /DBUILDDATE_PP=\&quot;&quot;true\&quot;&quot;  &#xA;/debug:inline-debug-info&#xA;" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" AdditionalIncludeDirectories="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\include&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\intel64\include&quot;" PreprocessorDefinitions="WITH_PARDISO;WITH_MKL;WITH_SPARSE_CLUSTER_SOLVER" EnableEnhancedInstructionSet="codeArchAVX" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF08" DebugParameter="debugParameterAll" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" AdditionalOptions="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib\debug\impi.lib&quot;&#xA;&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\lib\intel64\mkl_blacs_intelmpi_ilp64.lib&quot;&#xA;/map &#xA;" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib\debug&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\lib\intel64&quot;" LinkLibraryDependencies="false" GenerateDebugInformation="true" GenerateMapFile="true" SubSystem="subSystemConsole" AdditionalDependencies="impi.lib"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Z7 &#xA;/F4000000000 /map /DWITH_PARDISO /DWITH_CLUSTER_SPARSE_SOLVE /DWITH_MKL&#xA;-fpp /DGITHASH_PP=\&quot;true\&quot; /DGITDATE_PP=\&quot;&quot;true\&quot;&quot;  /DBUILDDATE_PP=\&quot;&quot;true\&quot;&quot;  &#xA;/debug:inline-debug-info  /Qsimd " SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" InlineFunctionExpansion="expandOnlyInline" FavorSizeOrSpeed="favorNone" GenAlternateCodePaths="codeForAVX2" Parallelization="true" AdditionalIncludeDirectories="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\include&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\intel64\include&quot;" PreprocessorDefinitions="WITH_PARDISO;WITH_MKL;WITH_SPARSE_CLUSTER_SOLVER" EnableEnhancedInstructionSet="codeArchAVX" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" OptDiagLevel="odlLevel5" UseMkl="mklCluster"/>
+				<Tool Name="VFLinkerTool" AdditionalOptions="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib\debug\impi.lib&quot;&#xA;&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\lib\intel64\mkl_blacs_intelmpi_ilp64.lib&quot;&#xA;/map /Md /Qmkl" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib\debug&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mpi\intel64\lib&quot; &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\mkl\lib\intel64&quot;  &quot;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2019.4.245\windows\redist\intel64\mkl&quot;" GenerateDebugInformation="true" GenerateMapFile="true" SubSystem="subSystemConsole" AdditionalDependencies="impi.lib"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<File RelativePath="..\..\Elk\elk.f90"/>
+		<File RelativePath="..\..\Elk\fds.f90"/>
+		<File RelativePath="..\..\Source\scrc.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>

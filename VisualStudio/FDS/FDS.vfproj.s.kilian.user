@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioUserFile ProjectCreator="Intel Fortran" Keyword="Application" Version="11.0" ProjectIdGuid="{9ED9CB00-4B14-4701-9606-23338BDFB8BD}">
+	<Configurations>
+		<Configuration Name="Debug|Win32"/>
+		<Configuration Name="Release|Win32"/>
+		<Configuration Name="Debug|x64" CommandArguments="mgm1.fds" WorkingDirectory="../Cases"/>
+		<Configuration Name="Release|x64" CommandArguments="poisson3d_scarc_1mesh.fds" WorkingDirectory="../Cases"/>
+		<Configuration Name="Release_Qipo|Win32"/>
+		<Configuration Name="Release_Qipo|x64"/></Configurations></VisualStudioUserFile>
