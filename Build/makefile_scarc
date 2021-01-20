@@ -143,6 +143,8 @@ setup:
 
 .f90.o:
 	$(FCOMPL) -c $(FFLAGS) $<
+f90.obj:
+	$(FCOMPL) -c $(FFLAGS) $<
 	 
 # Files which have OpenMP compiler directives are compiled using the FOPENMPFLAG and can be enabled/disabled on a per-file basis.
 
