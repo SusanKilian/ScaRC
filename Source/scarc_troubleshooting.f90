@@ -1,11 +1,11 @@
 !=======================================================================================================================
 !
-! MODULE SCARC_ERRORS
+! MODULE SCARC_TROUBLESHOOTING
 !
 !> \brief Organize program shutdown in case of an error based on corresponding error messages
 !
 !=======================================================================================================================
-MODULE SCARC_ERRORS
+MODULE SCARC_TROUBLESHOOTING
 
 USE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS, ONLY: EB, FB
@@ -131,6 +131,6 @@ RETURN
 3000 FORMAT('Stop in ScaRC-solver: ', A, ' (CHID: ',A,')' )
 END SUBROUTINE SCARC_SHUTDOWN
 
-END MODULE SCARC_ERRORS
+END MODULE SCARC_TROUBLESHOOTING
 
 
