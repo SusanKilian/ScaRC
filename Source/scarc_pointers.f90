@@ -133,15 +133,21 @@ REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()          !< Pointer to vector on fi
 REAL(EB), POINTER, DIMENSION(:):: V1=>NULL()          !< Pointer to first vector
 REAL(EB), POINTER, DIMENSION(:):: V2=>NULL()          !< Pointer to second vector
 
+REAL(EB), POINTER, DIMENSION(:,:,:):: HP=>NULL()      !< Pointer to pressure solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: SP=>NULL()      !< Pointer to structured Poisson MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: UL=>NULL()      !< Pointer to unstructured Laplace MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: ULP=>NULL()     !< Pointer to unstructured Laplace MGM solution (previous time step)
+REAL(EB), POINTER, DIMENSION(:,:,:):: UP=>NULL()      !< Pointer to unstructured Poisson MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: SS=>NULL()      !< Pointer to structured ScaRC solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: US=>NULL()      !< Pointer to unstructured ScaRC solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: DSU=>NULL()     !< Pointer to difference of structured and unstructured ScaRC
+
 REAL(EB), POINTER, DIMENSION(:):: OH1=>NULL()         !< Pointer to other Poisson solution
 REAL(EB), POINTER, DIMENSION(:):: OH2=>NULL()         !< Pointer to other Laplace solution
 REAL(EB), POINTER, DIMENSION(:):: OH3=>NULL()         !< Pointer to other MGM solution
 
-REAL(EB), POINTER, DIMENSION(:,:,:):: HP=>NULL()      !< Pointer to pressure vector
-REAL(EB), POINTER, DIMENSION(:,:,:):: H1=>NULL()      !< Pointer to Poisson solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: H2=>NULL()      !< Pointer to Laplace solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: H3=>NULL()      !< Pointer to MGM solution
 REAL(EB), POINTER, DIMENSION(:,:,:):: PRHS=>NULL()    !< Pointer to right hand side vector
+
 REAL(EB), POINTER, DIMENSION(:,:,:):: UU=>NULL()      !< Pointer to u-velocity vector
 REAL(EB), POINTER, DIMENSION(:,:,:):: VV=>NULL()      !< Pointer to v-velocity vector
 REAL(EB), POINTER, DIMENSION(:,:,:):: WW=>NULL()      !< Pointer to w-velocity vector
@@ -166,32 +172,6 @@ TYPE (SCARC_PRESSURE_TYPE), POINTER:: PRES=>NULL()    !< Pointer to pressure typ
 CONTAINS
 
 
-! -----------------------------------------------------------------------------
-!> \brief Point to specified mesh
-! -----------------------------------------------------------------------------
-SUBROUTINE SCARC_POINT_TO_MESH(NM)
-INTEGER, INTENT(IN):: NM
-
-M => MESHES(NM)
-S => SCARC(NM)
-
-END SUBROUTINE SCARC_POINT_TO_MESH
-
-
-! -----------------------------------------------------------------------------
-!> \brief Point to specified combination of mesh and grid level
-! -----------------------------------------------------------------------------
-SUBROUTINE SCARC_POINT_TO_LEVEL(NM, NL)
-INTEGER, INTENT(IN):: NM, NL
-
-M => MESHES(NM)
-S => SCARC(NM)
-L => S%LEVEL(NL)
-MGM=> L%MGM
-
-END SUBROUTINE SCARC_POINT_TO_LEVEL
-
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Unset ScaRC pointers
 ! mainly used to test the correctness of the pointer settings in the different routines
@@ -211,6 +191,54 @@ C => NULL();  CF => NULL();  CC => NULL()
 Z => NULL();  ZF => NULL();  ZC => NULL()
 
 END SUBROUTINE SCARC_POINT_TO_NONE
+
+
+! -----------------------------------------------------------------------------
+!> \brief Point to specified mesh
+! -----------------------------------------------------------------------------
+SUBROUTINE SCARC_POINT_TO_MESH(NM)
+INTEGER, INTENT(IN):: NM
+
+M => MESHES(NM)
+S => SCARC(NM)
+
+END SUBROUTINE SCARC_POINT_TO_MESH
+
+
+! -----------------------------------------------------------------------------
+!> \brief Point to specified combination of mesh and grid level
+! -----------------------------------------------------------------------------
+SUBROUTINE SCARC_POINT_TO_LEVEL(NM, NL)
+INTEGER, INTENT(IN):: NM, NL
+
+M   => MESHES(NM)
+S   => SCARC(NM)
+L   => S%LEVEL(NL)
+MGM => L%MGM
+
+END SUBROUTINE SCARC_POINT_TO_LEVEL
+
+
+! -----------------------------------------------------------------------------
+!> \brief Point to specified combination of mesh and grid level
+! -----------------------------------------------------------------------------
+SUBROUTINE SCARC_POINT_TO_MGM(NM, NL)
+INTEGER, INTENT(IN):: NM, NL
+
+M   => MESHES(NM)
+S   => SCARC(NM)
+L   => S%LEVEL(NL)
+MGM => L%MGM
+
+SP  => MGM%SP
+UL  => MGM%UL
+UP  => MGM%UP
+ULP => MGM%ULP
+SS  => MGM%SS
+US  => MGM%US
+DSU => MGM%DSU
+
+END SUBROUTINE SCARC_POINT_TO_MGM
 
 
 ! ----------------------------------------------------------------------------------------------------
@@ -235,7 +263,7 @@ SELECT CASE(TYPE_GRID)
 END SELECT
 
 MGM => L%MGM
-W => G%WALL
+W   => G%WALL
 
 END SUBROUTINE SCARC_POINT_TO_GRID
 
