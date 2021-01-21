@@ -1,0 +1,5 @@
+*.debug*
+*.log*
+*.scarc*
+*.dump*
+storage

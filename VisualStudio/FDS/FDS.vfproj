@@ -25,8 +25,8 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Z7 &#xA;/F4000000000 /map&#xA;-fpp /DGITHASH_PP=\&quot;true\&quot; /DGITDATE_PP=\&quot;&quot;true\&quot;&quot;  /DBUILDDATE_PP=\&quot;&quot;true\&quot;&quot;  &#xA;/debug:inline-debug-info&#xA;" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" AdditionalIncludeDirectories="&quot;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\include&quot; &quot;C:\Program Files (x86)\Intel\oneAPI\mkl\latest\include&quot;" PreprocessorDefinitions="WITH_PARDISO;WITH_MKL;WITH_SPARSE_CLUSTER_SOLVER;WITH_SCARC_DEBUG;WITH_SCARC_VERBOSE;WITH_SCARC_AMG;WITH_SCARC_POSTPROCESSING" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF08" DebugParameter="debugParameterAll" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" AdditionalOptions="&quot;C:\Program Files (x86)\Intel\oneAPI\mkl\latest\lib\intel64\mkl_blacs_intelmpi_lp64.lib&quot;&#xA;&quot;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\lib\debug\impi.lib&quot;&#xA;/map &#xA;" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\lib\debug&quot; &quot;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\lib&quot; &quot;C:\Program Files (x86)\Intel\oneAPI\mkl\latest\lib\intel64&quot;" LinkLibraryDependencies="false" GenerateDebugInformation="true" GenerateMapFile="true" SubSystem="subSystemConsole" AdditionalDependencies="impi.lib"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Z7 &#xA;/F4000000000 /map&#xA;-fpp /DGITHASH_PP=\&quot;true\&quot; /DGITDATE_PP=\&quot;&quot;true\&quot;&quot;  /DBUILDDATE_PP=\&quot;&quot;true\&quot;&quot;  &#xA;/debug:inline-debug-info&#xA;" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" AdditionalIncludeDirectories="C:\Program Files (x86)\Intel\oneAPI\mkl\latest\include;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\include" PreprocessorDefinitions="WITH_PARDISO;WITH_MKL;WITH_SPARSE_CLUSTER_SOLVER;WITH_SCARC_DEBUG;WITH_SCARC_AMG;WITH_SCARC_PROCESSING;WITH_SCARC_VERBOSE" EnableEnhancedInstructionSet="codeArchAVX" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF18" DebugParameter="debugParameterAll" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" AdditionalOptions="&quot;C:\Program Files (x86)\Intel\oneAPI\mkl\latest\lib\intel64\mkl_blacs_intelmpi_lp64.lib&quot;&#xA;" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="C:\Program Files (x86)\Intel\oneAPI\mkl\latest\lib\intel64;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\lib;C:\Program Files (x86)\Intel\oneAPI\mpi\latest\lib\debug" LinkLibraryDependencies="false" GenerateDebugInformation="true" GenerateMapFile="true" SubSystem="subSystemConsole" AdditionalDependencies="impi.lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -66,7 +66,8 @@
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
-		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<File RelativePath="..\..\Source\cons.f90"/>
 		<File RelativePath="..\..\Source\ctrl.f90"/>
 		<File RelativePath="..\..\Source\data.f90"/>
@@ -95,7 +96,6 @@
 		<File RelativePath="..\..\Source\scarc_amg.f90"/>
 		<File RelativePath="..\..\Source\scarc_constants.f90"/>
 		<File RelativePath="..\..\Source\scarc_convergence.f90"/>
-		<File RelativePath="..\..\Source\scarc_errors.f90"/>
 		<File RelativePath="..\..\Source\scarc_fft.f90"/>
 		<File RelativePath="..\..\Source\scarc_gmg.f90"/>
 		<File RelativePath="..\..\Source\scarc_grids.f90"/>
@@ -112,6 +112,7 @@
 		<File RelativePath="..\..\Source\scarc_stack.f90"/>
 		<File RelativePath="..\..\Source\scarc_storage.f90"/>
 		<File RelativePath="..\..\Source\scarc_timings.f90"/>
+		<File RelativePath="..\..\Source\scarc_troubleshooting.f90"/>
 		<File RelativePath="..\..\Source\scarc_types.f90"/>
 		<File RelativePath="..\..\Source\scarc_utilities.f90"/>
 		<File RelativePath="..\..\Source\scarc_variables.f90"/>
