@@ -497,15 +497,18 @@ END TYPE SCARC_GRID_TYPE
   
 TYPE SCARC_MGM_TYPE
 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SP                  !< structured Poisson MGM solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UP                  !< unstructured Poisson MGM solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UL                  !< unstructured Laplace MGM solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: ULP                 !< unstructured Laplace MGM solution (previous time step)
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SS                  !< structured ScaRC solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: US                  !< unstructured ScaRC solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: DSU                 !< difference of structured and unstructured ScaRC solutions
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SIP                 !< structured inhomogeneous Poisson MGM solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP                 !< unstructured Poisson MGM solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL                 !< unstructured Laplace MGM solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_PREV            !< unstructured Laplace MGM solution (previous time step)
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SCARC               !< structured ScaRC solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: USCARC              !< unstructured ScaRC solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: DSCARC              !< difference of structured and unstructured ScaRC solutions
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP_VS_USCARC       !< difference of unstructured Poisson MGM and UScaRC solutions
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_VS_DSCARC       !< difference of unstructured Laplace MGM and diff ScaRC-UScarC
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL                !< Boundary values of other mesh
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL_PREV           !< Boundary values of other mesh (previous time step)
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OU3, OV3, OW3       !< Velocity components along external boundaries
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OH1, OH2, OH3       !< Other mesh H3 vector
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: BC                  !< Boundary conditions along internal mesh interfaces
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: X, Y, B             !< RHS and solution vectors of LU (experimental)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: ASQ                 !< Matrix for LU-decomposition (experimental)

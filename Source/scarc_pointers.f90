@@ -120,53 +120,55 @@ TYPE (SCARC_MATRIX_BANDWISE_CONDENSED_TYPE), POINTER:: ABCO=>NULL()    !< Pointe
 
 TYPE (SCARC_MULTIGRID_TYPE), POINTER:: MG =>NULL()                     !< Pointer to multigrid type
 
-REAL(EB), POINTER, DIMENSION(:):: XCOR=>NULL()        !< Pointer to vector of node coordinates in x-direction
-REAL(EB), POINTER, DIMENSION(:):: YCOR=>NULL()        !< Pointer to vector of node coordinates in x-direction
-REAL(EB), POINTER, DIMENSION(:):: ZCOR=>NULL()        !< Pointer to vector of node coordinates in x-direction
+REAL(EB), POINTER, DIMENSION(:):: XCOR=>NULL()              !< Pointer to vector of node coordinates in x-direction
+REAL(EB), POINTER, DIMENSION(:):: YCOR=>NULL()              !< Pointer to vector of node coordinates in x-direction
+REAL(EB), POINTER, DIMENSION(:):: ZCOR=>NULL()              !< Pointer to vector of node coordinates in x-direction
 
-REAL(EB), POINTER, DIMENSION(:):: XMID=>NULL()        !< Pointer to vector of cell midpoints in x-direction
-REAL(EB), POINTER, DIMENSION(:):: YMID=>NULL()        !< Pointer to vector of cell midpoints in y-direction
-REAL(EB), POINTER, DIMENSION(:):: ZMID=>NULL()        !< Pointer to vector of cell midpoints in z-direction
+REAL(EB), POINTER, DIMENSION(:):: XMID=>NULL()              !< Pointer to vector of cell midpoints in x-direction
+REAL(EB), POINTER, DIMENSION(:):: YMID=>NULL()              !< Pointer to vector of cell midpoints in y-direction
+REAL(EB), POINTER, DIMENSION(:):: ZMID=>NULL()              !< Pointer to vector of cell midpoints in z-direction
 
-REAL(EB), POINTER, DIMENSION(:):: VC=>NULL()          !< Pointer to vector on coarse grid level
-REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()          !< Pointer to vector on fine grid level
-REAL(EB), POINTER, DIMENSION(:):: V1=>NULL()          !< Pointer to first vector
-REAL(EB), POINTER, DIMENSION(:):: V2=>NULL()          !< Pointer to second vector
+REAL(EB), POINTER, DIMENSION(:):: VC=>NULL()                !< Pointer to vector on coarse grid level
+REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()                !< Pointer to vector on fine grid level
+REAL(EB), POINTER, DIMENSION(:):: V1=>NULL()                !< Pointer to first vector
+REAL(EB), POINTER, DIMENSION(:):: V2=>NULL()                !< Pointer to second vector
 
-REAL(EB), POINTER, DIMENSION(:,:,:):: HP=>NULL()      !< Pointer to pressure solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: SP=>NULL()      !< Pointer to structured Poisson MGM solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: UL=>NULL()      !< Pointer to unstructured Laplace MGM solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: ULP=>NULL()     !< Pointer to unstructured Laplace MGM solution (previous time step)
-REAL(EB), POINTER, DIMENSION(:,:,:):: UP=>NULL()      !< Pointer to unstructured Poisson MGM solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: SS=>NULL()      !< Pointer to structured ScaRC solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: US=>NULL()      !< Pointer to unstructured ScaRC solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: DSU=>NULL()     !< Pointer to difference of structured and unstructured ScaRC
+REAL(EB), POINTER, DIMENSION(:,:,:):: HP=>NULL()            !< Pointer to pressure solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: SIP=>NULL()           !< Pointer to structured inhomogenous Poisson MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: UIP=>NULL()           !< Pointer to unstructured inhomogenous Poisson MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: UHL=>NULL()           !< Pointer to unstructured homogeneous Laplace MGM solution
+REAL(EB), POINTER, DIMENSION(:,:,:):: UHL_PREV=>NULL()      !< Pointer to previous unstructured homogeneous Laplace MGM solution 
 
-REAL(EB), POINTER, DIMENSION(:):: OH1=>NULL()         !< Pointer to other Poisson solution
-REAL(EB), POINTER, DIMENSION(:):: OH2=>NULL()         !< Pointer to other Laplace solution
-REAL(EB), POINTER, DIMENSION(:):: OH3=>NULL()         !< Pointer to other MGM solution
+REAL(EB), POINTER, DIMENSION(:):: OVEL=>NULL()              !< Pointer to other velocity component
+REAL(EB), POINTER, DIMENSION(:):: OUIP=>NULL()              !< Pointer to other unstructured inhomogenous Poisson solution
+REAL(EB), POINTER, DIMENSION(:):: OUHL=>NULL()              !< Pointer to other unstructured homogenous Laplace solution
+REAL(EB), POINTER, DIMENSION(:):: OUHL_PREV=>NULL()         !< Pointer to other previous unstructured homogenous Laplace solution
 
-REAL(EB), POINTER, DIMENSION(:,:,:):: PRHS=>NULL()    !< Pointer to right hand side vector
+REAL(EB), POINTER, DIMENSION(:,:,:):: PRHS=>NULL()          !< Pointer to right hand side vector
 
-REAL(EB), POINTER, DIMENSION(:,:,:):: UU=>NULL()      !< Pointer to u-velocity vector
-REAL(EB), POINTER, DIMENSION(:,:,:):: VV=>NULL()      !< Pointer to v-velocity vector
-REAL(EB), POINTER, DIMENSION(:,:,:):: WW=>NULL()      !< Pointer to w-velocity vector
+REAL(EB), POINTER, DIMENSION(:,:,:):: UU=>NULL()            !< Pointer to u-velocity vector
+REAL(EB), POINTER, DIMENSION(:,:,:):: VV=>NULL()            !< Pointer to v-velocity vector
+REAL(EB), POINTER, DIMENSION(:,:,:):: WW=>NULL()            !< Pointer to w-velocity vector
 
-REAL(EB), POINTER, DIMENSION(:) ::  RECV_BUFFER_REAL   !< Pointer to double precision receive vector
-INTEGER,  POINTER, DIMENSION(:) ::  RECV_BUFFER_INT    !< Pointer to inter receive vector
+REAL(EB), POINTER, DIMENSION(:) ::  RECV_BUFFER_REAL        !< Pointer to double precision receive vector
+INTEGER,  POINTER, DIMENSION(:) ::  RECV_BUFFER_INT         !< Pointer to inter receive vector
 
-TYPE (SCARC_MKL_TYPE), POINTER:: MKL=>NULL()          !< Pointer to MKL type
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: AS=>NULL()       !< Pointer to symmetric Poisson matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: ACS=>NULL()      !< Pointer to coarse symmetric Poisson matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: AFS=>NULL()      !< Pointer to fine symmetric Poisson matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAS=>NULL()      !< Pointer to neighboring symmetric Poisson matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: OACS=>NULL()     !< Pointer to coarse neighboring symmetric Poisson matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAFS=>NULL()     !< Pointer to fine neighboring symmetric Poisson matrix
-REAL(FB), DIMENSION(:), POINTER:: V1_FB=>NULL()       !< Pointer to first single precision vector
-REAL(FB), DIMENSION(:), POINTER:: V2_FB=>NULL()       !< Pointer to second single precision vector
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: AS=>NULL()             !< Pointer to symmetric Poisson matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: ACS=>NULL()            !< Pointer to coarse symmetric Poisson matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: AFS=>NULL()            !< Pointer to fine symmetric Poisson matrix
 
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAS=>NULL()            !< Pointer to neighboring symmetric Poisson matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: OACS=>NULL()           !< Pointer to coarse neighboring symmetric Poisson matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAFS=>NULL()           !< Pointer to fine neighboring symmetric Poisson matrix
+
+REAL(FB), DIMENSION(:), POINTER:: V1_FB=>NULL()             !< Pointer to first single precision vector
+REAL(FB), DIMENSION(:), POINTER:: V2_FB=>NULL()             !< Pointer to second single precision vector
+
+#ifdef WITH_MKL
+TYPE (SCARC_MKL_TYPE), POINTER:: MKL=>NULL()                !< Pointer to MKL type
+#endif
 #ifdef WITH_SCARC_POSTPROCESSING
-TYPE (SCARC_PRESSURE_TYPE), POINTER:: PRES=>NULL()    !< Pointer to pressure type
+TYPE (SCARC_PRESSURE_TYPE), POINTER:: PRES=>NULL()          !< Pointer to pressure type
 #endif
 
 CONTAINS
@@ -230,13 +232,10 @@ S   => SCARC(NM)
 L   => S%LEVEL(NL)
 MGM => L%MGM
 
-SP  => MGM%SP
-UL  => MGM%UL
-UP  => MGM%UP
-ULP => MGM%ULP
-SS  => MGM%SS
-US  => MGM%US
-DSU => MGM%DSU
+SIP => MGM%SIP
+UIP => MGM%UIP
+UHL => MGM%UHL
+UHL_PREV => MGM%UHL_PREV
 
 END SUBROUTINE SCARC_POINT_TO_MGM
 
@@ -256,7 +255,7 @@ L => S%LEVEL(NL)
 SELECT CASE(TYPE_GRID)
    CASE (NSCARC_GRID_STRUCTURED)
       G => L%STRUCTURED
-      G%NW = L%N_WALL_CELLS_EXT                     ! TODO: set it elsewhere
+       G%NW = L%N_WALL_CELLS_EXT                     ! TODO: set it elsewhere
    CASE (NSCARC_GRID_UNSTRUCTURED)
       G => L%UNSTRUCTURED
       G%NW = L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT

@@ -54,31 +54,38 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Allocate workspace for the storage of the different vectors in the MGM methods
 
-      !   SP  : structured Poisson solution (pass 1)
-      !   UL  : unstructured Laplace solution (pass 2)
-      !   UP  : unstructured Poisson solution (merge)
-      !   ULP : unstructured Laplace solution (previous time step, extrapolation BCs only)
+      !   SIP    : structured inhomogeneous Poisson solution (pass 1)
+      !   UIP    : unstructured inhomogeneous Poisson solution (merge)
+      !   UHL    : unstructured homogeneous Laplace solution (pass 2)
+      !   UHLP   : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
 
-      !   SS  : structured ScaRC solution 
-      !   US  : unstructured ScaRC solution 
-      !   DS  : difference of structured and unstructured ScaRC solution 
+      !   SCARC  : ScaRC solution (structured inhomogeneous)
+      !   USCARC : UScaRC solution (unstructured inhomogeneous)
+      !   DSCARC : difference of UScaRC and ScaRC solution 
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%SP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UP', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%SIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SIP', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP', CROUTINE)
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) &
-         CALL SCARC_ALLOCATE_REAL3(MGM%ULP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%ULP', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL3(MGM%UHL_PREV, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_PREV', CROUTINE)
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%SS, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%US, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%US', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%DSU, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSU', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
 
-      !   UP_VS_US  : unstructured Poisson versus unstructured ScaRC
-      !   UL_VS_DSU : unstructured Laplace versus difference of structured and unstructured ScaRC
+      !   UIP_VS_USCARC : unstructured inhomogeneous Poisson versus UScaRC
+      !   UHL_VS_DSCARC : unstructured homogeneous Laplace versus difference UScaRC-ScaRC
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%UP_VS_US, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UP_VS_US', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UL_VS_DSU, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UL_VS_DSU', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
 
+      CALL SCARC_ALLOCATE_REAL1(MGM%OUIP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUIP', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%OUHL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%OUHL_PREV, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL_PREV', CROUTINE)
+
+      CALL SCARC_ALLOCATE_REAL1(MGM%OUVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%OVVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OVVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%OWVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OWVEL', CROUTINE)
 
       CALL SCARC_ALLOCATE_REAL3(MGM%UU, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%UU', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%VV, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%VV', CROUTINE)
@@ -92,17 +99,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%U3, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U3', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%V3, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V3', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%W3, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W3', CROUTINE)
-
-      CALL SCARC_ALLOCATE_REAL1(MGM%OBDRY, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OBDRY', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OBDRYP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OBDRYP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OH3, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OH3', CROUTINE)
-
-      CALL SCARC_ALLOCATE_REAL1(MGM%OU3, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OU3', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OV3, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OV3', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OW3, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OW3', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%WVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%WVEL', CROUTINE)
 
       CALL SCARC_ALLOCATE_REAL1(MGM%BC, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%BC ', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
@@ -429,57 +428,6 @@ TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 END SUBROUTINE SCARC_SETUP_MGM_LU
 
 
-SUBROUTINE SCARC_MGM_DUMP (CTYPE, ITE_MGM)
-USE SCARC_POINTERS, ONLY: L, MGM, HP, SCARC_POINT_TO_LEVEL
-INTEGER, INTENT(IN):: ITE_MGM
-CHARACTER(*), INTENT(IN):: CTYPE
-CHARACTER(80):: FN_DUMP
-INTEGER:: IX, IY, IZ, NM
-INTEGER, SAVE:: LU_DUMP
-
-DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
-
-   SELECT CASE (TRIM(CTYPE))
-      CASE ('H1')
-         HP => MGM%SP
-      CASE ('H2')
-         HP => MGM%UL
-      CASE ('H3')
-         HP => MGM%UP
-      CASE ('H4')
-         HP => MGM%ULP
-      CASE ('H6')
-         HP => MGM%UP_VS_US
-      CASE ('H7')
-         HP => MGM%UL_VS_DSU
-      CASE ('HS')
-         HP => MGM%SS
-      CASE ('HU')
-         HP => MGM%US
-      CASE ('HD')
-         HP => MGM%DSU
-   END SELECT
-
-   WRITE (FN_DUMP, '(A, A, A, I1, A, A, A, i4.4, A, I4.4)') 'pressure/',TRIM(CHID), '_M',NM, '_',TRIM(CTYPE), '_TPI',&
-                                                    TOTAL_PRESSURE_ITERATIONS, '_MGM',ITE_MGM
-   
-   LU_DUMP = GET_FILE_NUMBER()
-   OPEN (LU_DUMP, FILE = FN_DUMP)
-   DO IZ = 1, L%NZ
-      DO IY = 1, L%NY
-         DO IX = 1, L%NX
-            WRITE(LU_DUMP, *) HP(IX, IY, IZ)
-         ENDDO
-      ENDDO
-   ENDDO
-   CLOSE(LU_DUMP)
-ENDDO
-
-END SUBROUTINE SCARC_MGM_DUMP
-
-
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Convergence state of MGM method
 ! ------------------------------------------------------------------------------------------------------
@@ -590,13 +538,13 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CASE  (NSCARC_MGM_POISSON, NSCARC_MGM_SCARC, NSCARC_MGM_USCARC, NSCARC_MGM_TERMINATE) 
 
          IF (NTYPE == NSCARC_MGM_POISSON) THEN
-            HP => MGM%SP
+            HP => MGM%SIP
          ELSE IF (NTYPE == NSCARC_MGM_TERMINATE) THEN
-            HP => MGM%UP
+            HP => MGM%UIP
          ELSE IF (NTYPE == NSCARC_MGM_SCARC) THEN
-            HP => MGM%SS
+            HP => MGM%SCARC
          ELSE IF (NTYPE == NSCARC_MGM_USCARC) THEN
-            HP => MGM%US
+            HP => MGM%USCARC
          ELSE
             WRITE(*,*) 'ERROR IN UMPDATE_GHOSTCELLS'
          ENDIF
@@ -674,7 +622,7 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
       ! 
       CASE (NSCARC_MGM_LAPLACE)
 
-         HP => MGM%UL
+         HP => MGM%UHL
    
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE: LAPLACE'
@@ -755,7 +703,7 @@ END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
 
 
 ! ----------------------------------------------------------------------------------------------------
-!> \brief Copy solution vector in McKeeney-Greengard-Mayo method
+!> \brief Copy specified vectors in McKeeney-Greengard-Mayo method 
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
 USE SCARC_POINTERS, ONLY: M, L, MGM, SCARC_POINT_TO_LEVEL
@@ -772,126 +720,127 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      ! Copy structured Poisson MGM solution to unstructured Poisson MGM solution (initialization) 
+      ! Copy structured ihomogeneous Poisson MGM solution to unstructured ihomogeneous Poisson MGM solution (initialization) 
 
-      CASE (NSCARC_MGM_COPY_SP_TO_UL) 
+      CASE (NSCARC_MGM_SIP_TO_UIP) 
 
-         MGM%UP = MGM%SP
-
+         MGM%UIP = MGM%SIP
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY H1 TO H3:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%SP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY SP TO UP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy structured ScaRC solution to structured Poisson MGM solution
+      ! Copy structured inhomogeneous ScaRC solution to structured inhomogeneous Poisson MGM solution
 
-      CASE (NSCARC_MGM_COPY_SS_TO_SP)                    
-         MGM%SP = MGM%SS
+      CASE (NSCARC_MGM_SCARC_TO_SIP)                    
 
+         MGM%SIP = MGM%SCARC
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY HS TO H1:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SS(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%SP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY SS TO SP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%SCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%SIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy unstructured ScaRC solution to unstructured Poisson MGM solution
+      ! Copy unstructured inhomogeneous ScaRC solution to unstructured inhomogeneous Poisson MGM solution
 
-      CASE (NSCARC_MGM_COPY_US_TO_UP)                     
-         MGM%UP = MGM%US
+      CASE (NSCARC_MGM_USCARC_TO_UIP)                     
+
+         MGM%UIP = MGM%USCARC
          IF (TWO_D) THEN
             DO IZ = 1, L%NZ
                DO IX = 1, L%NX
-                  IF (L%IS_SOLID(IX, 1, IZ)) MGM%UP(IX, 0:2, IZ) = 0.0_EB
+                  IF (L%IS_SOLID(IX, 1, IZ)) MGM%UIP(IX, 0:2, IZ) = 0.0_EB
                ENDDO
             ENDDO
          ELSE
             DO IZ = 1, L%NZ
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
-                     IF (L%IS_SOLID(IX, IY, IZ)) MGM%UP(IX, IY, IZ) = 0.0_EB
+                     IF (L%IS_SOLID(IX, IY, IZ)) MGM%UIP(IX, IY, IZ) = 0.0_EB
                   ENDDO
                ENDDO
             ENDDO
          ENDIF
 
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY HU TO H3:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%US'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%US(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY US TO UP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%USCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%USCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy difference between ScaRC and UScaRC to unstructured Laplace MGM solution
+      ! Copy difference between ScaRC and UScaRC to unstructured homogeneous Laplace MGM solution
 
-      CASE (NSCARC_MGM_COPY_DSU_TO_UL)    
-         MGM%UL = MGM%DSU
+      CASE (NSCARC_MGM_DSCARC_TO_UHL)    
+
+         MGM%UHL = MGM%DSCARC
+
          IF (TWO_D) THEN
             DO IZ = 1, L%NZ
                DO IX = 1, L%NX
-                  IF (L%IS_SOLID(IX, 1, IZ)) MGM%UL(IX, 0:2, IZ) = 0.0_EB
+                  IF (L%IS_SOLID(IX, 1, IZ)) MGM%UHL(IX, 0:2, IZ) = 0.0_EB
                ENDDO
             ENDDO
          ELSE
             DO IZ = 1, L%NZ
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
-                     IF (L%IS_SOLID(IX, IY, IZ)) MGM%UL(IX, IY, IZ) = 0.0_EB
+                     IF (L%IS_SOLID(IX, IY, IZ)) MGM%UHL(IX, IY, IZ) = 0.0_EB
                   ENDDO
                ENDDO
             ENDDO
          ENDIF
-
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY HD TO H2:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%DSU'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSU(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY DSU TO UL:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%DSCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy difference between ScaRC and UScaRC to previous unstructured Laplace MGM solution
+      ! Copy difference between ScaRC and UScaRC to previous unstructured homogeneous Laplace MGM solution
 
-      CASE (NSCARC_MGM_COPY_DSU_TO_ULP)                     ! Copy HD to H2
-         MGM%ULP = MGM%DSU
+      CASE (NSCARC_MGM_DSCARC_TO_UHL_PREV)  
 
+         MGM%UHL_PREV = MGM%DSCARC
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY HD TO H4:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%DSU'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSU(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%ULP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%ULP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY DSU TO ULP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%DSCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL_PREV'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL_PREV(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy unstructured Laplace MGM soltuion to previous unstructured Laplace solution
+      ! Copy unstructured homogeneous Laplace MGM solution to previous 
 
-      CASE (NSCARC_MGM_COPY_UL_TO_ULP)                     ! Copy H2 to H2
-         MGM%ULP = MGM%UL
+      CASE (NSCARC_MGM_UHL_TO_PREV)  
 
+         MGM%UHL_PREV = MGM%UHL
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY H2 TO H4:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%ULP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%ULP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY UL TO ULP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL_PREV'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL_PREV(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Save other boundary information to previous
+      ! Copy other unstructured homogeneous Laplace MGM solution to previous 
 
-      CASE (NSCARC_MGM_COPY_OBDRY_TO_PREV)                     ! Copy OH1 to OH2
-         MGM%OBDRYP = MGM%OBDRY
+      CASE (NSCARC_MGM_OUHL_TO_PREV) 
 
+         MGM%OUHL_PREV = MGM%OUHL
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) '---------- COPY OH1 TO OH2:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRY'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRY(I), I = 1, L%N_WALL_CELLS_EXT)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRYP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRYP(I), I = 1, L%N_WALL_CELLS_EXT)
+      WRITE(MSG%LU_DEBUG, *) '---------- COPY OUL TO OULP:', TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL(I), I = 1, L%N_WALL_CELLS_EXT)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL_PREV'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL_PREV(I), I = 1, L%N_WALL_CELLS_EXT)
 #endif
 
 
@@ -906,9 +855,12 @@ END SUBROUTINE SCARC_MGM_COPY
 !> \brief Build difference of specified vectors in McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DIFF(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, HP, GWC, M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN):: NTYPE
-INTEGER:: NM, IX, IY, IZ, ICS, ICU, ICE, IOR0, IW
+INTEGER:: NM, IX, IY, IZ, IOR0, IW
+#ifdef WITH_SCARC_DEBUG
+INTEGER :: I, K
+#endif
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -917,12 +869,12 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      ! Build difference between structured ScaRC and unstructured UScaRC solution
+      ! Build difference between ScaRC and UScaRC solution
 
-      CASE (NSCARC_MGM_DIFF_HU_VS_HS)
+      CASE (NSCARC_MGM_USCARC_VS_SCARC)
 
          G  => L%STRUCTURED
-         MGM%DSU = MGM%US-MGM%SS
+         MGM%DSCARC = MGM%USCARC-MGM%SCARC
 
          IF (TWO_D) THEN
             !DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
@@ -931,10 +883,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IOR0 = GWC%IOR
                IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
                IX = GWC%IXG;  IZ = GWC%IZG
-               IF (L%IS_SOLID(IX, 1, IZ)) MGM%DSU(IX, 0:2, IZ) = 0.0_EB
+               IF (L%IS_SOLID(IX, 1, IZ)) MGM%DSCARC(IX, 0:2, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',&
-                                       IW, IX, IZ, MGM%DSU(IX, 0, IZ), MGM%DSU(IX, 1, IZ), MGM%DSU(IX, 2, IZ)
+WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, DSU:',&
+                                       IW, IX, IZ, MGM%DSCARC(IX, 0, IZ), MGM%DSCARC(IX, 1, IZ), MGM%DSCARC(IX, 2, IZ)
 #endif
             ENDDO
          ELSE
@@ -943,42 +895,42 @@ WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM-DIFFERENCE:2D: IW, IX, IZ, HD:',&
                IOR0 = GWC%IOR
                IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
                IX = GWC%IXG;  IY = GWC%IYG;  IZ = GWC%IZG
-               IF (L%IS_SOLID(IX, IY, IZ)) MGM%DSU(IX, IY, IZ) = 0.0_EB
+               IF (L%IS_SOLID(IX, IY, IZ)) MGM%DSCARC(IX, IY, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, 4I6, E14.6)') 'MGM-DIFFERENCE:3D: IW, IX, IY, IZ, HD:',IW, IX, IY, IZ, MGM%DSU(IX, IY, IZ)
+WRITE(MSG%LU_DEBUG, '(A, 4I6, E14.6)') 'MGM-DIFFERENCE:3D: IW, IX, IY, IZ, DSU:',IW, IX, IY, IZ, MGM%DSCARC(IX, IY, IZ)
 #endif
             ENDDO
          ENDIF
 
       ! Build difference of unstructured Laplace MGM solution and difference of ScaRC and UScaRC
 
-      CASE (NSCARC_MGM_DIFF_UL_VS_DSU)            
+      CASE (NSCARC_MGM_UHL_VS_DSCARC)            
 
-         MGM%UL_VS_DSU = MGM%UL-MGM%DSU
+         MGM%UHL_VS_DSCARC = MGM%UHL-MGM%DSCARC
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG, *) '---------- COMPARING UL_VS_DSU:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%DSU'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSU(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UL_VS_DSU_UL_VS_DSU'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL_VS_DSU(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%DSCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%DSCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UHL_VS_DSCARC_UL_VS_DSU'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL_VS_DSCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Build difference of unstructured Poisson MGM solution and unstructured ScaRC solution
+      ! Build difference of unstructured Poisson MGM solution and UScaRC solution
 
-      CASE (NSCARC_MGM_DIFF_UP_VS_US)                     
+      CASE (NSCARC_MGM_UIP_VS_USCARC)                     
 
-         MGM%UP_VS_US = MGM%UP-MGM%US
+         MGM%UIP_VS_USCARC = MGM%UIP-MGM%USCARC
 
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG, *) '---------- COMPARING UP_VS_US:', TOTAL_PRESSURE_ITERATIONS
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%US'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%US(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-      WRITE(MSG%LU_DEBUG, *) 'MGM%UP_VS_US_UP_VS_US'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP_VS_US(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%USCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%USCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+      WRITE(MSG%LU_DEBUG, *) 'MGM%UIP_VS_USCARC'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP_VS_USCARC(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
    END SELECT
@@ -992,7 +944,7 @@ END SUBROUTINE SCARC_MGM_DIFF
 !> \brief Store specified type of vector in McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_STORE(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, HP, GWC, M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IX, IY, IZ, ICS, ICU, ICE, IOR0, IW
 
@@ -1003,20 +955,20 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      ! Store structured ScaRC solution
+      ! Store ScaRC solution
 
       CASE (NSCARC_MGM_SCARC)
 
          G  => L%STRUCTURED
-         HP => MGM%SS
 
          DO IZ = 1, L%NZ
             DO IY = 1, L%NY
                DO IX = 1, L%NX
-                  ICS = G%CELL_NUMBER(IX, IY, IZ)              ! structured cell number
-                  HP(IX, IY, IZ) = ST%X(ICS) 
+                  ICS = G%CELL_NUMBER(IX, IY, IZ)  
+                  MGM%SCARC(IX, IY, IZ) = ST%X(ICS) 
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-SCARC:A: IX, IY, IZ, ICS, HS:',IX, IY, IZ, ICS, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-SCARC:A: IX, IY, IZ, ICS, SS:',&
+                                                                   IX, IY, IZ, ICS, MGM%SCARC(IX, IY, IZ)
 #endif
                ENDDO
             ENDDO
@@ -1029,28 +981,29 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-SCARC:A: IX, IY, IZ, I
             IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
             IX = GWC%IXG;  IY = GWC%IYG;  IZ = GWC%IZG
             ICE = L%STRUCTURED%CELL_NUMBER(IX, IY, IZ)
-            HP(IX, IY, IZ) = ST%X(ICE) 
+            MGM%SCARC(IX, IY, IZ) = ST%X(ICE) 
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-SCARC:B: IX, IY, IZ, IW, ICE, H1:',IX, IY, IZ, IW, ICE, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-SCARC:B: IX, IY, IZ, IW, ICE, SS:',&
+                                                                   IX, IY, IZ, IW, ICE, MGM%SCARC(IX, IY, IZ)
 #endif
          ENDDO
 
-      ! Store unstructured UScaRC solution
+      ! Store UScaRC solution
 
       CASE (NSCARC_MGM_USCARC)
 
          G  => L%UNSTRUCTURED
-         HP => MGM%US
 
-         HP = 0.0_EB
+         MGM%USCARC = 0.0_EB
          DO IZ = 1, L%NZ
             DO IY = 1, L%NY
                DO IX = 1, L%NX
                   IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
                   ICS = G%CELL_NUMBER(IX, IY, IZ)           ! unstructured cell number
-                  HP(IX, IY, IZ) = ST%X(ICS) 
+                  MGM%USCARC(IX, IY, IZ) = ST%X(ICS) 
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-USCARC:A: IX, IY, IZ, ICS, HS:',IX, IY, IZ, ICS, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-USCARC:A: IX, IY, IZ, ICS, SS:',&
+                                                                    IX, IY, IZ, ICS, MGM%USCARC(IX, IY, IZ)
 #endif
                ENDDO
             ENDDO
@@ -1063,9 +1016,10 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-USCARC:A: IX, IY, IZ, 
             IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
             IX = GWC%IXG;  IY = GWC%IYG;  IZ = GWC%IZG
             ICE = G%CELL_NUMBER(IX, IY, IZ)
-            HP(IX, IY, IZ) = ST%X(ICE) 
+            MGM%USCARC(IX, IY, IZ) = ST%X(ICE) 
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, IW, ICE, H1:',IX, IY, IZ, IW, ICE, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, IW, ICE, SP:',&
+                                                                    IX, IY, IZ, IW, ICE, MGM%USCARC(IX, IY, IZ)
 #endif
          ENDDO
 
@@ -1075,16 +1029,16 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, 
       CASE (NSCARC_MGM_POISSON)
 
          G  => L%STRUCTURED
-         HP => MGM%SP
 
-         !HP = 0.0_EB
+         !MGM%SIP = 0.0_EB
          DO IZ = 1, L%NZ
             DO IY = 1, L%NY
                DO IX = 1, L%NX
                   ICS = G%CELL_NUMBER(IX, IY, IZ)              ! structured cell number
-                  HP(IX, IY, IZ) = ST%X(ICS) 
+                  MGM%SIP(IX, IY, IZ) = ST%X(ICS) 
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-POISSON:A: IX, IY, IZ, ICS, H1:',IX, IY, IZ, ICS, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-POISSON:A: IX, IY, IZ, ICS, SP:',&
+                                                                     IX, IY, IZ, ICS, MGM%SIP(IX, IY, IZ)
 #endif
                ENDDO
             ENDDO
@@ -1097,9 +1051,10 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-POISSON:A: IX, IY, IZ,
             IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
             IX = GWC%IXG;  IY = GWC%IYG;  IZ = GWC%IZG
             ICE = L%STRUCTURED%CELL_NUMBER(IX, IY, IZ)
-            HP(IX, IY, IZ) = ST%X(ICE) 
+            MGM%SIP(IX, IY, IZ) = ST%X(ICE) 
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ, IW, ICE, H1:',IX, IY, IZ, IW, ICE, HP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ, IW, ICE, SP:',&
+                                                                     IX, IY, IZ, IW, ICE, MGM%SIP(IX, IY, IZ)
 #endif
          ENDDO
 
@@ -1111,35 +1066,36 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ,
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_STORE_SOLUTION: LAPLACE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
          IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
             DO IZ = 0, L%NZ+1
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%CELL_NUMBER(IX, IY, IZ)              ! structured cell number
-                     MGM%ULP(IX, IY, IZ) = MGM%UL(IX, IY, IZ)  
+                     ICU = G%CELL_NUMBER(IX, IY, IZ)             
+                     MGM%UHL_PREV(IX, IY, IZ) = MGM%UHL(IX, IY, IZ)  
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:H4:EXPOL: IX, IY, IZ, ICU, H3:', IX, IY, IZ, ICU, MGM%ULP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ, ICU, UP:', &
+                                                                     IX, IY, IZ, ICU, MGM%UHL_PREV(IX, IY, IZ)
 #endif
                   ENDDO
                ENDDO
             ENDDO
          ENDIF
 
-         MGM%UL = 0.0_EB
+         MGM%UHL = 0.0_EB
          IF (SCARC_MGM_USE_LU) THEN
             DO IZ = 1, L%NZ
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ))              ! structured cell number
-                     MGM%UL(IX, IY, IZ) = MGM%X(ICU)
+                     ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ)) 
+                     MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
 #ifdef WITH_SCARC_DEBUG 
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, H2:',IX, IY, IZ, ICU, MGM%UL(IX, IY, IZ), &
-                                                    MGM%X(G%PERM_BW(ICU))
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, UL:',&
+                                                                     IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(G%PERM_BW(ICU))
 #endif
                   ENDDO
                ENDDO
@@ -1149,11 +1105,11 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%CELL_NUMBER(IX, IY, IZ)              ! structured cell number
-                     MGM%UL(IX, IY, IZ) = ST%X(ICU)
+                     ICU = G%CELL_NUMBER(IX, IY, IZ)           
+                     MGM%UHL(IX, IY, IZ) = ST%X(ICU)
 #ifdef WITH_SCARC_DEBUG 
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, H2:',IX, IY, IZ, ICU, MGM%UL(IX, IY, IZ), &
-                                                    ST%X(ICU)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, UL:',&
+                                                                     IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
 #endif
                   ENDDO
                ENDDO
@@ -1162,8 +1118,8 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: LAPLACE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
 
       ! Merge structured inhomogeneous Poisson and unstructured homogeneous Laplace solutions
@@ -1172,20 +1128,20 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_STORE_SOLUTION: MGM_MERGE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
 
          DO IZ = 0, L%NZ+1
             DO IY = 0, L%NY+1
                DO IX = 0, L%NX+1
-                  !MGM%UP(IX, IY, IZ) = MGM%UP(IX, IY, IZ) + MGM%UL(IX, IY, IZ)              ! Variant A
-                  MGM%UP(IX, IY, IZ) = MGM%SP(IX, IY, IZ) + MGM%UL(IX, IY, IZ)              ! Variant A
+                  !MGM%UIP(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) + MGM%UHL(IX, IY, IZ)              ! Variant A
+                  MGM%UIP(IX, IY, IZ) = MGM%SIP(IX, IY, IZ) + MGM%UHL(IX, IY, IZ)              ! Variant A
 #ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, H1, H2, H3:',  IX, IY, IZ, &
-                                                    MGM%SP(IX, IY, IZ), MGM%UL(IX, IY, IZ), MGM%UP(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL, UP:',  IX, IY, IZ, &
+                                                    MGM%SIP(IX, IY, IZ), MGM%UHL(IX, IY, IZ), MGM%UIP(IX, IY, IZ)
 #endif
                ENDDO
             ENDDO
@@ -1194,15 +1150,15 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, H1, H2,
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: MGM_MERGE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
 
 #ifdef WITH_SCARC_VERBOSE2
-         CALL SCARC_VERBOSE_VECTOR3 (MGM%SP, 'H1')
-         CALL SCARC_VERBOSE_VECTOR3 (MGM%UL, 'H2')
+         CALL SCARC_VERBOSE_VECTOR3 (MGM%SIP, 'SP')
+         CALL SCARC_VERBOSE_VECTOR3 (MGM%UHL, 'UL')
          CALL SCARC_VERBOSE_VECTOR3 (HP, 'HP')
 #endif
 
@@ -1215,9 +1171,9 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, H1, H2,
             DO IZ = 0, L%NZ+1
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
-                     M%H(IX, IY, IZ) = MGM%UP(IX, IY, IZ) 
+                     M%H(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) 
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%H(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                   ENDDO
                ENDDO
@@ -1227,7 +1183,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, 1, IZ)) M%H(IX, 0:2, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%H(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                   ENDDO
                ENDDO
@@ -1237,7 +1193,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                      DO IX = 1, L%NX
                         IF (L%IS_SOLID(IX, IY, IZ)) M%H(IX, IY, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%H(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                      ENDDO
                   ENDDO
@@ -1249,9 +1205,9 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
             DO IZ = 0, L%NZ+1
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
-                     M%HS(IX, IY, IZ) = MGM%UP(IX, IY, IZ) 
+                     M%HS(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) 
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-CORRECTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%HS(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-CORRECTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                   ENDDO
                ENDDO
@@ -1261,7 +1217,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-CORRECTOR: IX, IY, IZ,
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, 1, IZ)) M%HS(IX, 0:2, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%HS(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                   ENDDO
                ENDDO
@@ -1271,7 +1227,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                      DO IX = 1, L%NX
                         IF (L%IS_SOLID(IX, IY, IZ)) M%HS(IX, IY, IZ) = 0.0_EB
 #ifdef WITH_SCARC_DEBUG
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, H3:', IX, IY, IZ, M%HS(IX, IY, IZ)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                      ENDDO
                   ENDDO
@@ -1317,16 +1273,16 @@ WRITE(MSG%LU_DEBUG, *) 'MGM_SETUP_WORKSPACE: CORRECTOR'
       MGM%W1 = M%WS
    ENDIF
 
-   MGM%SP = 0.0_EB
-   !MGM%UL = 0.0_EB
-   MGM%UP = 0.0_EB
-   !IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) MGM%ULP = 0.0_EB
-   MGM%UP_VS_US = 0.0_EB
-   MGM%UL_VS_DSU = 0.0_EB
+   MGM%SIP = 0.0_EB
+   !MGM%UHL = 0.0_EB
+   MGM%UIP = 0.0_EB
+   !IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) MGM%UHL_PREV = 0.0_EB
+   MGM%UIP_VS_USCARC = 0.0_EB
+   MGM%UHL_VS_DSCARC = 0.0_EB
 
-   MGM%SS = 0.0_EB
-   MGM%US = 0.0_EB
-   MGM%DSU = 0.0_EB
+   MGM%SCARC = 0.0_EB
+   MGM%USCARC = 0.0_EB
+   MGM%DSCARC = 0.0_EB
 
 ENDDO
 
@@ -1337,7 +1293,7 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ---------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_INTERFACES(NM, NL)
-USE SCARC_POINTERS, ONLY: L, G, F, MGM, GWC, OL, OG, OH1, OH2, H2, ST, &
+USE SCARC_POINTERS, ONLY: L, G, F, MGM, GWC, OL, OG, ST, UHL, OUHL, OUHL_PREV, &
                           SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: IW, I, J, K, IOR0, IFACE, INBR, NOM, ICG, IC, IWG, ICW, ITYPE
@@ -1357,10 +1313,10 @@ SELECT CASE (ITYPE)
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START MEAN SETTING:', TOTAL_PRESSURE_ITERATIONS
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%UL(I, 1, K), I = 1, L%NX), K = L%NZ, 1, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRY'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRY(I), I = 1, L%N_WALL_CELLS_EXT)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%UHL(I, 1, K), I = 1, L%NX), K = L%NZ, 1, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL(I), I = 1, L%N_WALL_CELLS_EXT)
 #endif
       MGM%BC = 0.0_EB
       DO IW = 1, L%N_WALL_CELLS_EXT
@@ -1378,9 +1334,9 @@ SELECT CASE (ITYPE)
          IF (IOR0 == 0) CYCLE
          F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
       
-         MGM%BC(IW) = 0.5_EB * (MGM%UL(I, J, K) + MGM%OBDRY(IW)) 
+         MGM%BC(IW) = 0.5_EB * (MGM%UHL(I, J, K) + MGM%OUHL(IW)) 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 2000) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM%BC(IW), F%SCAL_DIRICHLET*MGM%BC(IW)
+WRITE(MSG%LU_DEBUG, 2000) IOR0, IW, I, J, K, MGM%UHL(I, J, K), MGM%OUHL(IW), MGM%BC(IW), F%SCAL_DIRICHLET*MGM%BC(IW)
 #endif
 
          IC = G%CELL_NUMBER(I, J, K)
@@ -1403,14 +1359,14 @@ WRITE(MSG%LU_DEBUG, 2000) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM
    
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% EXPOL SETTING:', TOTAL_PRESSURE_ITERATIONS
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%ULP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%ULP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRY'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRY(I), I = 1, L%N_WALL_CELLS_EXT)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRYP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRYP(I), I = 1, L%N_WALL_CELLS_EXT)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL_PREV'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL_PREV(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL(I), I = 1, L%N_WALL_CELLS_EXT)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL_PREV'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL_PREV(I), I = 1, L%N_WALL_CELLS_EXT)
 #endif
       MGM%BC = 0.0_EB
       DO IW = 1, L%N_WALL_CELLS_EXT
@@ -1428,9 +1384,9 @@ WRITE(MSG%LU_DEBUG, 2000) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM
          IF (IOR0 == 0) CYCLE
          F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
       
-         MGM%BC(IW) = MGM%UL(I, J, K) + MGM%OBDRY(IW) - 0.5_EB*(MGM%ULP(I, J, K) + MGM%OBDRYP(IW))  
+         MGM%BC(IW) = MGM%UHL(I, J, K) + MGM%OUHL(IW) - 0.5_EB*(MGM%UHL_PREV(I, J, K) + MGM%OUHL_PREV(IW))  
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 2100) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM%ULP(I, J, K), MGM%OBDRYP(IW), &
+WRITE(MSG%LU_DEBUG, 2100) IOR0, IW, I, J, K, MGM%UHL(I, J, K), MGM%OUHL(IW), MGM%UHL_PREV(I, J, K), MGM%OUHL_PREV(IW), &
                          MGM%BC(IW), F%SCAL_DIRICHLET*MGM%BC(IW)
 #endif
 
@@ -1450,18 +1406,18 @@ WRITE(MSG%LU_DEBUG, 2100) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM
    !
    CASE (NSCARC_MGM_BC_TRUE)
 
-      H2  => MGM%UL
-      OH1 => MGM%OBDRY
-      OH2 => MGM%OBDRYP
+      UHL       => MGM%UHL
+      OUHL      => MGM%OUHL
+      OUHL_PREV => MGM%OUHL_PREV
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START TRUE SETTING:', TOTAL_PRESSURE_ITERATIONS
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%UL(I, 1, K), I = 1, L%NX), K = L%NZ, 1, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRY'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRY(I), I = 1, L%N_WALL_CELLS_EXT)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%OBDRYP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OBDRYP(I), I = 1, L%N_WALL_CELLS_EXT)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%UHL(I, 1, K), I = 1, L%NX), K = L%NZ, 1, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL(I), I = 1, L%N_WALL_CELLS_EXT)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL_PREV'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL_PREV(I), I = 1, L%N_WALL_CELLS_EXT)
 #endif
       MGM%BC = 0.0_EB
       MGM_TRUE_FACE_LOOP: DO IFACE = 1, 6
@@ -1493,72 +1449,72 @@ WRITE(MSG%LU_DEBUG, 2100) IOR0, IW, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IW), MGM
 
                   ! ---------------------------------------
                   CASE( 1)
-                     HB( 1) = 0.5_EB * (OH1(IWG)  + OH2(IWG) )
-                     HB(-1) = 0.5_EB * (H2(1, J, K) + H2(2, J, K))
+                     HB( 1) = 0.5_EB * (OUHL(IWG)  + OUHL_PREV(IWG) )
+                     HB(-1) = 0.5_EB * (UHL(1, J, K) + UHL(2, J, K))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, IWG, -1,  -1, IWG, -1, -1, OH1(IWG),   OH2(IWG),  1, HB( 1)
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, 11,  J,   K, 2  ,  J,  K, H2(1, J, K), H2(2, J, K), -1, HB(-1)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, IWG, -1,  -1, IWG, -1, -1, OUHL(IWG),   OUHL_PREV(IWG),  1, HB( 1)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, 11,  J,   K, 2  ,  J,  K, UHL(1, J, K), UHL(2, J, K), -1, HB(-1)
 #endif
                      IF (.NOT.TWO_D) THEN
                         IF (MGM%BTYPE(IWG, 2) == INTERNAL) THEN
-                           HB( 2) = 0.5_EB * (H2(1, J-1, K) + OH1(IWG+F%INCRS(2)))
+                           HB( 2) = 0.5_EB * (UHL(1, J-1, K) + OUHL(IWG+F%INCRS(2)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(2), -1, -1, H2(1, J-1, K), OH1(IWG+F%INCRS(2)), 3, HB(2)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(2), -1, -1, UHL(1, J-1, K), OUHL(IWG+F%INCRS(2)), 3, HB(2)
 #endif
                         ENDIF
                         IF (MGM%BTYPE(IWG, -2) == INTERNAL) THEN
-                           HB(-2) = 0.5_EB * (H2(1, J+1, K) + OH1(IWG+F%INCRS(-2)))
+                           HB(-2) = 0.5_EB * (UHL(1, J+1, K) + OUHL(IWG+F%INCRS(-2)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(-2), -1, -1, H2(1, J-1, K), OH1(IWG+F%INCRS(-2)), 3, HB(2)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(-2), -1, -1, UHL(1, J-1, K), OUHL(IWG+F%INCRS(-2)), 3, HB(2)
 #endif
                         ENDIF
                      ENDIF
                      IF (MGM%BTYPE(IWG, 3) == INTERNAL) THEN
-                        HB( 3) = 0.5_EB * (H2(1, J, K-1) + OH1(IWG+F%INCRS(3)))
+                        HB( 3) = 0.5_EB * (UHL(1, J, K-1) + OUHL(IWG+F%INCRS(3)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCRS(3), -1, -1, H2(1, J, K-1), OH1(IWG+F%INCRS(3)), 3, HB(3)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCRS(3), -1, -1, UHL(1, J, K-1), OUHL(IWG+F%INCRS(3)), 3, HB(3)
 #endif
                      ENDIF
                      IF (MGM%BTYPE(IWG, -3) == INTERNAL) THEN
-                        HB(-3) = 0.5_EB *(H2(1, J, K+1) + OH1(IWG+F%INCRS(-3)))
+                        HB(-3) = 0.5_EB *(UHL(1, J, K+1) + OUHL(IWG+F%INCRS(-3)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J,  K+1, IWG+F%INCRS(-3), 1, -1, H2(1, J, K+1), OH1(IWG+F%INCRS(-3)), -3, HB(-3)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J,  K+1, IWG+F%INCRS(-3), 1, -1, UHL(1, J, K+1), OUHL(IWG+F%INCRS(-3)), -3, HB(-3)
 #endif
                      ENDIF
 
 
                   ! ---------------------------------------
                   CASE(-1)
-                     HB( 1) = 0.5_EB * (H2(I-1, J, K) + H2(I, J, K))
-                     HB(-1) = 0.5_EB * (OH1(IWG)    + OH2(IWG) )
+                     HB( 1) = 0.5_EB * (UHL(I-1, J, K) + UHL(I, J, K))
+                     HB(-1) = 0.5_EB * (OUHL(IWG)    + OUHL_PREV(IWG) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I-1, J, K, I, J, K, H2(I-1, J, K), H2(I, J, K), 1, HB(1)
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, IWG, -1,  -1, IWG, -1, -1, OH1(IWG), OH2(IWG), -1, HB(-1)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I-1, J, K, I, J, K, UHL(I-1, J, K), UHL(I, J, K), 1, HB(1)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, IWG, -1,  -1, IWG, -1, -1, OUHL(IWG), OUHL_PREV(IWG), -1, HB(-1)
 #endif
                      IF (.NOT.TWO_D) THEN
                         IF (MGM%BTYPE(IWG, 2) == INTERNAL) THEN
-                           HB( 2) = 0.5_EB * (H2(I, J-1, K) + OH1(IWG+F%INCRS(2)))
+                           HB( 2) = 0.5_EB * (UHL(I, J-1, K) + OUHL(IWG+F%INCRS(2)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(2), H2(I, J-1, K), OH1(IWG+F%INCRS(2)), 3, HB(2)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(2), UHL(I, J-1, K), OUHL(IWG+F%INCRS(2)), 3, HB(2)
 #endif
                         ENDIF
                         IF (MGM%BTYPE(IWG, -2) == INTERNAL) THEN
-                           HB(-2) = 0.5_EB * (H2(I, J+1, K) + OH1(IWG+F%INCRS(-2)))
+                           HB(-2) = 0.5_EB * (UHL(I, J+1, K) + OUHL(IWG+F%INCRS(-2)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(-2), H2(I, J-1, K), OH1(IWG+F%INCRS(-2)), 3, HB(2)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCRS(-2), UHL(I, J-1, K), OUHL(IWG+F%INCRS(-2)), 3, HB(2)
 #endif
                         ENDIF
                      ENDIF
                      IF (MGM%BTYPE(IWG, 3) == INTERNAL) THEN   
-                        HB( 3) = 0.5_EB * (H2(I, J, K-1) + OH1(IWG+F%INCRS(3)))
+                        HB( 3) = 0.5_EB * (UHL(I, J, K-1) + OUHL(IWG+F%INCRS(3)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCRS(3), -1, -1, H2(I, J, K-1), OH1(IWG+F%INCRS(3)),  3, HB(3)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCRS(3), -1, -1, UHL(I, J, K-1), OUHL(IWG+F%INCRS(3)),  3, HB(3)
 #endif
                      ENDIF
                      IF (MGM%BTYPE(IWG, -3) == INTERNAL) THEN  
-                        HB(-3) = 0.5_EB * (H2(I, J, K+1) + OH1(IWG+F%INCRS(-3)))
+                        HB(-3) = 0.5_EB * (UHL(I, J, K+1) + OUHL(IWG+F%INCRS(-3)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K+1, IWG+F%INCRS(-3), -1, -1, H2(I, J, K+1), OH1(IWG+F%INCRS(-3)), -3, HB(-3)
+WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K+1, IWG+F%INCRS(-3), -1, -1, UHL(I, J, K+1), OUHL(IWG+F%INCRS(-3)), -3, HB(-3)
 #endif
                      ENDIF
 
@@ -1591,7 +1547,8 @@ WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGH
                IC = G%CELL_NUMBER(I, J, K)
                ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET*VAL
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 3000) IOR0, IWG, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IWG), MGM%OBDRYP(IWG), MGM%BC(IWG), F%SCAL_DIRICHLET*MGM%BC(IWG)
+WRITE(MSG%LU_DEBUG, 3000) IOR0, IWG, I, J, K, MGM%UHL(I, J, K), MGM%OUHL(IWG), MGM%OUHL_PREV(IWG), MGM%BC(IWG), &
+                          F%SCAL_DIRICHLET*MGM%BC(IWG)
 #endif
             ENDDO MGM_TRUE_FACECELL_LOOP
 
@@ -1629,40 +1586,40 @@ WRITE(MSG%LU_DEBUG, 3000) IOR0, IWG, I, J, K, MGM%UL(I, J, K), MGM%OBDRY(IWG), M
       
          SELECT CASE (IOR0)
             CASE(1)
-               VAL = -L%DXI2 * (MGM%UL(I, J, K) - MGM%UL(I-1, J, K))
+               VAL = -L%DXI2 * (MGM%UHL(I, J, K) - MGM%UHL(I-1, J, K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR =  1: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I-1, J, K), MGM%UL(I, J, K), VAL
+                     IW, I, J, K, MGM%UHL(I-1, J, K), MGM%UHL(I, J, K), VAL
 #endif
             CASE(-1)
-               VAL =  L%DXI2 * (MGM%UL(I+1, J, K) - MGM%UL(I, J, K))
+               VAL =  L%DXI2 * (MGM%UHL(I+1, J, K) - MGM%UHL(I, J, K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR = -1: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I, J, K), MGM%UL(I+1, J, K), VAL
+                     IW, I, J, K, MGM%UHL(I, J, K), MGM%UHL(I+1, J, K), VAL
 #endif
             CASE(2)
-               VAL = -L%DYI2 * (MGM%UL(I, J, K) - MGM%UL(I, J-1, K))
+               VAL = -L%DYI2 * (MGM%UHL(I, J, K) - MGM%UHL(I, J-1, K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR =  2: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I, J-1, K), MGM%UL(I, J, K), VAL
+                     IW, I, J, K, MGM%UHL(I, J-1, K), MGM%UHL(I, J, K), VAL
 #endif
             CASE(-2)
-               VAL =  L%DYI2 * (MGM%UL(I, J+1, K) - MGM%UL(I, J, K))
+               VAL =  L%DYI2 * (MGM%UHL(I, J+1, K) - MGM%UHL(I, J, K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR = -2: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I, J, K), MGM%UL(I, J+1, K), VAL
+                     IW, I, J, K, MGM%UHL(I, J, K), MGM%UHL(I, J+1, K), VAL
 #endif
             CASE(3)
-               VAL = -L%DZI2 * (MGM%UL(I, J, K) - MGM%UL(I, J, K-1))
+               VAL = -L%DZI2 * (MGM%UHL(I, J, K) - MGM%UHL(I, J, K-1))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR =  3: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I, J, K-1), MGM%UL(I, J, K), VAL
+                     IW, I, J, K, MGM%UHL(I, J, K-1), MGM%UHL(I, J, K), VAL
 #endif
             CASE(-3)
-               VAL =  +L%DZI2 * (MGM%UL(I, J, K+1) - MGM%UL(I, J, K))
+               VAL =  +L%DZI2 * (MGM%UHL(I, J, K+1) - MGM%UHL(I, J, K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 4i4, 3E14.6)') 'MGM-BC: TAYLOR: IOR = -3: IW, I, J, K, HPM, HPP, VAL, VAL2: ', &
-                     IW, I, J, K, MGM%UL(I, J, K), MGM%UL(I, J, K+1), VAL
+                     IW, I, J, K, MGM%UHL(I, J, K), MGM%UHL(I, J, K+1), VAL
 #endif
          END SELECT
 
@@ -1678,7 +1635,7 @@ END SELECT
             ' : HB(',i3, ')=', E14.6, ': W: ',E14.6)
 2000 FORMAT('MGM-BC: MEAN: IOR = ',I4, ' : IW =', I4, ' : I, J, K =', 3I4, ': H, OH, BC, SCAL*BC = ', 4E14.6)
 2100 FORMAT('MGM-BC: EXPOL: IOR = ',I4, ' : IW =', I4, ' : I, J, K =', 3I4, ': H, OH, H-1, OH-1, BC, SCAL*BC = ', 6E14.6)
-3000 FORMAT('MGM-BC: TRUE: IOR = ',I4, ' : IW =', I4, ' : I, J, K =', 3I4, ': H, OH1, OH2, BC, SCAL*BC = ', 5E14.6)
+3000 FORMAT('MGM-BC: TRUE: IOR = ',I4, ' : IW =', I4, ' : I, J, K =', 3I4, ': H, OUHL, OUHL_PREV, BC, SCAL*BC = ', 5E14.6)
 #endif
 END SUBROUTINE SCARC_SETUP_MGM_INTERFACES
 
@@ -1697,8 +1654,8 @@ REAL(EB):: VAL
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U1(I, 1, K), I = 0, L%NX), K = L%NZ, 1, -1)
    WRITE(MSG%LU_DEBUG, *) 'MGM%U2'
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U2(I, 1, K), I = 0, L%NX), K = L%NZ, 1, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%U3'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U3(I, 1, K), I = 0, L%NX), K = L%NZ, 1, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, L%NX), K = L%NZ, 1, -1)
 #endif
 
 DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
@@ -1792,10 +1749,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U2(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
    WRITE(MSG%LU_DEBUG, *) 'MGM%W2'
    WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%W2(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%U3'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U3(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%W3'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%W3(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%WVEL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%WVEL(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
 #endif
    MGM_PART_SELECT: SELECT CASE (NTYPE)
 
@@ -1807,7 +1764,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '================================ UPDATE-VELOCITY-POISSON:P: ', PREDICTOR, M%IBAR, M%JBAR, M%KBAR, DT
 #endif
-         HP => MGM%SP
+         HP => MGM%SIP
          IF (PREDICTOR) THEN
             UU => M%U
             VV => M%V
@@ -1854,25 +1811,25 @@ WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO Z:P: ',I, J, K, WW(I, J, K), M%FVZ
             ENDDO
          ENDDO
             
-         MGM%U3 = MGM%U1
-         MGM%V3 = MGM%V1
-         MGM%W3 = MGM%W1 
+         MGM%UVEL = MGM%U1
+         MGM%VVEL = MGM%V1
+         MGM%WVEL = MGM%W1 
 
       !
       ! ------------- Update velocity with new information after Laplace pass
       !
       CASE (NSCARC_MGM_LAPLACE)
 
-         HP => MGM%UL
+         HP => MGM%UHL
             
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '================================ UPDATE-VELOCITY-LAPLACE:P: ', PREDICTOR, M%IBAR, M%JBAR, M%KBAR, DT
-   WRITE(MSG%LU_DEBUG, *) 'MGM%SP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 WRITE(MSG%LU_DEBUG, *) '------------------------------------------------------------'
 #endif
             
@@ -1970,9 +1927,9 @@ WRITE(MSG%LU_DEBUG, '(A, 4I4, E14.6)') 'VELO Y:L: NOGRAD:',IOR0, I, J, K, MGM%W2
 
          ENDDO
 
-         MGM%U3 = MGM%U1+MGM%U2
-         MGM%V3 = MGM%V1+MGM%V2
-         MGM%W3 = MGM%W1+MGM%W2
+         MGM%UVEL = MGM%U1+MGM%U2
+         MGM%VVEL = MGM%V1+MGM%V2
+         MGM%WVEL = MGM%W1+MGM%W2
 
    END SELECT MGM_PART_SELECT
 ENDDO
@@ -1989,10 +1946,10 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U2(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1
 WRITE(MSG%LU_DEBUG, *) 'MGM%W2'
 WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%W2(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
 WRITE(MSG%LU_DEBUG, *) '------------------------------------------------------------'
-WRITE(MSG%LU_DEBUG, *) 'MGM%U3'
-WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U3(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
-WRITE(MSG%LU_DEBUG, *) 'MGM%W3'
-WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%W3(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
+WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
+WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
+WRITE(MSG%LU_DEBUG, *) 'MGM%WVEL'
+WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%WVEL(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
 WRITE(MSG%LU_DEBUG, *) '------------------------------------------------------------'
 #endif
  
@@ -2022,9 +1979,9 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
 
    IF (NTYPE == NSCARC_MGM_POISSON) THEN
-      HP  => MGM%SP
+      HP  => MGM%SIP
    ELSE
-      HP  => MGM%UP
+      HP  => MGM%UIP
    ENDIF
 
    MGM%VELOCITY_ERROR = 0.0_EB
@@ -2230,10 +2187,10 @@ WRITE(MSG%LU_DEBUG, '(A, 4I4, 3E14.6)') '---------------------------------------
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'GWC%BOUNDARY_TYPE:'
 WRITE(MSG%LU_DEBUG, '(5I5)') (G%WALL(IW)%BOUNDARY_TYPE, IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT)
-WRITE(MSG%LU_DEBUG, *) 'MGM%U3'
-WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U3(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
-WRITE(MSG%LU_DEBUG, *) 'MGM%W3'
-WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%W3(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
+WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
+WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
+WRITE(MSG%LU_DEBUG, *) 'MGM%WVEL'
+WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%WVEL(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
 WRITE(MSG%LU_DEBUG, *) 'MGM%OU3'
 WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%OU3(IW), IW = 1, L%N_WALL_CELLS_EXT)
 WRITE(MSG%LU_DEBUG, *) 'MGM%OW3'
@@ -2260,37 +2217,37 @@ WRITE(MSG%LU_DEBUG, *) 'MGM%VELOCITY_ERROR:', MGM%VELOCITY_ERROR
             SELECT CASE(IOR0)
                CASE( 1)
                   !UN_NEW = M%U(I, J, K)   - DT*(M%FVX(I, J, K)   + M%RDXN(I)  *(HP(I+1, J, K)-HP(I, J, K))*DHFCT)
-                  UN_NEW = MGM%U3(I, J, K)
+                  UN_NEW = MGM%UVEL(I, J, K)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J, K, UN_NEW
 #endif
                CASE(-1)
                   !UN_NEW = M%U(I-1, J, K) - DT*(M%FVX(I-1, J, K) + M%RDXN(I-1)*(HP(I, J, K)-HP(I-1, J, K))*DHFCT)
-                  UN_NEW = MGM%U3(I-1, J, K)
+                  UN_NEW = MGM%UVEL(I-1, J, K)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I-1, J, K, UN_NEW
 #endif
                CASE( 2)
                   !UN_NEW = M%V(I, J, K)   - DT*(M%FVY(I, J, K)   + M%RDYN(J)  *(HP(I, J+1, K)-HP(I, J, K))*DHFCT)
-                  UN_NEW = MGM%V3(I, J, K)
+                  UN_NEW = MGM%VVEL(I, J, K)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J, K, UN_NEW
 #endif
                CASE(-2)
                   !UN_NEW = M%V(I, J-1, K) - DT*(M%FVY(I, J-1, K) + M%RDYN(J-1)*(HP(I, J, K)-HP(I, J-1, K))*DHFCT)
-                  UN_NEW = MGM%V3(I, J-1, K)
+                  UN_NEW = MGM%VVEL(I, J-1, K)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J-1, K, UN_NEW
 #endif
                CASE( 3)
                   !UN_NEW = M%W(I, J, K)   - DT*(M%FVZ(I, J, K)   + M%RDZN(K)  *(HP(I, J, K+1)-HP(I, J, K))*DHFCT)
-                  UN_NEW = MGM%W3(I, J, K) 
+                  UN_NEW = MGM%WVEL(I, J, K) 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J, K, UN_NEW
 #endif
                CASE(-3)
                   !UN_NEW = M%W(I, J, K-1) - DT*(M%FVZ(I, J, K-1) + M%RDZN(K-1)*(HP(I, J, K)-HP(I, J, K-1))*DHFCT)
-                  UN_NEW = MGM%W3(I, J, K-1) 
+                  UN_NEW = MGM%WVEL(I, J, K-1) 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J, K-1, UN_NEW
 #endif

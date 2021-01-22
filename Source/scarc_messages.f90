@@ -453,35 +453,33 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MESHES(NM)%HS(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       ENDIF
    ELSE IF (NTYPE == 5) THEN
-      WRITE(MSG%LU_DEBUG,*) 'MGM%SS'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%SS(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
-      WRITE(MSG%LU_DEBUG,*) 'MGM%US'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%US(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
-      WRITE(MSG%LU_DEBUG,*) 'MGM%DSU'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%DSU(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      WRITE(MSG%LU_DEBUG,*) 'MGM%SCARC'
+      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%SCARC(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      WRITE(MSG%LU_DEBUG,*) 'MGM%USCARC'
+      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%USCARC(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      WRITE(MSG%LU_DEBUG,*) 'MGM%DSCARC'
+      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%DSCARC(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
    ELSE
    WRITE(MSG%LU_DEBUG,*) 'FVX'
    WRITE(MSG%LU_DEBUG,MSG%CFORM2) ((MESHES(MYID+1)%FVX(I,1,K), I=0, M%IBAR), K=M%KBAR,0,-1)
    !WRITE(MSG%LU_DEBUG,*) 'FVZ'
    !WRITE(MSG%LU_DEBUG,MSG%CFORM2) ((MESHES(MYID+1)%FVZ(I,1,K), I=0, M%IBAR), K=M%KBAR,0,-1)
    IF (IS_MGM) THEN
-      WRITE(MSG%LU_DEBUG,*) 'MGM%SP'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%SP(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
-      WRITE(MSG%LU_DEBUG,*) 'MGM%UL'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UL(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      WRITE(MSG%LU_DEBUG,*) 'MGM%SIP'
+      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%SIP(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      WRITE(MSG%LU_DEBUG,*) 'MGM%UHL'
+      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UHL(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
-         WRITE(MSG%LU_DEBUG,*) 'MGM%ULP'
-         WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%ULP(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+         WRITE(MSG%LU_DEBUG,*) 'MGM%UHL_PREV'
+         WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UHL_PREV(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       ENDIF
-      WRITE(MSG%LU_DEBUG,*) 'MGM%H5'
-      WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%H5(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       IF (NTYPE >= 2) THEN
-         !WRITE(MSG%LU_DEBUG,*) 'MGM%UP(.,0,.)'
-         !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UP(I,0,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
-         WRITE(MSG%LU_DEBUG,*) 'MGM%UP(.,1,.)'
-         WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UP(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
-         !WRITE(MSG%LU_DEBUG,*) 'MGM%UP(.,2,.)'
-         !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UP(I,2,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+         !WRITE(MSG%LU_DEBUG,*) 'MGM%UIP(.,0,.)'
+         !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UIP(I,0,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+         WRITE(MSG%LU_DEBUG,*) 'MGM%UIP(.,1,.)'
+         WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UIP(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+         !WRITE(MSG%LU_DEBUG,*) 'MGM%UIP(.,2,.)'
+         !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UIP(I,2,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       ENDIF
       IF (NTYPE >= 1) THEN
          WRITE(MSG%LU_DEBUG,*) 'H'
@@ -491,10 +489,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ENDIF
    ENDIF
    !IF (IS_MGM.AND.NTYPE >=2) THEN
-      !WRITE(MSG%LU_DEBUG,*) 'MGM%UP'
-      !WRITE(MSG%LU_DEBUG,MSG%CFORM2) ((MGM%UP(I,1,K), I=0, M%IBAR), K=M%KBAR,0,-1)
-      !WRITE(MSG%LU_DEBUG,*) 'MGM%UL'
-      !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UL(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
+      !WRITE(MSG%LU_DEBUG,*) 'MGM%UIP'
+      !WRITE(MSG%LU_DEBUG,MSG%CFORM2) ((MGM%UIP(I,1,K), I=0, M%IBAR), K=M%KBAR,0,-1)
+      !WRITE(MSG%LU_DEBUG,*) 'MGM%UHL'
+      !WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((MGM%UHL(I,1,K), I=0, M%IBAR+1), K=M%KBAR+1,0,-1)
       !WRITE(MSG%LU_DEBUG,*) 'MGM%UU'
       !WRITE(MSG%LU_DEBUG,MSG%CFORM2) ((MGM%UU(I,1,K), I=0, M%IBAR), K=M%KBAR,0,-1)
    !ELSE
@@ -523,6 +521,61 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_DEBUG_METHOD
+
+
+! ------------------------------------------------------------------------------------------------
+!> \brief Debugging version only: Dump out specified MGM vector
+! ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MGM_DUMP (CTYPE, ITE_MGM)
+USE SCARC_POINTERS, ONLY: L, MGM, HP, SCARC_POINT_TO_LEVEL
+INTEGER, INTENT(IN):: ITE_MGM
+CHARACTER(*), INTENT(IN):: CTYPE
+CHARACTER(80):: FN_DUMP
+INTEGER:: IX, IY, IZ, NM
+INTEGER, SAVE:: LU_DUMP
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+
+   SELECT CASE (TRIM(CTYPE))
+      CASE ('SIP')
+         HP => MGM%SIP
+      CASE ('UIP')
+         HP => MGM%UIP
+      CASE ('UHL')
+         HP => MGM%UHL
+      CASE ('UHL_PREV')
+         HP => MGM%UHL_PREV
+      CASE ('UIP_VS_USCARC')
+         HP => MGM%UIP_VS_USCARC
+      CASE ('UHL_VS_DSCARC')
+         HP => MGM%UHL_VS_DSCARC
+      CASE ('SCARC')
+         HP => MGM%SCARC
+      CASE ('USCARC')
+         HP => MGM%USCARC
+      CASE ('DSCARC')
+         HP => MGM%DSCARC
+   END SELECT
+
+   WRITE (FN_DUMP, '(A, A, A, I1, A, A, A, i4.4, A, I4.4)') 'pressure/',TRIM(CHID), '_M',NM, '_',TRIM(CTYPE), '_TPI',&
+                                                             TOTAL_PRESSURE_ITERATIONS, '_MGM',ITE_MGM
+   
+   LU_DUMP = GET_FILE_NUMBER()
+   OPEN (LU_DUMP, FILE = FN_DUMP)
+   DO IZ = 1, L%NZ
+      DO IY = 1, L%NY
+         DO IX = 1, L%NX
+            WRITE(LU_DUMP, *) HP(IX, IY, IZ)
+         ENDDO
+      ENDDO
+   ENDDO
+   CLOSE(LU_DUMP)
+ENDDO
+
+END SUBROUTINE SCARC_MGM_DUMP
+
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
