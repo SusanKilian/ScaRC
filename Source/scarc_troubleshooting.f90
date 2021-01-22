@@ -88,7 +88,6 @@ SELECT CASE (NERROR)
       CERROR = 'Wrong send exchange structure'
 END SELECT
 
-
 ! Specify more detailed information if available
 
 IF (CPARAM /= SCARC_NONE) THEN
@@ -98,7 +97,6 @@ ELSE IF (NPARAM /= NSCARC_NONE) THEN
 ELSE
    IF (MYID == 0) WRITE(LU_ERR,3000)  CERROR, TRIM(CHID)
 ENDIF
-
 
 ! Also print verbose message if enabled
 
@@ -131,7 +129,6 @@ RETURN
 3000 FORMAT('Error in ScaRC-solver: ', A, ' (CHID: ',A,')' )
 END SUBROUTINE SCARC_ERROR
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Print ScaRC warning message
 ! ------------------------------------------------------------------------------------------------
@@ -149,8 +146,9 @@ SELECT CASE (NWARNING)
       CWARNING = 'Intel MKL library missing - only SSOR smoother is used'
    CASE (NSCARC_WARNING_NO_MKL_LU)
       CWARNING = 'Intel MKL library missing - using LU instead'
+   CASE (NSCARC_WARNING_NO_GLOBAL_SCOPE)
+      CWARNING = 'No global scope preconditioner available'
 END SELECT
-
 
 ! Specify more detailed information if available
 
@@ -161,7 +159,6 @@ ELSE IF (NPARAM /= NSCARC_NONE) THEN
 ELSE
    IF (MYID == 0) WRITE(LU_ERR,3000)  CWARNING, TRIM(CHID)
 ENDIF
-
 
 ! Also print verbose message if enabled
 
@@ -184,5 +181,4 @@ RETURN
 END SUBROUTINE SCARC_WARNING
 
 END MODULE SCARC_TROUBLESHOOTING
-
 

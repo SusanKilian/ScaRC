@@ -45,7 +45,6 @@ ENDDO
 
 END SUBROUTINE SCARC_DAXPY_CONSTANT
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Vector multiplied with a constant scalar is added to vector multiplied with another scalar
 !     DY(I) = DA1 * DX(I) + DA2 * DY(I) 
@@ -64,7 +63,6 @@ ENDDO
 !$OMP END PARALLEL DO 
 
 END SUBROUTINE SCARC_DAXPY_CONSTANT_DOUBLE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Vector multiplied with variable scalars (componentwise) is added to another vector 
@@ -87,7 +85,6 @@ ENDDO
 
 END SUBROUTINE SCARC_DAXPY_VARIABLE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Vector is multiplied with a constant scalar 
 !     DY(I) = DA(I)*DX(I) 
@@ -107,7 +104,6 @@ ENDDO
 
 END SUBROUTINE SCARC_SCALING_CONSTANT
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Vector is multiplied with variable scalars (componentwise)
 !     DY(I) = DA(I)*DX(I) 
@@ -125,7 +121,6 @@ ENDDO
 !$OMP END PARALLEL DO
 
 END SUBROUTINE SCARC_SCALING_VARIABLE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Compute global scalar-product including global data exchange
@@ -179,7 +174,6 @@ SCARC_SCALAR_PRODUCT = RANK_REAL
 CPU(MYID)%SCALAR_PRODUCT = CPU(MYID)%SCALAR_PRODUCT + CURRENT_TIME()-TNOW
 END FUNCTION SCARC_SCALAR_PRODUCT
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Compute global L2-norm including global data exchange
 ! ------------------------------------------------------------------------------------------------
@@ -195,7 +189,6 @@ SCARC_L2NORM = GLOBAL_REAL
 
 CPU(MYID)%L2NORM =CPU(MYID)%L2NORM+CURRENT_TIME()-TNOW
 END FUNCTION SCARC_L2NORM
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Compute linear combination of two vectors for bandwise storage technique
@@ -226,7 +219,6 @@ ENDDO
 
 END SUBROUTINE SCARC_VECTOR_SUM
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Define vector2 to be a scaled copy of vector 1
 ! ------------------------------------------------------------------------------------------------
@@ -245,7 +237,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
-
 #ifdef WITH_MKL
    CALL DCOPY(G%NCE, V1, 1, V2, 1)
    CALL DSCAL(G%NCE, SCAL1, V2, 1)
@@ -256,7 +247,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_VECTOR_COPY
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Clear vector
@@ -273,7 +263,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_VECTOR_CLEAR
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specified value
@@ -306,7 +295,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_VECTOR_RANDOM_INIT
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specified value
@@ -347,12 +335,11 @@ END SUBROUTINE SCARC_VECTOR_INIT
 ! ------------------------------------------------------------------------------------------------
 DOUBLE PRECISION FUNCTION EXACT(X,Z)
 REAL (EB), INTENT(IN) :: X, Z
-!EXACT = (X**2 - X**4) * (Z**4 - Z**2)                                    ! FUNCTION 1
-!EXACT = (X**2 - 1) * (Z**2 - 1)                                         ! FUNCTION 2
-!EXACT =  625.0_EB/16.0_EB * X * (0.8_EB - X) * Z * (0.8_EB - Z)        ! FUNCTION 3
+!EXACT = (X**2 - X**4) * (Z**4 - Z**2)                              
+!EXACT = (X**2 - 1) * (Z**2 - 1)                                    
+!EXACT =  625.0_EB/16.0_EB * X * (0.8_EB - X) * Z * (0.8_EB - Z)    
 EXACT = - X * (0.8_EB - X) * Z * (0.8_EB - Z)        ! FUNCTION 3
 END FUNCTION EXACT
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Set right hand side according to specified function
@@ -364,7 +351,6 @@ REAL (EB), INTENT(IN) :: X, Z
 !RHS = 625.0_EB/8.0_EB * (X * (0.8_EB - X) + Z * (0.8_EB - Z))
 RHS = 2.0_EB * (X * (0.8_EB - X) + Z * (0.8_EB - Z))
 END FUNCTION RHS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Preset right hand side in such a way that exact solution is known
@@ -379,7 +365,7 @@ IF (ITE_TOTAL == 0) WRITE(*,*) 'TODO: PRESET_EXACT is active !!!'
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NE)
 
    DO K = 1, L%NZ
@@ -394,13 +380,11 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ZMID => L%ZMID
          ENDIF
          VC(IC) = EXACT(XMID(I),ZMID(K))
-         !WRITE(MSG%LU_DEBUG,'(A,i3,a,e10.2,a,e10.2,a,E14.6)') 'IC=',IC,':X=',XMID(i),':Z=',ZMID(k),': RHS=',VC(IC)
       ENDDO
    ENDDO
 ENDDO
 
 END SUBROUTINE SCARC_PRESET_EXACT
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specific values
@@ -438,7 +422,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_PRESET_VECTOR
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Preset right hand side in such a way that exact solution is known
@@ -699,5 +682,4 @@ CPU(MYID)%MATVEC_PRODUCT =CPU(MYID)%MATVEC_PRODUCT+CURRENT_TIME()-TNOW
 END SUBROUTINE SCARC_MATVEC_PRODUCT
 
 END MODULE SCARC_VECTORS
-
 

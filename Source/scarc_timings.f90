@@ -18,7 +18,6 @@ IMPLICIT NONE
 
 CONTAINS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Setup time measurements
 ! ------------------------------------------------------------------------------------------------
@@ -26,7 +25,6 @@ SUBROUTINE SCARC_SETUP_TIMINGS
 ALLOCATE (CPU(0:N_MPI_PROCESSES-1), STAT = IERROR)
 CALL CHKMEMERR ('SCARC_SETUP_TIMINGS', 'CPU', IERROR)
 END SUBROUTINE SCARC_SETUP_TIMINGS
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Dump CPU times of several routines
@@ -72,5 +70,4 @@ ENDIF
 END SUBROUTINE SCARC_DUMP_TIMERS
 
 END MODULE SCARC_TIMINGS
-
 

@@ -42,7 +42,6 @@ INTEGER  :: R                                   !< Handle for auxiliary one-dime
 INTEGER  :: V                                   !< Handle for auxiliary one-dimensional vector
 INTEGER  :: Y                                   !< Handle for auxiliary one-dimensional vector
 INTEGER  :: Z                                   !< Handle for auxiliary one-dimensional vector
-
 #ifdef WITH_SCARC_DEBUG
 INTEGER  :: E                                   !< Handle for one-dimensional error vector (debugging only)
 #endif
@@ -62,7 +61,6 @@ ITE_PRES = ITE_PRES + 1
 ITE_GLOBAL = ICYC
 
 END SUBROUTINE SCARC_SET_ITERATION_STATE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Check if solver converges or diverges and print out residual information
@@ -91,20 +89,17 @@ IF (RES > NSCARC_THRESHOLD_DIVGERGENCE) NSTATE = NSCARC_STATE_DIVG
 SCARC_CONVERGENCE_STATE = NSTATE
 
 IF (HAS_CSV_DUMP) CALL SCARC_DUMP_CSV(ISM, NS, NL)
-
 #ifdef WITH_SCARC_VERBOSE2
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) &
    WRITE(MSG%LU_VERBOSE,1100) STACK(NS)%SOLVER%CNAME, NL, ITE, RES
 1100 FORMAT (A30,': Level=',I4,': Iteration = ',I8,': Residual =',E14.6)
 #endif
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) STACK(NS)%SOLVER%CNAME, NL, ITE, RES
 1000 FORMAT (A30,': Level=',I4,': Iteration = ',I8,': Residual =',e25.16)
 #endif
 
 END FUNCTION SCARC_CONVERGENCE_STATE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Compute convergence rate and print out residual information for final loop
@@ -139,21 +134,17 @@ ELSE
 ENDIF
 
 CALL SCARC_DUMP_CSV(0, NS, NL)
-
 #ifdef WITH_SCARC_VERBOSE2
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) WRITE(MSG%LU_VERBOSE,2000) STACK(NS)%SOLVER%CNAME, ITE, CAPPA
 #endif
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,2000) STACK(NS)%SOLVER%CNAME, ITE, CAPPA
 #endif
-
 #if defined (WITH_SCARC_DEBUG) || defined (WITH_SCARC_VERBOSE2)
 2000 FORMAT (A30,': Iterations: ',i6,':   Convergence Rate =',E14.6,/)
 #endif
 
 END SUBROUTINE SCARC_CONVERGENCE_RATE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Increase corresponding iteration count (just for visualization of convergence behavior)
@@ -196,7 +187,5 @@ WRITE(MSG%LU_STAT,1000) ITE_PRES, NS, ITE_TOTAL, ITE_CG, ITE_MG, NL, ITE_SMOOTH,
 1000 FORMAT(10(I8,','), E14.6,',',E14.6)
 END SUBROUTINE SCARC_DUMP_CSV
 
-
 END MODULE SCARC_CONVERGENCE
-
 

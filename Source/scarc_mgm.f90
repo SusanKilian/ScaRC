@@ -1769,7 +1769,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    MGM_PART_SELECT: SELECT CASE (NTYPE)
 
       !
-      ! ------------- Update velocity with new information after Poisson pass 
+      ! ------------- Update velocity with new information after structured inhomogeneous Poisson pass 
       !
       CASE (NSCARC_MGM_POISSON)
 

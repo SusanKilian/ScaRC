@@ -79,8 +79,8 @@ TYPE (SCARC_CMATRIX_TYPE), POINTER:: OA=>NULL()       !< Pointer to compactly st
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAC=>NULL()      !< Pointer to compactly stored coarse neighboring matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAF=>NULL()      !< Pointer to compactly stored fine neighboring matrix
 
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: LM=>NULL()     !< Pointer to compactly stored matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: UM=>NULL()     !< Pointer to compactly stored matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: LM=>NULL()       !< Pointer to compactly stored matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: UM=>NULL()       !< Pointer to compactly stored matrix
 
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: P=>NULL()        !< Pointer to compactly stored Prolongation matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: PC=>NULL()       !< Pointer to compactly stored coarse Prolongation matrix
@@ -173,7 +173,6 @@ TYPE (SCARC_PRESSURE_TYPE), POINTER:: PRES=>NULL()          !< Pointer to pressu
 
 CONTAINS
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Unset ScaRC pointers
 ! mainly used to test the correctness of the pointer settings in the different routines
@@ -194,7 +193,6 @@ Z => NULL();  ZF => NULL();  ZC => NULL()
 
 END SUBROUTINE SCARC_POINT_TO_NONE
 
-
 ! -----------------------------------------------------------------------------
 !> \brief Point to specified mesh
 ! -----------------------------------------------------------------------------
@@ -205,7 +203,6 @@ M => MESHES(NM)
 S => SCARC(NM)
 
 END SUBROUTINE SCARC_POINT_TO_MESH
-
 
 ! -----------------------------------------------------------------------------
 !> \brief Point to specified combination of mesh and grid level
@@ -219,7 +216,6 @@ L   => S%LEVEL(NL)
 MGM => L%MGM
 
 END SUBROUTINE SCARC_POINT_TO_LEVEL
-
 
 ! -----------------------------------------------------------------------------
 !> \brief Point to specified combination of mesh and grid level
@@ -238,7 +234,6 @@ UHL => MGM%UHL
 UHL_PREV => MGM%UHL_PREV
 
 END SUBROUTINE SCARC_POINT_TO_MGM
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified combination of a mesh level and discretization type
@@ -265,7 +260,6 @@ MGM => L%MGM
 W   => G%WALL
 
 END SUBROUTINE SCARC_POINT_TO_GRID
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified pairing of mesh levels and discretization types
@@ -299,7 +293,6 @@ WF => GF%WALL
 
 END SUBROUTINE SCARC_POINT_TO_MULTIGRID
 
-
 ! ---------------------------------------------------------------------------------------------------
 !> \brief Point to specified combination of a neighboring mesh level and discretization type
 ! ---------------------------------------------------------------------------------------------------
@@ -321,7 +314,6 @@ END SELECT
 
 END SUBROUTINE SCARC_POINT_TO_OTHER_GRID
 
-
 ! -----------------------------------------------------------------------------------------------------
 !> \brief Point to specified combination of a neighboring mesh level and a discretization type
 ! -----------------------------------------------------------------------------------------------------
@@ -342,7 +334,6 @@ SELECT CASE(TYPE_GRID)
 END SELECT
 
 END SUBROUTINE SCARC_POINT_TO_OTHER_MULTIGRID
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified matrix in compact storage technique
@@ -379,7 +370,6 @@ END SELECT
 
 END FUNCTION SCARC_POINT_TO_CMATRIX
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified matrix in bandwise storage technique
 ! ----------------------------------------------------------------------------------------------------
@@ -396,7 +386,6 @@ SELECT CASE(NTYPE)
 END SELECT
 
 END FUNCTION SCARC_POINT_TO_BMATRIX
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified neighboring matrix in compact storage technique
@@ -427,7 +416,6 @@ END SELECT
 
 END FUNCTION SCARC_POINT_TO_OTHER_CMATRIX
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Point to specified neighboring matrix in bandwise storage technique
 ! ----------------------------------------------------------------------------------------------------
@@ -444,7 +432,6 @@ SELECT CASE(NTYPE)
 END SELECT
 
 END FUNCTION SCARC_POINT_TO_OTHER_BMATRIX
-
 
 ! -----------------------------------------------------------------------------
 !> \brief Point to specified integer receive buffer for data exchanges
@@ -471,7 +458,6 @@ END SELECT
 
 END FUNCTION SCARC_POINT_TO_BUFFER_INT
 
-
 ! -----------------------------------------------------------------------------
 !> \brief Point to specified integer receive buffer for data exchanges
 ! -----------------------------------------------------------------------------
@@ -496,7 +482,6 @@ SELECT CASE (NTYPE)
 END SELECT
 
 END FUNCTION SCARC_POINT_TO_BUFFER_REAL
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Point to specified vector on a given grid level
@@ -528,7 +513,6 @@ SELECT CASE (NV)
       SCARC_POINT_TO_VECTOR => SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)%E
 #endif
 
-
    ! Stage two vectors (for methods on second hierarchical level)
 
    CASE (NSCARC_VECTOR_TWO_X)
@@ -553,14 +537,12 @@ END SELECT
 
 END FUNCTION SCARC_POINT_TO_VECTOR
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Point to specified vector on a given grid level (single precision version)
 ! ------------------------------------------------------------------------------------------------
 FUNCTION SCARC_POINT_TO_VECTOR_FB(NM, NL, NV)
 REAL(FB), POINTER, DIMENSION(:):: SCARC_POINT_TO_VECTOR_FB
 INTEGER, INTENT(IN):: NM, NL, NV
-
 
 SELECT CASE (NV)
 
@@ -575,7 +557,6 @@ SELECT CASE (NV)
    CASE (NSCARC_VECTOR_ONE_V)
       SCARC_POINT_TO_VECTOR_FB => SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)%V_FB
 
-
    ! Stage two vectors (for methods on second hierarchical level)
 
    CASE (NSCARC_VECTOR_TWO_X)
@@ -589,7 +570,6 @@ SELECT CASE (NV)
 END SELECT
 
 END FUNCTION SCARC_POINT_TO_VECTOR_FB
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Point to pressure vector in predictor or corrector
@@ -606,5 +586,4 @@ END SELECT
 END FUNCTION SCARC_POINT_TO_HVECTOR
 
 END MODULE SCARC_POINTERS
-
 

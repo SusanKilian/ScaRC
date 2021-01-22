@@ -34,7 +34,7 @@ TYPE SCARC_ALLOCATION_TYPE
    CHARACTER(60) :: CSCOPE                            !< Name of allocating routine 
 
 END TYPE SCARC_ALLOCATION_TYPE
- 
+
 !> \brief ScaRC memory manager type
  
 TYPE SCARC_STORAGE_TYPE
@@ -73,7 +73,6 @@ TYPE SCARC_MESSAGE_TYPE
    INTEGER :: LU_CPU                                       !< Logical unit for CPU measurements
    INTEGER :: LU_MEM                                       !< Logical unit for memory management information
    INTEGER :: LU_STAT                                      !< Logical unit for convergence statistics
- 
 #ifdef WITH_SCARC_DEBUG
    CHARACTER(60) :: FILE_DEBUG                             !< Output file name for debugging information
    CHARACTER(60) :: FILE_DUMP                              !< Output file name for dumping information
@@ -81,12 +80,10 @@ TYPE SCARC_MESSAGE_TYPE
    INTEGER :: LU_DUMP                                      !< Logical unit for dumping information
    CHARACTER(20) :: CFORM1, CFORM2, CFORM3, CFORM4
 #endif
-
 #ifdef WITH_SCARC_VERBOSE
    CHARACTER(60)  :: FILE_VERBOSE                          !< Output file name for verbose messages
    INTEGER :: LU_VERBOSE                                   !< Logical unit for verbose messages
 #endif
-
 #ifdef WITH_SCARC_POSTPROCESSING
    INTEGER :: LU_SCARC                                                !< Logical unit for dump of complete ScaRC environment
    INTEGER :: LU_POST, LU_POST1, LU_POST2, LU_POST3                   !< Logical unit for dump of selected data
@@ -100,15 +97,14 @@ END TYPE SCARC_MESSAGE_TYPE
  
 TYPE SCARC_SUBDIVISION_TYPE
 
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: N_NEIGHBORS      !< Number of meshes for in complete subdivision
-   INTEGER, ALLOCATABLE, DIMENSION (:,:) :: NEIGHBORS        !< Global neighborship structure between meshes
-   INTEGER, ALLOCATABLE, DIMENSION (:,:) :: ORDER            !< Order of meshes during aggregation process
-   INTEGER :: N_CYCLES                                       !< Number of needed cycles during aggregation process
-   INTEGER :: N_NEIGHBORS_TOTAL                              !< Sum of all neighbors
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: N_NEIGHBORS    !< Number of meshes for in complete subdivision
+   INTEGER, ALLOCATABLE, DIMENSION (:,:) :: NEIGHBORS      !< Global neighborship structure between meshes
+   INTEGER, ALLOCATABLE, DIMENSION (:,:) :: ORDER          !< Order of meshes during aggregation process
+   INTEGER :: N_CYCLES                                     !< Number of needed cycles during aggregation process
+   INTEGER :: N_NEIGHBORS_TOTAL                            !< Sum of all neighbors
 
 END TYPE SCARC_SUBDIVISION_TYPE
 
- 
 !> \brief Face information related to wall cells and neighbors
  
 TYPE SCARC_FACE_TYPE
@@ -134,8 +130,6 @@ TYPE SCARC_FACE_TYPE
    INTEGER  :: INCRS (-3:3)                           !< Increments within stencil for HB-vector on that face
 
 END TYPE SCARC_FACE_TYPE
-
-
  
 !> \brief Wall information related to neighbors and BC's
  
@@ -155,39 +149,35 @@ TYPE SCARC_WALL_TYPE
 
 END TYPE SCARC_WALL_TYPE
 
-
 !> \brief Obstruction information
  
 TYPE SCARC_OBST_TYPE
-   INTEGER :: I1, I2, J1, J2, K1, K2                     !< Cell indices of obstructions
+   INTEGER :: I1, I2, J1, J2, K1, K2                  !< Cell indices of obstructions
 END TYPE SCARC_OBST_TYPE
-
 
 !> \brief Compact matrix entries which will be exchanged during generation of condensed system
  
 TYPE SCARC_MATRIX_COMPACT_CONDENSED_TYPE
 
-   REAL(EB) :: VAL1(NSCARC_MAX_STENCIL) = 0.0_EB         !< Original values (double precision)
-   REAL(EB) :: VAL2(NSCARC_MAX_STENCIL) = 0.0_EB         !< Condensed values (double precision)
+   REAL(EB) :: VAL1(NSCARC_MAX_STENCIL) = 0.0_EB      !< Original values (double precision)
+   REAL(EB) :: VAL2(NSCARC_MAX_STENCIL) = 0.0_EB      !< Condensed values (double precision)
 
-   INTEGER :: COL(NSCARC_MAX_STENCIL) = 0                !< Column pointers
-   INTEGER :: PTR(NSCARC_MAX_STENCIL) = 0                !< Storage pointer
+   INTEGER :: COL(NSCARC_MAX_STENCIL) = 0             !< Column pointers
+   INTEGER :: PTR(NSCARC_MAX_STENCIL) = 0             !< Storage pointer
    INTEGER :: N_COL
 
 END TYPE SCARC_MATRIX_COMPACT_CONDENSED_TYPE
-
 
 !> \brief Bandwise matrix entries which will exchanged during generation of condensed system
  
 TYPE SCARC_MATRIX_BANDWISE_CONDENSED_TYPE
 
-   REAL(EB) :: VAL1(NSCARC_MAX_STENCIL) = 0.0_EB         !< Original values (double precision)
-   REAL(EB) :: VAL2(NSCARC_MAX_STENCIL) = 0.0_EB         !< Condensed values (double precision)
-   INTEGER  :: IOR0 = 0                                  !< Position pointer
-   INTEGER  :: ICO = 0                                   !< Cell pointer
+   REAL(EB) :: VAL1(NSCARC_MAX_STENCIL) = 0.0_EB      !< Original values (double precision)
+   REAL(EB) :: VAL2(NSCARC_MAX_STENCIL) = 0.0_EB      !< Condensed values (double precision)
+   INTEGER  :: IOR0 = 0                               !< Position pointer
+   INTEGER  :: ICO = 0                                !< Cell pointer
 
 END TYPE SCARC_MATRIX_BANDWISE_CONDENSED_TYPE
-
 
 !> \brief Compact sparse row (COMPACT) storage technique for matrices
 ! Is based on three arrays:
@@ -197,35 +187,34 @@ END TYPE SCARC_MATRIX_BANDWISE_CONDENSED_TYPE
  
 TYPE SCARC_CMATRIX_TYPE
 
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL                !< Values of matrix (real precision)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: ILU                !< ILU-decomposition
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: RELAX              !< Workspace for relaxation
-   REAL(EB), DIMENSION (-3:3)           :: STENCIL            !< Store basic stencil information in single precision
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL         !< Values of matrix (real precision)
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: ILU         !< ILU-decomposition
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: RELAX       !< Workspace for relaxation
+   REAL(EB), DIMENSION (-3:3)           :: STENCIL     !< Store basic stencil information in single precision
 
-   REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB             !< Values of matrix (single precision)
-   REAL(FB), ALLOCATABLE, DIMENSION (:) :: RELAX_FB           !< Workspace for relaxation
-   REAL(FB), DIMENSION (-3:3)           :: STENCIL_FB         !< Store basic stencil information in single precision
+   REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB      !< Values of matrix (single precision)
+   REAL(FB), ALLOCATABLE, DIMENSION (:) :: RELAX_FB    !< Workspace for relaxation
+   REAL(FB), DIMENSION (-3:3)           :: STENCIL_FB  !< Store basic stencil information in single precision
 
    TYPE (SCARC_MATRIX_COMPACT_CONDENSED_TYPE) :: CONDENSED(NSCARC_MAX_STENCIL)
 
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW                !< Row index vector
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL                !< Local column index vectors
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: COLG               !< Global column index vectors
+   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW         !< Row index vector
+   INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL         !< Local column index vectors
+   INTEGER,  ALLOCATABLE, DIMENSION (:) :: COLG        !< Global column index vectors
 
-   INTEGER :: POS(-3:3) = 0                                   !< Position of IOR's in STENCIL
-   INTEGER :: N_CONDENSED = 0                                 !< Number of condensed entries in matrix
-   INTEGER :: N_VAL = 0                                       !< Number of matrix values
-   INTEGER :: N_ROW = 0                                       !< Number of matrix rows
-   INTEGER :: N_STENCIL = 0                                   !< Number of points in matrix stencil
-   INTEGER :: N_STENCIL_MAX = 0                               !< Max stencil size (AMG only)
-   INTEGER :: NTYPE = 0                                       !< Matrix type
-   INTEGER :: NPREC = 0                                       !< Precision type
+   INTEGER :: POS(-3:3) = 0                            !< Position of IOR's in STENCIL
+   INTEGER :: N_CONDENSED = 0                          !< Number of condensed entries in matrix
+   INTEGER :: N_VAL = 0                                !< Number of matrix values
+   INTEGER :: N_ROW = 0                                !< Number of matrix rows
+   INTEGER :: N_STENCIL = 0                            !< Number of points in matrix stencil
+   INTEGER :: N_STENCIL_MAX = 0                        !< Max stencil size (AMG only)
+   INTEGER :: NTYPE = 0                                !< Matrix type
+   INTEGER :: NPREC = 0                                !< Precision type
 
-   CHARACTER(40) :: CNAME                                     !< Name of matrix
+   CHARACTER(40) :: CNAME                              !< Name of matrix
 
 END TYPE SCARC_CMATRIX_TYPE
 
-  
 !> \brief Bandwise storage technique for matrices
 ! The entries are stored one diagonal after the other
 ! Missing entries of subdiagonals are filled with zero
@@ -389,7 +378,7 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN                       !< Galerkin matrix (AMG only)
 #ifdef WITH_MKL
-   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                   !< Symmetric part of compact Poisson matrix (only for MKL)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix (only for MKL)
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN_SYM                   !< Galerkin matrix symmetric version (AMG only)
 #endif
 
@@ -473,9 +462,9 @@ TYPE SCARC_GRID_TYPE
    ! Number of Dirichlet and Neumann boundary cells
    INTEGER :: N_DIRIC   = NSCARC_ZERO_INT                      !< Number of Dirichlet BCs
    INTEGER :: N_NEUMANN = NSCARC_ZERO_INT                      !< Number of Neumann BCs
-   INTEGER :: N_FINE    = NSCARC_ZERO_INT                       !< Number of fine cells (AMG only)
-   INTEGER :: N_COARSE  = NSCARC_ZERO_INT                       !< Number of coarse cells (AMG only)
-   INTEGER :: N_ZONES   = NSCARC_ZERO_INT                       !< Number of zones (AMG only)
+   INTEGER :: N_FINE    = NSCARC_ZERO_INT                      !< Number of fine cells (AMG only)
+   INTEGER :: N_COARSE  = NSCARC_ZERO_INT                      !< Number of coarse cells (AMG only)
+   INTEGER :: N_ZONES   = NSCARC_ZERO_INT                      !< Number of zones (AMG only)
 
    INTEGER :: N_STENCIL_MAX  = 25                              !< Max stencil size (AMG only)
 
@@ -491,7 +480,6 @@ TYPE SCARC_GRID_TYPE
    INTEGER :: NLEN_BUFFER_FULL    = NSCARC_ZERO_INT            !< Length for full length exchange on that level
 
 END TYPE SCARC_GRID_TYPE
-
 
 !> \brief McKenney-Greengard-Mayo method - still experimental
   
@@ -746,5 +734,4 @@ TYPE SCARC_TYPE
 END TYPE SCARC_TYPE
 
 END MODULE SCARC_TYPES
-
 

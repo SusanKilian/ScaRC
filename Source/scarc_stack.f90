@@ -22,7 +22,6 @@ IMPLICIT NONE
 
 CONTAINS
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Setup environent on specified stack level
 ! ----------------------------------------------------------------------------------------------------
@@ -58,7 +57,6 @@ SV%TYPE_VECTOR        = TYPE_VECTOR
 
 END SUBROUTINE SCARC_SETUP_STACK
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Restore environent on specified stack level
 ! ----------------------------------------------------------------------------------------------------
@@ -93,7 +91,6 @@ TYPE_TWOLEVEL      = SV%TYPE_TWOLEVEL
 TYPE_VECTOR        = SV%TYPE_VECTOR
 
 END SUBROUTINE SCARC_RESTORE_STACK
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for Krylov method
@@ -210,7 +207,6 @@ R = SV%R
 V = SV%V
 Y = SV%Y
 Z = SV%Z
-
 #ifdef WITH_SCARC_DEBUG
 E = SV%E
 #endif
@@ -218,7 +214,6 @@ E = SV%E
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) ITE_TOTAL = 0
 
 END SUBROUTINE SCARC_SETUP_SCOPE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Reset environment of calling routine when leaving solver
@@ -288,7 +283,6 @@ IF (NP > 0) THEN
    V = SVP%V
    Y = SVP%Y
    Z = SVP%Z
-
 #ifdef WITH_SCARC_DEBUG
    E = SVP%E
 #endif
@@ -319,7 +313,6 @@ SELECT CASE (SV%TYPE_STAGE)
       IF (BV) SV%V = NSCARC_VECTOR_ONE_V
       IF (BY) SV%Y = NSCARC_VECTOR_ONE_Y
       IF (BZ) SV%Z = NSCARC_VECTOR_ONE_Z
-
 #ifdef WITH_MKL
      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
         IF (BX) SV%X_FB = NSCARC_VECTOR_ONE_X
@@ -328,7 +321,6 @@ SELECT CASE (SV%TYPE_STAGE)
         IF (BV) SV%V_FB = NSCARC_VECTOR_ONE_V
      ENDIF
 #endif
-
 #ifdef WITH_SCARC_DEBUG
       SV%E = NSCARC_VECTOR_ONE_E
 #endif
@@ -346,7 +338,6 @@ SELECT CASE (SV%TYPE_STAGE)
 #ifdef WITH_SCARC_DEBUG
       SV%E = NSCARC_VECTOR_TWO_E
 #endif
-
 #ifdef WITH_MKL
      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
         IF (BX) SV%X_FB = NSCARC_VECTOR_TWO_X
@@ -434,7 +425,6 @@ SV%TYPE_MKL_PRECISION = SVP%TYPE_MKL_PRECISION
 SV%TYPE_RELAX         = SVP%TYPE_RELAX
 SV%TYPE_SOLVER        = SVP%TYPE_SOLVER
 SV%TYPE_STAGE         = SVP%TYPE_STAGE
- 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_PRECON: TYPE_RELAX =', SV%TYPE_RELAX
 #endif
@@ -455,7 +445,6 @@ IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
    SV%R_FB = SVP%R_FB
    SV%V_FB = SVP%V_FB
 ENDIF
-
 #ifdef WITH_SCARC_DEBUG
 SV%E = SVP%E
 #endif
@@ -533,6 +522,7 @@ SV%TYPE_MKL_PRECISION = SVP%TYPE_MKL_PRECISION
 SV%TYPE_MATRIX        = SVP%TYPE_MATRIX
 
 ! Preset references for preconditioner (use same pointers as calling solver)
+
 SV%X = SVP%X
 SV%B = SVP%B
 SV%D = SVP%D
@@ -547,7 +537,6 @@ IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
    SV%R_FB = SVP%R_FB
    SV%V_FB = SVP%V_FB
 ENDIF
-
 #ifdef WITH_SCARC_DEBUG
 SV%E = SVP%E
 SV%R = SVP%R
@@ -582,7 +571,8 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_KRYLOV=', SCARC_KRYLOV_ITERATIONS, NSOLVER, NSCOPE,
 #endif
 SELECT CASE(NSOLVER)
 
-   ! -------------- Krylov method is used as main solver
+   ! Krylov method is used as main solver
+
    CASE (NSCARC_SOLVER_MAIN)
    
       SV%CNAME = 'SCARC_MAIN_KRYLOV'
@@ -596,7 +586,8 @@ WRITE(MSG%LU_DEBUG,*) 'SV%NIT=', SV%NIT,SCARC_KRYLOV_ITERATIONS
       SV%TYPE_RELAX    = TYPE_PRECON
       SV%TYPE_TWOLEVEL = TYPE_TWOLEVEL
    
-   ! -------------- Krylov method is used as coarse grid solver solver
+   ! Krylov method is used as coarse grid solver solver
+
    CASE (NSCARC_SOLVER_COARSE)
    
       SV%CNAME = 'SCARC_COARSE_KRYLOV'
@@ -607,7 +598,8 @@ WRITE(MSG%LU_DEBUG,*) 'SV%NIT=', SV%NIT,SCARC_KRYLOV_ITERATIONS
       SV%TYPE_RELAX    = NSCARC_RELAX_SSOR             ! only use SSOR-preconditioning for coarse solver
       SV%TYPE_TWOLEVEL = NSCARC_TWOLEVEL_NONE          ! only use one level for coarse solver
    
-   ! -------------- Otherwise: print error message
+   ! Otherwise: print error message
+
    CASE DEFAULT
    
       CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, NSOLVER)
@@ -627,7 +619,6 @@ END SUBROUTINE SCARC_SETUP_KRYLOV
 SUBROUTINE SCARC_SETUP_MULTIGRID(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
-
  
 ! Basic setup of stack information and types for multigrid method
  
@@ -651,26 +642,27 @@ SV%TYPE_MKL_PRECISION = TYPE_MKL_PRECISION
 
 SELECT CASE(NSOLVER)
 
-   ! -------------- Multigrid method is used as main solver
+   ! Multigrid method is used as main solver
+
    CASE (NSCARC_SOLVER_MAIN)
       SV%CNAME = 'SCARC_MAIN_MG'
 
-   ! -------------- Multigrid method is only used as preconditioner for global Krylov method
+   ! Multigrid method is only used as preconditioner for global Krylov method
+
    CASE (NSCARC_SOLVER_PRECON)
       SV%CNAME = 'SCARC_PRECON_MG'
 
-   ! -------------- Otherwise: print error message
+   ! Otherwise: print error message
+
    CASE DEFAULT
       CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, NSOLVER)
 
 END SELECT
 
- 
 ! Preset iteration parameters for Multigrid method
  
 SV%EPS = SCARC_MULTIGRID_ACCURACY
 SV%NIT = SCARC_MULTIGRID_ITERATIONS
-
  
 ! Point to solution vectors (in corresponding scope)
  
@@ -679,5 +671,4 @@ CALL SCARC_SETUP_REFERENCES(.TRUE.,.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.,.TRUE., 
 END SUBROUTINE SCARC_SETUP_MULTIGRID
 
 END MODULE SCARC_STACK
-
 

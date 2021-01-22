@@ -25,7 +25,6 @@ IMPLICIT NONE
 
 CONTAINS
 
-
 ! -------------------------------------------------------------------------------------------------
 !> \brief Setup dimensions for data exchanges
 ! -------------------------------------------------------------------------------------------------
@@ -75,7 +74,6 @@ N_EXCHANGES = N_EXCHANGES+1
 
 END SUBROUTINE SCARC_SETUP_EXCHANGE_DIMENSIONS
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Allocate several global structures for data exchange
 ! ----------------------------------------------------------------------------------------------------
@@ -109,7 +107,6 @@ CALL SCARC_ALLOCATE_REAL1(MESH_REAL, 1, NMESHES, NSCARC_INIT_ZERO, 'MESH_REAL', 
 
 END SUBROUTINE SCARC_SETUP_GLOBALS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate workspace for data exchanges of different data types and sizes and perform basic exchanges
 ! ------------------------------------------------------------------------------------------------
@@ -133,7 +130,6 @@ IF (N_MPI_PROCESSES>1) THEN
 ENDIF
 CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_BASIC_SIZES, NSCARC_NONE, NLEVEL_MIN)
 
- 
 ! Allocate send and receive buffers (real and integer) in correct lengths
 ! These are allocated with sizes according to the requirements of the finest grid level
 ! In case of a multi-level method, they are also used for the coarser levels (with shorter exchange sizes)
@@ -207,8 +203,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_ALLOCATE_REAL1(OS%SEND_BUFFER_REAL, 1, NLEN, NSCARC_INIT_HUGE, 'OS%SEND_BUFFER_REAL', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(OS%RECV_BUFFER_REAL, 1, NLEN, NSCARC_INIT_HUGE, 'OS%RECV_BUFFER_REAL', CROUTINE)
       ENDIF
-     
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ALLOCATING SEND_BUFFERS IN LENGtH ', NLEN, OG%NCG, NSCARC_MAX_STENCIL
 #endif
@@ -230,7 +224,6 @@ WRITE(MSG%LU_DEBUG,*) 'ALLOCATING SEND_BUFFERS IN LENGtH ', NLEN, OG%NCG, NSCARC
    ENDDO
 ENDDO
 
- 
 ! If there is more than 1 mesh, initialize communication structures on finest level 
 ! and setup mapping from local to global numbering
  
@@ -241,7 +234,6 @@ IF (NMESHES > 1) THEN
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_NUMBERS, NSCARC_NONE, NLEVEL_MIN)
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_SIZES,   NSCARC_NONE, NLEVEL_MIN)
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_SOLIDS,       NSCARC_NONE, NLEVEL_MIN)
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'SETTING UP EXCHANGE_CELL_NUMBERS, TYPE_GRID =', TYPE_GRID
 WRITE(MSG%LU_DEBUG,*) 'EXCHANGE_SOLIDS:'
@@ -284,7 +276,6 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_EXCHANGES
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Perform data exchange corresponding to requested exchange type 
 ! 
@@ -314,7 +305,6 @@ INTEGER :: NM, NOM
 N_REQ = 0
 TYPE_EXCHANGE = NTYPE
 
- 
 ! ---------- Receive data from neighbors 
  
 RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -405,15 +395,13 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO RECEIVE_OMESHES_LOOP
 ENDDO RECEIVE_MESHES_LOOP
 
-
-  
 ! ---------- Pack data for requested exchange type in corresponding SEND-buffer
   
 TNOW = CURRENT_TIME()
 
 SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)      
 
    SEND_PACK_OMESHES_LOOP: DO NOM = 1, NMESHES
 
@@ -521,19 +509,16 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO SEND_PACK_MESHES_LOOP
 
 
- 
 ! ---------- Wait for all meshes to have sent and received their data
  
 IF (N_MPI_PROCESSES > 1 .AND. N_REQ /= 0) CALL MPI_WAITALL(N_REQ,REQ(1:N_REQ),MPI_STATUSES_IGNORE,IERROR)
 
-
- 
 ! ---------- Unpack received data from corresponding RECEIVE-buffers
  
 TNOW = CURRENT_TIME()
 SEND_UNPACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                   
 
    SEND_UNPACK_OMESHES_LOOP: DO NOM = 1, NMESHES
 
@@ -620,7 +605,6 @@ ENDDO SEND_UNPACK_MESHES_LOOP
 
 END SUBROUTINE SCARC_EXCHANGE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Receive data of type integer
 ! ------------------------------------------------------------------------------------------------
@@ -633,7 +617,7 @@ INTEGER,  POINTER :: RECV_BUFFER_INT
 INTEGER :: NLEN, NDUMMY
 CHARACTER(40) :: CDUMMY
 
-NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY=CTEXT                ! prevent compilation warning if VERBOSE flag is not set
+NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY=CTEXT     ! prevent compilation warning if VERBOSE flag is not set (temporarily)
 
 IF (RNODE == SNODE) RETURN
 N_REQ = N_REQ+1
@@ -666,7 +650,6 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_INT
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Receive data of type real
 ! ------------------------------------------------------------------------------------------------
@@ -679,7 +662,7 @@ REAL(EB), POINTER :: RECV_BUFFER_REAL
 INTEGER :: NLEN, NDUMMY
 CHARACTER(40) :: CDUMMY
 
-NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY=CTEXT                ! prevent compilation warning if VERBOSE flag is not set
+NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY=CTEXT     ! prevent compilation warning if VERBOSE flag is not set (temporarily)
 
 IF (RNODE == SNODE) RETURN
 N_REQ = N_REQ+1
@@ -712,7 +695,6 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_REAL
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Send data of integer type
 ! ------------------------------------------------------------------------------------------------
@@ -725,7 +707,7 @@ INTEGER,  POINTER :: SEND_BUFFER_INT
 INTEGER :: NLEN, NDUMMY
 CHARACTER(40) :: CDUMMY
 
-NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY = CTEXT      ! prevent compilation warning if VERBOSE flag is not set
+NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY = CTEXT    ! prevent compilation warning if VERBOSE flag is not set (temporarily)
 
 IF (RNODE == SNODE) RETURN
 N_REQ = N_REQ+1
@@ -754,7 +736,6 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_INT
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Send data of real type
 ! ------------------------------------------------------------------------------------------------
@@ -767,7 +748,7 @@ REAL(EB), POINTER :: SEND_BUFFER_REAL
 INTEGER :: NLEN, NDUMMY
 CHARACTER(40) :: CDUMMY
 
-NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY = CTEXT      ! prevent compilation warning if VERBOSE flag is not set
+NDUMMY = NM; NDUMMY = NOM; NDUMMY = NL; CDUMMY = CTEXT    ! prevent compilation warning if VERBOSE flag is not set (temporarily)
 
 IF (RNODE == SNODE) RETURN
 N_REQ = N_REQ+1
@@ -796,7 +777,6 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_REAL
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack numbers of cells which are overlapped by neighbor
 ! ------------------------------------------------------------------------------------------------
@@ -820,7 +800,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_CELL_NUMBERS: OL%GHOST_FIRSTE(',IOR0,')=', OL%GHOST_
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_CELL_NUMBERS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack numbers of cells which are overlapped by neighbor
@@ -855,7 +834,6 @@ WRITE(MSG%LU_DEBUG,*) 'ICE_TO_ICN(',ICE,')=', G%ICE_TO_ICN(ICE), TYPE_GRID
 ENDDO
 END SUBROUTINE SCARC_UNPACK_CELL_NUMBERS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack cell width information 
 ! ------------------------------------------------------------------------------------------------
@@ -870,7 +848,6 @@ OS%SEND_BUFFER_REAL0(5) = L%DZL(0)
 OS%SEND_BUFFER_REAL0(6) = L%DZL(L%NZ)
 
 END SUBROUTINE SCARC_PACK_CELL_SIZES
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack cell width information 
@@ -890,7 +867,6 @@ IF (OL%GHOST_LASTW( 3) /= 0) L%DZL(L%NZ) = 0.5_EB*(RECV_BUFFER_REAL(6) + L%DZL(L
 
 END SUBROUTINE SCARC_UNPACK_CELL_SIZES
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack initial exchange sizes along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -901,7 +877,6 @@ OS%SEND_BUFFER_INT0(1)=OG%NCG
 OS%SEND_BUFFER_INT0(2)=OG%NZG
 
 END SUBROUTINE SCARC_PACK_BASIC_SIZES
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack initial exchange sizes along interfaces
@@ -916,7 +891,6 @@ OG%NCG = RECV_BUFFER_INT(1)
 OG%NZG = RECV_BUFFER_INT(2)
 
 END SUBROUTINE SCARC_UNPACK_BASIC_SIZES
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -942,7 +916,6 @@ DO IOR0 = -3, 3
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_PRESSURE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
@@ -973,7 +946,6 @@ DO IOR0 = -3, 3
    ENDDO UNPACK_PRESSURE
 ENDDO
 END SUBROUTINE SCARC_UNPACK_PRESSURE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
@@ -1043,7 +1015,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): 
       LL = LL + 2
    ENDDO
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_REAL), SIZE(UL)
 WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
@@ -1078,7 +1049,6 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_TRUE: NM, NOM, ICG, IWG, OUHL
    ENDDO UNPACK_MGM_TRUE
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_TRUE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
@@ -1115,7 +1085,6 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 
 END SUBROUTINE SCARC_PACK_MGM_MEAN
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
 ! ------------------------------------------------------------------------------------------------
@@ -1126,7 +1095,6 @@ INTEGER :: IOR0, ICG, IWG, LL
 
 OUHL => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL
 RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'UNPACK: Sizes RECV_BUFFER_REAL, VC=', SIZE(RECV_BUFFER_REAL), SIZE(OUHL)
 WRITE(MSG%LU_DEBUG,'(8E14.6)') RECV_BUFFER_REAL(1:16)
@@ -1147,7 +1115,6 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, E14.6)') 'UNPACK_MGM_MEAN: NM, NOM, ICG, IWG, OUHL:
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MGM_MEAN
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1214,7 +1181,6 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 1E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1290,7 +1256,6 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 3E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
 ! ------------------------------------------------------------------------------------------------
@@ -1322,7 +1287,6 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 1E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OVEL
    ENDDO UNPACK_MGM_VELO
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1357,7 +1321,6 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OUIP
    ENDDO UNPACK_MGM_VELO
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO2
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping auxiliary vector 
@@ -1395,7 +1358,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_AUXILIARY
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping auxiliary vector 
 ! ------------------------------------------------------------------------------------------------
@@ -1424,7 +1386,6 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_AUXILIARY
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack and unpack overlapping nullspace vector 
@@ -1462,7 +1423,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_NULLSPACE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping nullspace vector 
 ! ------------------------------------------------------------------------------------------------
@@ -1492,7 +1452,6 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_NULLSPACE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
 ! ------------------------------------------------------------------------------------------------
@@ -1516,7 +1475,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_VECTOR_PLAIN: IOR0, ICG, ICW, REAL(ICG): ', IOR0, IC
 #endif
    ENDDO
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_REAL), SIZE(VC)
 WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
@@ -1525,7 +1483,6 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') VC
 #endif
 
 END SUBROUTINE SCARC_PACK_VECTOR_PLAIN
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
@@ -1569,7 +1526,7 @@ SUBROUTINE SCARC_PACK_SOLIDS
 USE SCARC_POINTERS, ONLY: L, G, OL, OG, OS
 INTEGER :: IOR0, ICG, IWG, IXW, IYW, IZW
 
-OS%SEND_BUFFER_INT = NSCARC_ZERO_INT            ! corresponds gas phase cell
+OS%SEND_BUFFER_INT = NSCARC_ZERO_INT        
 
 DO IOR0 = -3, 3
    IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
@@ -1587,7 +1544,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_SOLIDS: IOR0, ICG, IWG, IXW, IYW, IZW, SEND_BUFF ', 
 ENDDO
 
 END SUBROUTINE SCARC_PACK_SOLIDS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
@@ -1622,7 +1578,6 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_SOLIDS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping and internal parts of specified vector
 ! ------------------------------------------------------------------------------------------------
@@ -1652,7 +1607,6 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_PACK_VECTOR_MEAN
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping and internal parts of specified vector
@@ -1685,7 +1639,6 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_VECTOR_MEAN
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix columns (compact storage technique only)
@@ -1726,7 +1679,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLS:B: IOR0, ICG, ICW, ICOL, COL:', IOR0, IC
 ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_COLS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix columns (compact storage technique only)
@@ -1773,7 +1725,6 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_COLS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix columns (compact storage technique only)
 ! ------------------------------------------------------------------------------------------------
@@ -1816,7 +1767,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLSG:B: IOR0, ICG, ICW, ICOL, COLG:', IOR0, 
 ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_COLSG
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix columns (compact storage technique only)
@@ -1866,7 +1816,6 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_COLSG
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix values (both storage techniques)
 ! ------------------------------------------------------------------------------------------------
@@ -1913,7 +1862,6 @@ SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 END SELECT
 
 END SUBROUTINE SCARC_PACK_MATRIX_VALS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix values (both storage techniques)
@@ -1967,7 +1915,6 @@ END SELECT
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_VALS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack information about matrix sizes into send vector
 ! ------------------------------------------------------------------------------------------------
@@ -1988,7 +1935,6 @@ END SELECT
 
 END SUBROUTINE SCARC_PACK_MATRIX_SIZES
    
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack information about matrix sizes into send vector
 ! ------------------------------------------------------------------------------------------------
@@ -2009,7 +1955,6 @@ SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 END SELECT
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_SIZES
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix diagonals (compact storage technique only)
@@ -2038,7 +1983,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_DIAGS
       
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix diagonals (compact storage technique only)
 ! ------------------------------------------------------------------------------------------------
@@ -2064,7 +2008,6 @@ WRITE(MSG%LU_DEBUG,'(A, 3I8,E14.6)') 'UNPACK_MATRIX_DIAGS: NOM, IOR0, ICG, ICE, 
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
@@ -2104,7 +2047,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_CELL_NEIGHBORS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -2140,7 +2082,6 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
@@ -2187,7 +2128,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_ZONE_NEIGHBORS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -2230,7 +2170,6 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_ZONE_NEIGHBORS:B: ICG, OZONE, GZONE :', &
 ENDDO
 END SUBROUTINE SCARC_UNPACK_ZONE_NEIGHBORS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -2259,7 +2198,6 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_NUMS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -2284,7 +2222,6 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_NUMS: ICG, LAYER2_NUMS:', ICG, RECV_BUFFER_
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_NUMS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
 ! ------------------------------------------------------------------------------------------------
@@ -2305,7 +2242,6 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_LAYER2_VALS: ICG, IC, SEND_BUFFER_REAL(ICG):', ICG, 
 ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_VALS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
@@ -2333,7 +2269,6 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_VALS: ICG, L%L2PTR, G%ELAYER2_VALS:', ICG, 
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_VALS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Pack zones information into send vector
@@ -2368,7 +2303,6 @@ DO IOR0 = -3, 3
 ENDDO
 END SUBROUTINE SCARC_PACK_ZONE_TYPES
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Unpack zones information into send vector
 ! ------------------------------------------------------------------------------------------------
@@ -2396,5 +2330,4 @@ ENDDO
 END SUBROUTINE SCARC_UNPACK_ZONE_TYPES
 
 END MODULE SCARC_MPI
-
 

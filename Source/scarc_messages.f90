@@ -44,8 +44,8 @@ IF (HAS_CSV_DUMP) THEN
    ENDIF
 ENDIF
 
-! If verbose directive is set, open file for log-information
 #ifdef WITH_SCARC_VERBOSE
+! If verbose directive is set, open file for log-information
 IF (MYID == 0) THEN
    WRITE (MSG%FILE_MEM, '(A,A)') TRIM(CHID),'_scarc.mem'
    MSG%LU_MEM = GET_FILE_NUMBER()
@@ -64,7 +64,6 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LASTID = MYID
 ENDDO
 #endif
-
 #ifdef WITH_SCARC_DEBUG
 LASTID = -NSCARC_HUGE_INT
 DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -75,13 +74,11 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LASTID = MYID
 ENDDO
 #endif
-
 #ifdef WITH_SCARC_VERBOSE
 1001 FORMAT(A8,',',A8,',',A30,',',A40,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',&
             A10,',',A10,',',A15,',',A15,',',A15,',',A15,',',A15)
 #endif
 END SUBROUTINE SCARC_SETUP_MESSAGES
-
 
 #ifdef WITH_SCARC_VERBOSE
 ! ------------------------------------------------------------------------------------------------------
@@ -152,8 +149,6 @@ WRITE(MSG%LU_VERBOSE,*) '============ END VERBOSE MATRIX ', CNAME, ' AT ', TRIM(
 ENDIF
 
 END SUBROUTINE SCARC_VERBOSE_CMATRIX
-
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Verbose version only: Dump out information for specified 1-dimensional vector
@@ -229,7 +224,6 @@ ENDDO
 CLOSE(LU_DUMP)
 
 END SUBROUTINE SCARC_VERBOSE_VECTOR3
-
 
 #ifdef WITH_SCARC_AMG
 ! ----------------------------------------------------------------------------------------------------
@@ -372,10 +366,7 @@ CLOSE(MAGG)
 1000 FORMAT(I8,',', I8,',', E14.6,',',  E14.6,',', E14.6)
 END SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES
 #endif
-
 #endif
-
-
 #ifdef WITH_SCARC_DEBUG
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Assign formats for debug messages dependent on length of mesh
@@ -402,7 +393,6 @@ ELSE
 ENDIF
 
 END SUBROUTINE SCARC_DEBUG_FORMATS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Debug different vectors within a single method
@@ -522,7 +512,6 @@ ENDDO
 
 END SUBROUTINE SCARC_DEBUG_METHOD
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out specified MGM vector
 ! ------------------------------------------------------------------------------------------------
@@ -576,7 +565,6 @@ ENDDO
 
 END SUBROUTINE SCARC_MGM_DUMP
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
 ! ------------------------------------------------------------------------------------------------
@@ -600,7 +588,6 @@ ENDDO
 WRITE(MSG%LU_DEBUG,*) '============================================================='
 
 END SUBROUTINE SCARC_DEBUG_VECTOR3
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
@@ -626,8 +613,6 @@ WRITE(MSG%LU_DEBUG,*) '=========================================================
 
 END SUBROUTINE SCARC_DEBUG_VECTOR3_BIG
 
-
-
 ! =================================================================================================================
 ! Start  WITH_SCARC_DEBUG  - Part
 ! Collection of routines which print out different quantities or allow to preset them
@@ -644,7 +629,6 @@ WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING INT1 ARRAY ', CNAME, ' AT ', TRIM(
 WRITE(MSG%LU_DEBUG,'(8I6)') (ARR(IC), IC=I1, I2)
 END SUBROUTINE SCARC_DEBUG_INT1
 
-
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for double precision vector
 ! ------------------------------------------------------------------------------------------------------
@@ -656,7 +640,6 @@ INTEGER :: IC
 WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING REAL1 ARRAY ', CNAME, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_DEBUG,'(8E14.6)') (ARR(IC), IC=I1, I2)
 END SUBROUTINE SCARC_DEBUG_REAL1
-
 
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for aggregation zones
@@ -681,7 +664,6 @@ ENDIF
 WRITE(MSG%LU_DEBUG,*) '-------------- ZONE_CENTERS'
 WRITE(MSG%LU_DEBUG,'(8I12)') G%ZONE_CENTERS
 END SUBROUTINE SCARC_DEBUG_ZONES
-
 
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
@@ -752,7 +734,6 @@ ENDIF
 
 END SUBROUTINE SCARC_DEBUG_CMATRIX
 
-
 ! ------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
 ! ------------------------------------------------------------------------------------------------------
@@ -805,7 +786,6 @@ WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CNAME, ' AT ', TRIM(
 ENDIF
 
 END SUBROUTINE SCARC_DEBUG_RELAX
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified vector
@@ -984,7 +964,6 @@ DO IZ = MESHES(NM)%KBP1, 0, -1
 ENDDO
 
 END SUBROUTINE SCARC_DEBUG_PRESSURE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified quantity
@@ -1357,7 +1336,6 @@ END SELECT
 
 END SUBROUTINE SCARC_DEBUG_QUANTITY
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out vector information on specified level for MATLAB
 ! ------------------------------------------------------------------------------------------------
@@ -1387,7 +1365,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 
 END SUBROUTINE SCARC_MATLAB_VECTOR
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for MATLAB
@@ -1423,7 +1400,6 @@ ENDDO
 CLOSE(MMATRIX)
 
 END SUBROUTINE SCARC_MATLAB_MATRIX
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for PYTHON
@@ -1473,7 +1449,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'IC, NLEN, COLUMNS1, STENCIL1:', IC, NLEN, COLUMNS(1:NLEN), STENCIL(1:NLEN)
 #endif
-
       DO I = NLEN, 2, -1
          DO J = 1, I-1
             IF (STENCIL(J) > STENCIL(J+1)) THEN
@@ -1490,7 +1465,6 @@ WRITE(MSG%LU_DEBUG,*) 'IC, NLEN, COLUMNS1, STENCIL1:', IC, NLEN, COLUMNS(1:NLEN)
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '          COLUMNS2, STENCIL2:', IC, NLEN, COLUMNS(1:NLEN), STENCIL(1:NLEN)
 #endif
-
       DO I = 1, NLEN
          ICOL = COLUMNS(I)
          WRITE(MCOL,1001, ADVANCE="NO") A%COL(ICOL)-1
@@ -1544,7 +1518,5 @@ CLOSE(MAGG)
 END SUBROUTINE SCARC_PYTHON_ZONES
 
 #endif
-
 END MODULE SCARC_MESSAGES
-
 

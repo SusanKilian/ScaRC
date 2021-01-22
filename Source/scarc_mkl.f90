@@ -1,6 +1,6 @@
 !=======================================================================================================================
 !
-! Module SCARC_MKL:
+! Module SCARC_MKL
 !
 !> \brief Setup environment necessary for the call of the IntelMKL local and global LU-solvers
 !   PARDISO and CLUSTER_SPARSE_SOLVER
@@ -27,7 +27,6 @@ USE SCARC_STORAGE, ONLY: SCARC_ALLOCATE_INT1, SCARC_ALLOCATE_INT2, SCARC_ALLOCAT
 IMPLICIT NONE
 
 CONTAINS
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
@@ -56,7 +55,6 @@ END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
 SUBROUTINE SCARC_SETUP_MKL(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
-
  
 ! Basic setup of stack information and types for MKL
  
@@ -85,7 +83,6 @@ SV%TYPE_LEVEL(2)      = NLMAX
 SV%TYPE_MATRIX        = NSCARC_MATRIX_COMPACT    
 SV%TYPE_MKL_PRECISION = TYPE_MKL_PRECISION
 
- 
 ! Point to solution vectors (in corresponding scope)
  
 CALL SCARC_SETUP_REFERENCES(.TRUE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE., NSTACK)
@@ -213,7 +210,6 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_CLUSTER
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Initialize PARDISO solver from MKL-library
 ! ------------------------------------------------------------------------------------------------
@@ -275,7 +271,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! First perform only reordering and symbolic factorization
       ! Then perform only factorization
- 
 
       IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
 #ifdef WITH_SCARC_DEBUG
@@ -313,5 +308,4 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_PARDISO
 
 END MODULE SCARC_MKL
-
 

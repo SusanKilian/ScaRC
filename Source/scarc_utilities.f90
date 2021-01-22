@@ -32,7 +32,6 @@ IF (OM%NIC_R == 0 .AND. OM%NIC_S == 0) ARE_NEIGHBORS = .FALSE.
 
 END FUNCTION ARE_NEIGHBORS
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
@@ -55,7 +54,6 @@ SELECT CASE (NTYPE)
 END SELECT
 
 END SUBROUTINE SCARC_SET_GRID_TYPE
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
@@ -89,7 +87,6 @@ END SELECT
 
 END SUBROUTINE SCARC_SET_SYSTEM_TYPE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the data type of the currently processed array
 ! ------------------------------------------------------------------------------------------------
@@ -115,7 +112,6 @@ END SELECT
 
 END FUNCTION SCARC_GET_DATA_TYPE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the dimension of the currently processed array
 ! ------------------------------------------------------------------------------------------------
@@ -134,7 +130,6 @@ SELECT CASE (NDIM)
 END SELECT
 
 END FUNCTION SCARC_GET_DIMENSION
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the initialization type of the currently processed array
@@ -168,7 +163,6 @@ IF (NSTATE == NSCARC_STORAGE_REMOVE) SCARC_GET_INIT_TYPE = ' '
 
 END FUNCTION SCARC_GET_INIT_TYPE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Get type of matrix storage scheme for specified grid level
 ! ------------------------------------------------------------------------------------------------
@@ -182,7 +176,6 @@ ELSE
 ENDIF
 
 END FUNCTION SCARC_GET_MATRIX_TYPE
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Check if a subdiagonal entry must be computed in a specified coordinate direction
@@ -220,7 +213,6 @@ RETURN
 
 END FUNCTION IS_VALID_DIRECTION
 
-
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Get grid permutation (MGM only)
 ! ----------------------------------------------------------------------------------------------------
@@ -230,7 +222,6 @@ INTEGER, INTENT(IN) :: JC
 GET_PERM = -1
 IF (JC > 0 .AND. JC <= G%NC) GET_PERM = G%PERM_FW(JC)
 END FUNCTION GET_PERM
-
 
 ! ----------------------------------------------------------------------------------------------------
 !> \brief Filter out mean value
@@ -271,7 +262,6 @@ ENDDO
 
 END SUBROUTINE SCARC_FILTER_MEANVALUE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Restore last cell of last mesh
 ! ------------------------------------------------------------------------------------------------
@@ -286,7 +276,6 @@ VC => SCARC_POINT_TO_VECTOR (UPPER_MESH_INDEX, NL, XX)
 VC(S%NC) = S%RHS_END
 
 END SUBROUTINE SCARC_RESTORE_LAST_CELL
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Determine if cell should be considered during packing of zone numbers
@@ -306,21 +295,6 @@ DO ICG = ICG1, ICG2
    LL = LL + 4
 ENDDO
 END FUNCTION SCARC_FORBIDDEN_ZONE
-
-
-
-! ------------------------------------------------------------------------------------------------
-!> \brief Check if difference of two values is less than a given tolerance
-! ------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION MATCH (VAL1, VAL2)
-REAL (EB), INTENT(IN) :: VAL1, VAL2
-REAL (EB) :: TOL
-TOL = 1.0E-10_EB
-MATCH = .FALSE.
-IF (Abs(VAL1-VAL2) <= TOL) MATCH = .TRUE.
-RETURN
-END FUNCTION MATCH
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Control multigrid cycling (F/V/W)
@@ -354,7 +328,6 @@ SELECT CASE (NTYPE)
    
       ICYCLE = NSCARC_CYCLING_NEXT
    
- 
    ! Reset cycle counts at beginning of each new multigrid iteration
  
    CASE (NSCARC_CYCLING_RESET)
@@ -367,7 +340,6 @@ SELECT CASE (NTYPE)
       ENDDO
       ICYCLE = NSCARC_CYCLING_NEXT
    
- 
    ! Determine where to proceed with cycling
  
    CASE (NSCARC_CYCLING_PROCEED)
@@ -402,9 +374,6 @@ END SELECT
 
 SCARC_CYCLING_CONTROL = ICYCLE
 RETURN
-
 END FUNCTION SCARC_CYCLING_CONTROL
 
 END MODULE SCARC_UTILITIES
-
-

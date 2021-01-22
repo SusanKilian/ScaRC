@@ -15,120 +15,120 @@ IMPLICIT NONE
 
 ! ---------- Basic definitions
  
-CHARACTER(40) :: SCARC_GRID              = 'STRUCTURED'         !< Type of discretization (STRUCTURED/UNSTRUCTURED)
-CHARACTER(40) :: SCARC_METHOD            = 'NONE'               !< Type of global ScaRC solver (Krylov/MULTIGRID)
-CHARACTER(40) :: SCARC_MATRIX            = 'NONE'               !< Type of matrix storage (COMPACT/BANDWISE)
-CHARACTER(40) :: SCARC_STENCIL           = 'VARIABLE'           !< Type of matrix stencil (CONSTANT/VARIABLE)
-CHARACTER(40) :: SCARC_TWOLEVEL          = 'NONE'               !< Type of two-level method (NONE/ADDITIVE/MULTIPLICATIVE)
+CHARACTER(40) :: SCARC_GRID              = 'STRUCTURED'          !< Type of discretization (STRUCTURED/UNSTRUCTURED)
+CHARACTER(40) :: SCARC_METHOD            = 'NONE'                !< Type of global ScaRC solver (Krylov/MULTIGRID)
+CHARACTER(40) :: SCARC_MATRIX            = 'NONE'                !< Type of matrix storage (COMPACT/BANDWISE)
+CHARACTER(40) :: SCARC_STENCIL           = 'VARIABLE'            !< Type of matrix stencil (CONSTANT/VARIABLE)
+CHARACTER(40) :: SCARC_TWOLEVEL          = 'NONE'                !< Type of two-level method (NONE/ADDITIVE/MULTIPLICATIVE)
 
 ! ---------- General iteration parameters
  
-CHARACTER(40) :: SCARC_ACCURACY          = 'ABSOLUTE'           !< Type of accuracy type (ABSOLUTE/RELATIVE)
-REAL (EB)     :: SCARC_CAPPA             =  0.0_EB              !< Convergence rate of selected ScarC solver
-INTEGER       :: SCARC_ITERATIONS        =  0                   !< Number of iterations of selected ScaRC solver
-REAL (EB)     :: SCARC_RESIDUAL          =  0.0_EB              !< Residual of globally selected ScaRC solver
+CHARACTER(40) :: SCARC_ACCURACY          = 'ABSOLUTE'            !< Type of accuracy type (ABSOLUTE/RELATIVE)
+REAL (EB)     :: SCARC_CAPPA             =  0.0_EB               !< Convergence rate of selected ScarC solver
+INTEGER       :: SCARC_ITERATIONS        =  0                    !< Number of iterations of selected ScaRC solver
+REAL (EB)     :: SCARC_RESIDUAL          =  0.0_EB               !< Residual of globally selected ScaRC solver
 
 ! ---------- Parameters for coarse grid method
  
-CHARACTER(40) :: SCARC_COARSE            = 'ITERATIVE'          !< Type of coarse grid solver (ITERATIVE/DIRECT)
-REAL (EB)     :: SCARC_COARSE_ACCURACY   = 1.E-14_EB            !< Requested accuracy for iterative solver
-INTEGER       :: SCARC_COARSE_ITERATIONS = 100                  !< Max number of iterations for iterative solver
-INTEGER       :: SCARC_COARSE_LEVEL      =  1                   !< Coarse grid level for twolevel-Krylov method
-REAL (EB)     :: SCARC_COARSE_OMEGA      = 0.80E+0_EB           !< Relaxation parameter
+CHARACTER(40) :: SCARC_COARSE            = 'ITERATIVE'           !< Type of coarse grid solver (ITERATIVE/DIRECT)
+REAL (EB)     :: SCARC_COARSE_ACCURACY   = 1.E-14_EB             !< Requested accuracy for iterative solver
+INTEGER       :: SCARC_COARSE_ITERATIONS = 100                   !< Max number of iterations for iterative solver
+INTEGER       :: SCARC_COARSE_LEVEL      =  1                    !< Coarse grid level for twolevel-Krylov method
+REAL (EB)     :: SCARC_COARSE_OMEGA      = 0.80E+0_EB            !< Relaxation parameter
 
-CHARACTER(40) :: SCARC_COARSENING = 'GMG'                       !< Coarsening strategy (CUBIC/AGGREGATED/GMG)
+CHARACTER(40) :: SCARC_COARSENING = 'GMG'                        !< Coarsening strategy (CUBIC/AGGREGATED/GMG)
 
 ! ---------- Parameters for Krylov type methods
  
-REAL (EB)     :: SCARC_KRYLOV_ACCURACY   = 1.E-8_EB             !< Requested accuracy for convergence
-CHARACTER(40) :: SCARC_KRYLOV_INTERPOL   = 'CONSTANT'           !< Twolevel-interpolation (CONSTANT/BILINEAR)
-INTEGER       :: SCARC_KRYLOV_ITERATIONS = 1000                 !< Max number of iterations
+REAL (EB)     :: SCARC_KRYLOV_ACCURACY   = 1.E-8_EB              !< Requested accuracy for convergence
+CHARACTER(40) :: SCARC_KRYLOV_INTERPOL   = 'CONSTANT'            !< Twolevel-interpolation (CONSTANT/BILINEAR)
+INTEGER       :: SCARC_KRYLOV_ITERATIONS = 1000                  !< Max number of iterations
 
 ! ---------- Parameters for multigrid-type methods
  
-CHARACTER(40) :: SCARC_MULTIGRID            = 'GEOMETRIC'       !< Type of MG method (GEOMETRIC/ALGEBRAIC)
-REAL (EB)     :: SCARC_MULTIGRID_ACCURACY   = 1.E-8_EB          !< Requested accuracy for convergence
-CHARACTER(3)  :: SCARC_MULTIGRID_CYCLE      = 'V'               !< Cycling type  (F/V/W/FULL)
-CHARACTER(40) :: SCARC_MULTIGRID_INTERPOL   = 'CONSTANT'        !< Interpolation strategy (CONSTANT/BILINEAR)
-INTEGER       :: SCARC_MULTIGRID_ITERATIONS = 100               !< Max number of iterations
-INTEGER       :: SCARC_MULTIGRID_LEVEL      = -1                !< User defined number of MG-levels (optionally, maximum else)
-INTEGER       :: SCARC_MULTIGRID_PRESMOOTH  = 4                 !< Number of presmoothing iterations
-INTEGER       :: SCARC_MULTIGRID_POSTSMOOTH = 4                 !< Number of postsmoothing iterations
-LOGICAL       :: SCARC_MULTIGRID_RELAXING   = .TRUE.            !< Relaxing of nullspace (AMG only)
-REAL (EB)     :: SCARC_MULTIGRID_THETA      = 0.10E+0_EB        !< Threshold for strength of connection matrix (AMG only)
+CHARACTER(40) :: SCARC_MULTIGRID            = 'GEOMETRIC'        !< Type of MG method (GEOMETRIC/ALGEBRAIC)
+REAL (EB)     :: SCARC_MULTIGRID_ACCURACY   = 1.E-8_EB           !< Requested accuracy for convergence
+CHARACTER(3)  :: SCARC_MULTIGRID_CYCLE      = 'V'                !< Cycling type  (F/V/W/FULL)
+CHARACTER(40) :: SCARC_MULTIGRID_INTERPOL   = 'CONSTANT'         !< Interpolation strategy (CONSTANT/BILINEAR)
+INTEGER       :: SCARC_MULTIGRID_ITERATIONS = 100                !< Max number of iterations
+INTEGER       :: SCARC_MULTIGRID_LEVEL      = -1                 !< User defined number of MG-levels (optionally, maximum else)
+INTEGER       :: SCARC_MULTIGRID_PRESMOOTH  = 4                  !< Number of presmoothing iterations
+INTEGER       :: SCARC_MULTIGRID_POSTSMOOTH = 4                  !< Number of postsmoothing iterations
+LOGICAL       :: SCARC_MULTIGRID_RELAXING   = .TRUE.             !< Relaxing of nullspace (AMG only)
+REAL (EB)     :: SCARC_MULTIGRID_THETA      = 0.10E+0_EB         !< Threshold for strength of connection matrix (AMG only)
 
 ! ---------- Parameters for MGM method
 
-REAL(EB)      :: SCARC_MGM_ACCURACY        = 1.E-2_EB           !< Requested accuracy for interface velocity error 
-CHARACTER(40) :: SCARC_MGM_BC              = 'MEAN'             !< Type of interface boundary condition for local Laplace problems
-CHARACTER(40) :: SCARC_MGM_INTERPOL        = 'LINEAR'           !< Type of interpolation for Lapalce BC settings
-INTEGER       :: SCARC_MGM_ITERATIONS      = 50                 !< Maximum allowed number of Laplace iterations 
-LOGICAL       :: SCARC_MGM_CHECK_LAPLACE   = .FALSE.            !< Requested check of Laplace solutions against ScaRC-UScaRC diff
-LOGICAL       :: SCARC_MGM_INIT_EXACT      = .TRUE.             !< Use exact Laplace solution for initialization of interface BCs
-LOGICAL       :: SCARC_MGM_USE_LU          = .TRUE.             !< Use permuted LU for Laplace solutions (otherwise UScaRC)
+REAL(EB)      :: SCARC_MGM_ACCURACY        = 1.E-2_EB            !< Requested accuracy for interface velocity error 
+CHARACTER(40) :: SCARC_MGM_BC              = 'MEAN'              !< Type of interface boundary condition for local Laplace problems
+CHARACTER(40) :: SCARC_MGM_INTERPOL        = 'LINEAR'            !< Type of interpolation for Lapalce BC settings
+INTEGER       :: SCARC_MGM_ITERATIONS      = 50                  !< Maximum allowed number of Laplace iterations 
+LOGICAL       :: SCARC_MGM_CHECK_LAPLACE   = .FALSE.             !< Requested check of Laplace solutions against ScaRC-UScaRC diff
+LOGICAL       :: SCARC_MGM_INIT_EXACT      = .TRUE.              !< Use exact Laplace solution for initialization of interface BCs
+LOGICAL       :: SCARC_MGM_USE_LU          = .TRUE.              !< Use permuted LU for Laplace solutions (otherwise UScaRC)
 
 ! ---------- Parameters for smoothing method (used in multigrids-methods)
  
-CHARACTER(40) :: SCARC_SMOOTH            = 'SSOR'               !< Smoother for MG (JACOBI/SSOR)
-REAL (EB)     :: SCARC_SMOOTH_ACCURACY   = 1.E-8_EB             !< Requested accuracy for convergence
-INTEGER       :: SCARC_SMOOTH_ITERATIONS = 4                    !< Max number of iterations
-REAL (EB)     :: SCARC_SMOOTH_OMEGA      = 0.80E+0_EB           !< Relaxation parameter
-CHARACTER(40) :: SCARC_SMOOTH_SCOPE      = 'GLOBAL'             !< Scope of action (LOCAL/GLOBAL)
+CHARACTER(40) :: SCARC_SMOOTH            = 'SSOR'                !< Smoother for MG (JACOBI/SSOR)
+REAL (EB)     :: SCARC_SMOOTH_ACCURACY   = 1.E-8_EB              !< Requested accuracy for convergence
+INTEGER       :: SCARC_SMOOTH_ITERATIONS = 4                     !< Max number of iterations
+REAL (EB)     :: SCARC_SMOOTH_OMEGA      = 0.80E+0_EB            !< Relaxation parameter
+CHARACTER(40) :: SCARC_SMOOTH_SCOPE      = 'GLOBAL'              !< Scope of action (LOCAL/GLOBAL)
 
 ! ---------- Parameters for preconditioning method (used in Krylov methods)
  
-CHARACTER(40) :: SCARC_PRECON            = 'NONE'               !< Preconditioner for CG (JACOBI/SSOR/FFT/PARDISO/MG)
-REAL (EB)     :: SCARC_PRECON_ACCURACY   = 1.E-10_EB            !< Requested accuracy for convergence
-INTEGER       :: SCARC_PRECON_ITERATIONS = 100                  !< Max number of iterations
-REAL (EB)     :: SCARC_PRECON_OMEGA      = 1.50E+0_EB           !< Relaxation parameter
-CHARACTER(40) :: SCARC_PRECON_SCOPE      = 'LOCAL'              !< Scope of action (LOCAL/GLOBAL)
+CHARACTER(40) :: SCARC_PRECON            = 'NONE'                !< Preconditioner for CG (JACOBI/SSOR/FFT/PARDISO/MG)
+REAL (EB)     :: SCARC_PRECON_ACCURACY   = 1.E-10_EB             !< Requested accuracy for convergence
+INTEGER       :: SCARC_PRECON_ITERATIONS = 100                   !< Max number of iterations
+REAL (EB)     :: SCARC_PRECON_OMEGA      = 1.50E+0_EB            !< Relaxation parameter
+CHARACTER(40) :: SCARC_PRECON_SCOPE      = 'LOCAL'               !< Scope of action (LOCAL/GLOBAL)
 
 ! ---------- Parameter for MKL solver
  
-CHARACTER(40) :: SCARC_MKL_SCOPE      = 'GLOBAL'                !< Scope of MKL solver (LOCAL/GLOBAL)
-CHARACTER(40) :: SCARC_MKL_MTYPE      = 'SYMMETRIC'             !< Type of MKL matrix (SYMMETRIC/UNSYMMETRIC)
-CHARACTER(6)  :: SCARC_MKL_PRECISION  = 'DOUBLE'                !< Single/double precision for MKL solver
+CHARACTER(40) :: SCARC_MKL_SCOPE      = 'GLOBAL'                 !< Scope of MKL solver (LOCAL/GLOBAL)
+CHARACTER(40) :: SCARC_MKL_MTYPE      = 'SYMMETRIC'              !< Type of MKL matrix (SYMMETRIC/UNSYMMETRIC)
+CHARACTER(6)  :: SCARC_MKL_PRECISION  = 'DOUBLE'                 !< Single/double precision for MKL solver
 
 ! ---------- Dump out of error information and error handling
  
-LOGICAL :: SCARC_ERROR_FILE = .FALSE.                           !< Print ScaRC statistics into chid_scarc.csv (TRUE/FALSE)
-INTEGER :: IERROR = 0                                           !< General error flag - used at different positions
+LOGICAL :: SCARC_ERROR_FILE = .FALSE.                            !< Print ScaRC statistics into chid_scarc.csv (TRUE/FALSE)
+INTEGER :: IERROR = 0                                            !< General error flag - used at different positions
 
 #ifdef WITH_SCARC_POSTPROCESSING
-LOGICAL :: SCARC_DUMP = .TRUE.                                  !< Dump out several arrays for POSTPROCESSING use of ScaRC
+LOGICAL :: SCARC_DUMP = .TRUE.                                   !< Dump out several arrays for POSTPROCESSING use of ScaRC
 #endif
 
 ! ---------- Logical indicators for different methods and mechanisms
   
-LOGICAL :: IS_STRUCTURED        = .FALSE.                       !< Flag for structured discretization
-LOGICAL :: IS_UNSTRUCTURED      = .FALSE.                       !< Flag for unstructured discretization
-LOGICAL :: IS_PURE_NEUMANN      = .FALSE.                       !< Flag for pure Neumann system
-LOGICAL :: IS_MG                = .FALSE.                       !< Flag for Multigrid-method
-LOGICAL :: IS_AMG               = .FALSE.                       !< Flag for Algebraic Multigrid-method
-LOGICAL :: IS_GMG               = .FALSE.                       !< Flag for Geometric Multigrid-method
-LOGICAL :: IS_CG                = .FALSE.                       !< Flag for Krylov method
-LOGICAL :: IS_CG_ADD            = .FALSE.                       !< Flag for additive twolevel-Krylov method
-LOGICAL :: IS_CG_AMG            = .FALSE.                       !< Flag for Krylov method with AMG-preconditioning
-LOGICAL :: IS_CG_GMG            = .FALSE.                       !< Flag for Krylov method with GMG-preconditioning
-LOGICAL :: IS_CG_COARSE         = .FALSE.                       !< Flag for only coarse grid solver
-LOGICAL :: IS_CG_MACRO          = .FALSE.                       !< Flag for macro coarse grid solver
-LOGICAL :: IS_CG_MG             = .FALSE.                       !< Flag for Krylov method with MG-preconditioning
-LOGICAL :: IS_CG_MUL            = .FALSE.                       !< Flag for multiplicative Twolevel-Krylov method
-LOGICAL :: IS_CG_MUL2           = .FALSE.                       !< Flag for multiplicative-type2 Twolevel-Krylov method
-LOGICAL :: IS_FFT               = .FALSE.                       !< Flag for FFT-method
-LOGICAL :: IS_FFTO              = .FALSE.                       !< Flag for FFTO-method
-LOGICAL :: IS_LAPLACE           = .FALSE.                       !< Flag for use of Laplace matrix (MGM only)
-LOGICAL :: IS_POISSON           = .TRUE.                        !< Flag for use of Poisson matrix (MGM only)
-LOGICAL :: IS_MKL               = .FALSE.                       !< Flag for MKL-method
-LOGICAL :: IS_MKL_LEVEL(10)     = .FALSE.                       !< Flag for level-dependent MKL method
-LOGICAL :: IS_MGM               = .FALSE.                       !< Flag for McKeeney-Greengard-Mayo method
+LOGICAL :: IS_STRUCTURED        = .FALSE.                        !< Flag for structured discretization
+LOGICAL :: IS_UNSTRUCTURED      = .FALSE.                        !< Flag for unstructured discretization
+LOGICAL :: IS_PURE_NEUMANN      = .FALSE.                        !< Flag for pure Neumann system
+LOGICAL :: IS_MG                = .FALSE.                        !< Flag for Multigrid-method
+LOGICAL :: IS_AMG               = .FALSE.                        !< Flag for Algebraic Multigrid-method
+LOGICAL :: IS_GMG               = .FALSE.                        !< Flag for Geometric Multigrid-method
+LOGICAL :: IS_CG                = .FALSE.                        !< Flag for Krylov method
+LOGICAL :: IS_CG_ADD            = .FALSE.                        !< Flag for additive twolevel-Krylov method
+LOGICAL :: IS_CG_AMG            = .FALSE.                        !< Flag for Krylov method with AMG-preconditioning
+LOGICAL :: IS_CG_GMG            = .FALSE.                        !< Flag for Krylov method with GMG-preconditioning
+LOGICAL :: IS_CG_COARSE         = .FALSE.                        !< Flag for only coarse grid solver
+LOGICAL :: IS_CG_MACRO          = .FALSE.                        !< Flag for macro coarse grid solver
+LOGICAL :: IS_CG_MG             = .FALSE.                        !< Flag for Krylov method with MG-preconditioning
+LOGICAL :: IS_CG_MUL            = .FALSE.                        !< Flag for multiplicative Twolevel-Krylov method
+LOGICAL :: IS_CG_MUL2           = .FALSE.                        !< Flag for multiplicative-type2 Twolevel-Krylov method
+LOGICAL :: IS_FFT               = .FALSE.                        !< Flag for FFT-method
+LOGICAL :: IS_FFTO              = .FALSE.                        !< Flag for FFTO-method
+LOGICAL :: IS_LAPLACE           = .FALSE.                        !< Flag for use of Laplace matrix (MGM only)
+LOGICAL :: IS_POISSON           = .TRUE.                         !< Flag for use of Poisson matrix (MGM only)
+LOGICAL :: IS_MKL               = .FALSE.                        !< Flag for MKL-method
+LOGICAL :: IS_MKL_LEVEL(10)     = .FALSE.                        !< Flag for level-dependent MKL method
+LOGICAL :: IS_MGM               = .FALSE.                        !< Flag for McKeeney-Greengard-Mayo method
 
-LOGICAL :: HAS_CSV_DUMP         = .FALSE.                       !< Flag for CSV-file to be dumped out
-LOGICAL :: HAS_MULTIPLE_GRIDS   = .FALSE.                       !< Flag for multiple discretization types
-LOGICAL :: HAS_TWO_LEVELS       = .FALSE.                       !< Flag for two grid levels
-LOGICAL :: HAS_MULTIPLE_LEVELS  = .FALSE.                       !< Flag for multiple grid levels
-LOGICAL :: HAS_AMG_LEVELS       = .FALSE.                       !< Flag for AMG-based grid levels
-LOGICAL :: HAS_GMG_LEVELS       = .FALSE.                       !< Flag for GMG-based grid levels
+LOGICAL :: HAS_CSV_DUMP         = .FALSE.                        !< Flag for CSV-file to be dumped out
+LOGICAL :: HAS_MULTIPLE_GRIDS   = .FALSE.                        !< Flag for multiple discretization types
+LOGICAL :: HAS_TWO_LEVELS       = .FALSE.                        !< Flag for two grid levels
+LOGICAL :: HAS_MULTIPLE_LEVELS  = .FALSE.                        !< Flag for multiple grid levels
+LOGICAL :: HAS_AMG_LEVELS       = .FALSE.                        !< Flag for AMG-based grid levels
+LOGICAL :: HAS_GMG_LEVELS       = .FALSE.                        !< Flag for GMG-based grid levels
 
  
 ! ---------- Globally used types for description of different solvers
@@ -278,8 +278,9 @@ TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MGS          !< Solver structur
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSGS         !< Solver structure for Sym. Gauss-Seidel smoother (matrix vs.)
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSOR         !< Solver structure for SOR smoother (matrix version)
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSSOR        !< Solver structure for SSOR smoother (matrix version)
-TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG
-TYPE (SCARC_CPU_TYPE), SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: CPU
+
+TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG                !< Message structure to handle verbose and debug messages
+TYPE (SCARC_CPU_TYPE), SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: CPU   !< CPU structure to handle time measurements
 
 !#ifdef WITH_MKL
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_LU             !< Solver structure for LU-decomposition main solver 
@@ -292,5 +293,4 @@ TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MKL          !< Solver structur
 TYPE (SCARC_SUBDIVISION_TYPE), SAVE, TARGET :: SUBDIVISION    !< Structure to keep information about subdivision
 
 END MODULE SCARC_VARIABLES
-
 

@@ -32,7 +32,6 @@ ALLOCATE (STORAGE%ALLOCATION_LIST(NSCARC_STORAGE_MAX), STAT = IERROR)
 CALL CHKMEMERR ('SCARC_SETUP_MEMORY_MANAGMENT', 'ALLOCATION_LIST', IERROR)
 END SUBROUTINE SCARC_SETUP_STORAGE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Update list of arrays within ScaRC memory management
 ! ------------------------------------------------------------------------------------------------
@@ -113,7 +112,6 @@ ENDIF
 #endif
 END SUBROUTINE SCARC_UPDATE_STORAGE
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Update memory statistics w.r.t to occupied workspace and number of allocated arrays
 ! ------------------------------------------------------------------------------------------------
@@ -144,8 +142,6 @@ END SELECT
 
 END SUBROUTINE SCARC_UPDATE_STORAGE_COUNTERS
 
-
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 1
 ! ------------------------------------------------------------------------------------------------
@@ -174,7 +170,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_INT1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 2
@@ -208,7 +203,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_INT2
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 3
@@ -244,7 +238,6 @@ CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 3, NINIT, 
 
 END SUBROUTINE SCARC_ALLOCATE_INT3
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 1
 ! ------------------------------------------------------------------------------------------------
@@ -272,7 +265,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_LOG1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 2
@@ -303,7 +295,6 @@ CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 2, NINIT, 
 
 END SUBROUTINE SCARC_ALLOCATE_LOG2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 3
 ! ------------------------------------------------------------------------------------------------
@@ -333,7 +324,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_LOG3
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 1
@@ -370,7 +360,6 @@ CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 1, NINIT, 
 
 END SUBROUTINE SCARC_ALLOCATE_REAL1
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 1
 ! ------------------------------------------------------------------------------------------------
@@ -402,7 +391,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_FB, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL1_FB
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 2
@@ -437,7 +425,6 @@ ENDIF
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CNAME, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL2
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 3
@@ -474,7 +461,6 @@ CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 3, NINIT, 
 
 END SUBROUTINE SCARC_ALLOCATE_REAL3
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional integer vector 
 ! ------------------------------------------------------------------------------------------------
@@ -484,7 +470,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional integer vector 
@@ -496,7 +481,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional integer vector 
 ! ------------------------------------------------------------------------------------------------
@@ -506,7 +490,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT3
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional logical vector 
@@ -518,7 +501,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG1
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional logical vector 
 ! ------------------------------------------------------------------------------------------------
@@ -528,7 +510,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG2
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional logical vector 
@@ -540,7 +521,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG3
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional double precision vector 
 ! ------------------------------------------------------------------------------------------------
@@ -550,7 +530,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional double precision vector 
@@ -562,7 +541,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional double precision vector 
 ! ------------------------------------------------------------------------------------------------
@@ -572,7 +550,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL3
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
@@ -584,7 +561,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL1_FB
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
 ! ------------------------------------------------------------------------------------------------
@@ -595,7 +571,6 @@ DEALLOCATE(WORKSPACE)
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL2_FB
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
 ! ------------------------------------------------------------------------------------------------
@@ -605,7 +580,6 @@ CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
 DEALLOCATE(WORKSPACE) 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL3_FB
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Resize one-dimensional integer vector to requested bounds
@@ -643,7 +617,6 @@ ELSE
 ENDIF
 
 END SUBROUTINE SCARC_RESIZE_INT1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Resize two-dimensional integer vector to requested bounds
@@ -695,7 +668,6 @@ ENDIF
 
 END SUBROUTINE SCARC_RESIZE_INT2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer vector
 ! ------------------------------------------------------------------------------------------------
@@ -719,7 +691,6 @@ ELSE IF (NSIZE < SIZE(WORKSPACE)) THEN
 ENDIF
 
 END SUBROUTINE SCARC_REDUCE_INT1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer array with dimension 2
@@ -758,7 +729,6 @@ ENDIF
 
 END SUBROUTINE SCARC_REDUCE_INT2
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Expand size of integer vector
 ! ------------------------------------------------------------------------------------------------
@@ -778,7 +748,6 @@ WORKSPACE(1:NSIZE+NSIZE_ADD) = AUX(1:NSIZE+NSIZE_ADD)
 DEALLOCATE(AUX)
 
 END SUBROUTINE SCARC_EXPAND_INT1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer vector
@@ -803,7 +772,6 @@ ELSE IF (NSIZE < SIZE(WORKSPACE)) THEN
 ENDIF
 
 END SUBROUTINE SCARC_REDUCE_REAL1
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate matrix in compact storage format
@@ -847,7 +815,6 @@ IF (NTYPE /= NSCARC_MATRIX_MINIMAL) THEN
 ENDIF
 
 END SUBROUTINE SCARC_ALLOCATE_CMATRIX
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Dellocate matrix in compact storage format
@@ -980,7 +947,6 @@ A2%VAL = A1%VAL
 
 END SUBROUTINE SCARC_COPY_CMATRIX
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Reduce size of matrix in compact storage format
 ! ------------------------------------------------------------------------------------------------
@@ -1053,7 +1019,6 @@ ENDIF
 
 END SUBROUTINE SCARC_REDUCE_CMATRIX
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Allocate matrix in bandwise storage format
 ! ------------------------------------------------------------------------------------------------
@@ -1073,7 +1038,6 @@ WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CNAME),'_LEV',NL,'.VAL'
 CALL SCARC_ALLOCATE_REAL2(A%VAL, 1, A%N_DIAG, 1, A%N_STENCIL, NSCARC_INIT_ZERO, CINFO, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_BMATRIX
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Deallocate matrix in bandwise storage format
@@ -1103,5 +1067,4 @@ A%TARGET = 0
 END SUBROUTINE SCARC_DEALLOCATE_BMATRIX
 
 END MODULE SCARC_STORAGE
-
 
