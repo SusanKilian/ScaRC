@@ -3,7 +3,7 @@
 ! MODULE SCARC_PARSER
 ! 
 !> \brief Parse ScaRC related input parameters and initialize basic ScaRC structures
-!
+
 !=======================================================================================================================
 MODULE SCARC_PARSER
   

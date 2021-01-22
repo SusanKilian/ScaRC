@@ -1,16 +1,16 @@
 !=======================================================================================================================
 ! 
 ! MODULE SCARC_METHODS
-!
+
 !> \brief Collection of available ScaRC/UScaRC solvers : 
-!
+
 !  - Krylov method (without and with coarse grid correction)
 !  - McKeeney-Greengard-Mayo method (still experimental)
 !  - Geometric Multigrid method
 !  - Algebraic Multigrid method
 !  - FFT method (Crayfish Pak)
 !  - IntelMKL methods (Pardiso/Cluster_Sparse_Solver)
-!
+
 !=======================================================================================================================
 MODULE SCARC_METHODS
   
@@ -554,9 +554,9 @@ CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: START, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
-!
+
 ! Pass 1: Solve structured inhomogeneous Poisson solution
-!
+
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
 CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)
 
@@ -585,11 +585,11 @@ IF (STATE_MGM == NSCARC_MGM_SUCCESS) THEN
    
    TYPE_METHOD = NSCARC_METHOD_MGM                      
    
-!
+
 ! Pass 2: Solve local homogeneous Laplace problems:
 ! Perform iteration based on the solution of local homogeneous Laplace problems
 ! As BC's to neighbors simple mean values of the previous Laplaces solutions along interfaces are used
-!
+
 ELSE
    
    ! If comparison with correct UScaRC method is selected, also compute UScaRC solution

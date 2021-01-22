@@ -1,12 +1,12 @@
 !=======================================================================================================================
-!
+
 ! MODULE SCARC_MATRICES
-!
+
 !> \brief Setup and organize the matrix types needed for the different ScaRC/UscaRC solvers
-!
+
 !   This inlcudes local/global Poisson and Laplace matrices, their boundary conditions and 
 !   a corresponding condensing in the purely Neumann case
-!
+
 !=======================================================================================================================
 MODULE SCARC_MATRICES
   
@@ -776,10 +776,10 @@ CALL SCARC_POINT_TO_GRID (NM, NL)
 A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
 CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
 
-!
+
 ! Assemble permuted Laplace matrix which will be stored in LAPLACE,
 ! determine the permuted cells that belong to the matrix stencil in a given cell
-!
+
 IP = 1
 DO IC = 1, G%NC
 
@@ -1501,13 +1501,13 @@ END SUBROUTINE SCARC_SETUP_POISSON_MKL
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Insert correct boundary conditions into system matrix
-!
+
 ! If A is a pure Neumann matrix, get neighboring cell indices of communicated stencil legs for 
 ! condensed system, also save values and column indices of last matrix row of last mesh
-!
+
 ! Set correct boundary conditions for system matrix
 ! Take care of whether the structured or unstructured discretization is used
-!
+
 ! If there are no Dirichlet BC's transform sytem into condensed one by replacing the
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
 ! ------------------------------------------------------------------------------------------------

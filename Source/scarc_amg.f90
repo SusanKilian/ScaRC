@@ -1,7 +1,7 @@
 !=======================================================================================================================
-!
+
 ! MODULE SCARC_AMG
-!
+
 !> \brief Setup algebraic multigrid structures
 !   Allocate needed workspace for hierarchy of system matrices, prolongation, restriction, etc.
 !   Note: all used pointers end with either 'F' or 'C' where:
@@ -13,7 +13,7 @@
 !   If the maximum allowed level is not yet reached, set dimensions for next coarser level, 
 !   define its nullspace and perform relaxation to define the respective Prolongation matrix
 !   Define Poisson matrix on coarser level by Galerkin approach: A_coarse = R*A_fine*P
-!
+
 !=======================================================================================================================
 MODULE SCARC_AMG
   
@@ -161,9 +161,9 @@ END SUBROUTINE SCARC_INVERT_MATRIX_DIAGONAL
 ! ------------------------------------------------------------------------------------------------------
 !> \brief  Compute a strength of connection matrix based on symmetric smoothed aggregation heuristic. 
 ! A nonzero connection A[i, j] is considered strong if:
-!
+
 !     abs(A[i, j]) >= theta*sqrt( abs(A[i, i]) * abs(A[j, j]) )
-!
+
 ! The strength matrix S corresponds to the set of nonzero entries of A that are strong connections
 ! based on a strength of connection tolerance theta
 ! ------------------------------------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 !=======================================================================================================================
-!
+
 ! MODULE SCARC_GRIDS
-!
+
 !> \brief Setup all structures related to the different grid types (structured/unstructured) and
 !   the different grid resolution levels
-!
+
 !   This includes information w.r.t the mesh faces and the wall cells along external, interface and
 !   internal boundaries
-!
+
 !=======================================================================================================================
 MODULE SCARC_GRIDS
   
@@ -71,7 +71,6 @@ INTEGER :: NL
 #endif
 
 SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
-
  
    ! Global data-parallel Krylov method 
  
@@ -99,7 +98,6 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
                TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
             ENDIF
 #endif
-
          ! Preconditioning by defect correction based on geometric multigrid method,
          ! use specified hierarchy of grid levels
  
@@ -149,8 +147,6 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
          IF (TYPE_MKL(0) == NSCARC_MKL_COARSE) TYPE_MKL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
-
-
  
    ! Global LU-decomposition 
  
@@ -160,14 +156,12 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
       CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
       TYPE_MKL(NLEVEL_MIN) = TYPE_MKL(0)
-
  
    ! Global McKenney-Greengard-Mayo method - only finest level 
  
    CASE (NSCARC_METHOD_MGM)
 
       CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
-
 
 END SELECT SELECT_SCARC_METHOD
 
@@ -200,6 +194,7 @@ SELECT_LEVEL_TYPE: SELECT CASE (NTYPE)
       NLEVEL_MAX = 1
    
    ! determine maximum number of possible levels based on number of grid cells (based on doubling)
+
    CASE(NSCARC_LEVEL_MULTI)
    
       NLEVEL = NSCARC_LEVEL_MAX
@@ -242,6 +237,7 @@ INTEGER, INTENT(IN) :: NC, IOR0
 INTEGER :: NC0, NL
 
 ! Print error message if not divisable by 2
+
 IF (IS_GMG .AND. SCARC_MULTIGRID_LEVEL > 1 .AND. MOD(NC,2)/=0) THEN
    SELECT CASE (ABS(IOR0))
       CASE (1)
@@ -254,6 +250,7 @@ IF (IS_GMG .AND. SCARC_MULTIGRID_LEVEL > 1 .AND. MOD(NC,2)/=0) THEN
 ENDIF
 
 ! Divide by 2 as often as possible or until user defined max-level is reached
+
 IF (SCARC_MULTIGRID_LEVEL > 1) THEN
    NC0=NC
    DO NL=1,NSCARC_LEVEL_MAX
@@ -552,13 +549,11 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
       G%NC   = G%NC_LOCAL(NM)
       G%NCE  = G%NC_LOCAL(NM)
       G%NCE2 = G%NC_LOCAL(NM)
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
 
       IF (IS_MGM .AND. SCARC_MGM_USE_LU) CALL SCARC_SETUP_GRID_PERMUTATION
-
  
    ! If only one specified type of discretization must be admistrated:
    ! allocate and preset cell numbers and state arrays for requested type of discretization
@@ -630,15 +625,13 @@ SUBROUTINE SCARC_SETUP_GRID_PERMUTATION()
 USE SCARC_POINTERS, ONLY: L, G, GWC
 INTEGER :: IW, I, J, K, IOR0, IC, JC, KC
 
-!
 ! Allocate permutation vectors 
-!
+
 CALL SCARC_ALLOCATE_INT1 (G%PERM_FW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_FW', CROUTINE)
 CALL SCARC_ALLOCATE_INT1 (G%PERM_BW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_BW', CROUTINE)
    
-!
 ! Obstruction cells are numbered last such that they appear at the end of a vector
-!
+
 G%PERM_FW = 0
 JC = G%NC
 
@@ -664,7 +657,6 @@ DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
    JC = JC - 1
 
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_FW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
@@ -672,9 +664,8 @@ WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_BW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
 #endif
 
-!
 ! Interface cells are numbered second last
-!
+
 DO IW = 1, L%N_WALL_CELLS_EXT
    
    GWC => G%WALL(IW)
@@ -698,7 +689,6 @@ DO IW = 1, L%N_WALL_CELLS_EXT
    JC = JC - 1
 
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_FW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
@@ -706,9 +696,8 @@ WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_BW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
 #endif
 
-!
 ! The rest is used from beginning to first interface cell
-!
+
 KC = 1
 DO IC = 1, G%NC
    IF (G%PERM_FW(IC) /= 0) CYCLE
