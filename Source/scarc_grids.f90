@@ -61,7 +61,6 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_BASICS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Determine number of grid levels 
 ! NLEVEL_MIN corresponds to finest grid resolution, NLEVEL_MAX to coarsest resolution
@@ -74,14 +73,13 @@ INTEGER :: NL
 SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
  
-   ! ---------- Global data-parallel Krylov method 
+   ! Global data-parallel Krylov method 
  
    CASE (NSCARC_METHOD_KRYLOV)
 
       SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
 #ifdef WITH_MKL
- 
          ! Preconditioning by defect correction based on LU-decomposition
          ! If two-level method, also use coarse grid level, otherwise only use single (finest) grid level
          ! Either using a global CLUSTER_SPARSE_SOLVER or local PARDISO solvers from MKL
@@ -100,7 +98,6 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
             ELSE IF (TYPE_SCOPE(1) == NSCARC_SCOPE_LOCAL) THEN
                TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
             ENDIF
-
 #endif
 
          ! Preconditioning by defect correction based on geometric multigrid method,
@@ -112,7 +109,6 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
             IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_MKL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
 
- 
          ! Preconditioning by defect correction based on local basic iterations (JACOBI/SSOR),
          ! if two-level method, also use coarse grid, otherwise only use single (finest) grid level
  
@@ -128,8 +124,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
       END SELECT SELECT_KRYLOV_PRECON
 
- 
-   ! ---------- Global data-parallel Multigrid method 
+   ! Global data-parallel Multigrid method 
  
    CASE (NSCARC_METHOD_MULTIGRID)
 
@@ -157,7 +152,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
 
  
-   ! ---------- Global LU-decomposition 
+   ! Global LU-decomposition 
  
    CASE (NSCARC_METHOD_LU)
 
@@ -167,7 +162,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
       TYPE_MKL(NLEVEL_MIN) = TYPE_MKL(0)
 
  
-   ! ---------- Global McKenney-Greengard-Mayo method - only finest level 
+   ! Global McKenney-Greengard-Mayo method - only finest level 
  
    CASE (NSCARC_METHOD_MGM)
 
@@ -176,9 +171,7 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
 
 END SELECT SELECT_SCARC_METHOD
 
-
 #ifdef WITH_MKL
- 
 ! Define MKL related logical short names based on number of levels
  
 DO NL = NLEVEL_MIN, NLEVEL_MAX
@@ -187,9 +180,7 @@ DO NL = NLEVEL_MIN, NLEVEL_MAX
                       (TYPE_MKL(NL) == NSCARC_MKL_GLOBAL)
 ENDDO
 #endif
-
 END SUBROUTINE SCARC_SETUP_LEVELS
-
 
 ! ------------------------------------------------------------------------------------------------
 !> \brief Setup single level in case of default Krylov method
@@ -242,7 +233,6 @@ END SELECT SELECT_LEVEL_TYPE
 
 END SUBROUTINE SCARC_GET_NUMBER_OF_LEVELS
 
-
 ! ------------------------------------------------------------------------------------------------
 !> \brief Determine maximum number of possible levels 
 ! In case of GMG- or 2-Level-method, NC must be divisable by 2 at least one time
@@ -280,7 +270,6 @@ ENDIF
 RETURN
 END FUNCTION SCARC_GET_MAX_LEVEL
 
-
 ! -----------------------------------------------------------------------------
 !> \brief Setup discretization information
 ! -----------------------------------------------------------------------------
@@ -295,7 +284,7 @@ INTEGER :: IBAR, JBAR, KBAR
 
 CROUTINE = 'SCARC_SETUP_GRIDS'
 
-! ---------- On all grid levels 
+! On all grid levels:
 ! Specify general mesh related geometry information
 
 MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -363,7 +352,6 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG
          CALL SCARC_DEBUG_FORMATS(L%NX)
 #endif
-
       ELSE
 
          ! Allocate and compute coordinate information for coarser levels
@@ -441,8 +429,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO LEVEL_LOOP1
 ENDDO MESHES_LOOP1
 
- 
-! ---------------------- On finest grid level -------------------------------------------------
+! On finest grid level:
 ! Allocate several arrays for the administration of discretization related data
  
 MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -467,14 +454,13 @@ MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDDO
       ENDDO
    ENDDO
-
  
    ! If both discretization types (structured/unstructured) must be administrated (MGM method only):
    ! allocate all arrays which are related to a specific discretization type
  
    IF (HAS_MULTIPLE_GRIDS) THEN
  
-      ! ---------- First process structured discretization
+      ! First process structured discretization
  
       CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
@@ -517,13 +503,11 @@ MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       G%NC   = G%NC_LOCAL(NM)
       G%NCE  = G%NC_LOCAL(NM)
       G%NCE2 = G%NC_LOCAL(NM)
-
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
  
-      ! ---------------- Then process unstructured discretization
+      ! Then process unstructured discretization
  
       CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
@@ -581,7 +565,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, 
  
    ELSE
 
-      ! ---------------- Only process specified type of discretization
+      ! Only process specified type of discretization
 
       CALL SCARC_SET_GRID_TYPE(TYPE_GRID)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)

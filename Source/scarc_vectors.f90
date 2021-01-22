@@ -481,13 +481,11 @@ TNOW = CURRENT_TIME()
 
 ! If this call is related to a globally acting solver, exchange internal boundary values of
 ! vector1 such that the ghost values contain the corresponding overlapped values of adjacent neighbor
- 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'CALLING MATVEC_PRODUCT FOR ', NV1, NV2, NL, TYPE_MATVEC
 CALL SCARC_DEBUG_LEVEL (NV1, 'MATVEC: NV1 INIT0 ', NL)
 CALL SCARC_DEBUG_LEVEL (NV2, 'MATVEC: NV2 INIT0 ', NL)
 #endif
-
 IF (TYPE_MATVEC == NSCARC_MATVEC_GLOBAL) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR_PLAIN, NV1, NL)
 
 ! Perform global matrix-vector product:
@@ -496,7 +494,7 @@ IF (TYPE_MATVEC == NSCARC_MATVEC_GLOBAL) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VE
  
 SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
-   ! ------------- COMPACT storage technique
+   ! COMPACT storage technique
  
    CASE (NSCARC_MATRIX_COMPACT)
    
@@ -538,7 +536,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
    
       ENDDO MESHES_COMPACT_LOOP
    
-   ! ------------- bandwise storage technique
+   ! Bandwise storage technique:
    ! matrix diagonals are supposed to be constant
    ! matrix-vector multiplication is based on daxpy-routines using the constant matrix stencil
    ! the 'wrong' entries due to boundary conditions and zero entries in subdiagonals are explicitly corrected 
@@ -547,8 +545,8 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
    
       SELECT_STENCIL_TYPE: SELECT CASE (TYPE_STENCIL)
 
-         ! ---------- Variable entries with own implementation of daxpyv 
-         !            matrix-vector multiplication is based on variable matrix stencil
+         ! Variable entries with own implementation of daxpyv 
+         ! matrix-vector multiplication is based on variable matrix stencil
  
          CASE (NSCARC_STENCIL_VARIABLE)
          
@@ -595,7 +593,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
             ENDDO MESHES_BANDWISE_VARIABLE_LOOP
 
  
-         ! ---------- Storage of constant matrix entries - with corrections at subdiagonals and diagonal (BC's)
+         ! Storage of constant matrix entries - with corrections at subdiagonals and diagonal (BC's)
  
          CASE (NSCARC_STENCIL_CONSTANT)
 
@@ -672,7 +670,6 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
       END SELECT SELECT_STENCIL_TYPE
 END SELECT SELECT_MATRIX_TYPE
-
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (NV1, 'MATVEC: NV1 EXIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (NV2, 'MATVEC: NV2 EXIT1 ', NL)
