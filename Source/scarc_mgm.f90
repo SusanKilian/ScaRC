@@ -54,54 +54,66 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Allocate workspace for the storage of the different vectors in the MGM methods
 
-      !   SIP    : structured inhomogeneous Poisson solution (pass 1)
-      !   UIP    : unstructured inhomogeneous Poisson solution (merge)
-      !   UHL    : unstructured homogeneous Laplace solution (pass 2)
-      !   UHLP   : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
-
-      !   SCARC  : ScaRC solution (structured inhomogeneous)
-      !   USCARC : UScaRC solution (unstructured inhomogeneous)
-      !   DSCARC : difference of UScaRC and ScaRC solution 
+      !   SIP       : structured inhomogeneous Poisson solution (pass 1)
+      !   UIP       : unstructured inhomogeneous Poisson solution (merge)
+      !   UHL       : unstructured homogeneous Laplace solution (pass 2)
+      !   UHL_PREV  : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
+      !   OUIP      : other unstructured inhomogeneous Poisson solution on boundary
+      !   OUHL      : other unstructured homogeneous Laplace solution on boundary
+      !   OUHL_PREV : other unstructured homogeneous Laplace solution of previous time step on boundary
 
       CALL SCARC_ALLOCATE_REAL3(MGM%SIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SIP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%UIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP', CROUTINE)
-      IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) &
-         CALL SCARC_ALLOCATE_REAL3(MGM%UHL_PREV, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_PREV', CROUTINE)
-
-      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
-
-      !   UIP_VS_USCARC : unstructured inhomogeneous Poisson versus UScaRC
-      !   UHL_VS_DSCARC : unstructured homogeneous Laplace versus difference UScaRC-ScaRC
-
-      CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
 
       CALL SCARC_ALLOCATE_REAL1(MGM%OUIP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUIP', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%OUHL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OUHL_PREV, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL_PREV', CROUTINE)
+
+      IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
+         CALL SCARC_ALLOCATE_REAL3(MGM%UHL_PREV, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_PREV', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL1(MGM%OUHL_PREV, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL_PREV', CROUTINE)
+      ENDIF
+
+      !   UVEL  : u-velocity component in MGM pass
+      !   VVEL  : v-velocity component in MGM pass
+      !   WVEL  : w-velocity component in MGM pass
+      !   OUVEL : other u-velocity component in MGM pass on boundary
+      !   OVVEL : other v-velocity component in MGM pass on boundary
+      !   OWVEL : other w-velocity component in MGM pass on boundary
+
+      CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%WVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%WVEL', CROUTINE)
 
       CALL SCARC_ALLOCATE_REAL1(MGM%OUVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUVEL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%OVVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OVVEL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%OWVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OWVEL', CROUTINE)
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%UU, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%UU', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%VV, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%VV', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%WW, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%WW', CROUTINE)
+      !   SCARC  : ScaRC solution (structured inhomogeneous)
+      !   USCARC : UScaRC solution (unstructured inhomogeneous)
+      !   DSCARC : difference of UScaRC and ScaRC solution 
 
+      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
+
+      !   UIP_VS_USCARC : difference vector of unstructured inhomogeneous Poisson versus UScaRC
+      !   UHL_VS_DSCARC : difference vector of unstructured homogeneous Laplace versus difference UScaRC-ScaRC
+
+      CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
+
+      !CALL SCARC_ALLOCATE_REAL3(MGM%UU, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%UU', CROUTINE)
+      !CALL SCARC_ALLOCATE_REAL3(MGM%VV, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%VV', CROUTINE)
+      !CALL SCARC_ALLOCATE_REAL3(MGM%WW, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%WW', CROUTINE)
+ 
       CALL SCARC_ALLOCATE_REAL3(MGM%U1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U1', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%V1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V1', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W1', CROUTINE)
-
+ 
       CALL SCARC_ALLOCATE_REAL3(MGM%U2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U2', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
-
-      CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%WVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%WVEL', CROUTINE)
 
       CALL SCARC_ALLOCATE_REAL1(MGM%BC, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%BC ', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
@@ -1960,7 +1972,7 @@ END SUBROUTINE SCARC_MGM_UPDATE_VELOCITY
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ---------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, UU, VV, WW, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN) ::  NTYPE
 INTEGER:: NM, I, J, K, IW, IOR0, IIO1, IIO2, JJO1, JJO2, KKO1, KKO2, IIO, JJO, KKO, ITYPE
 REAL(EB):: UN_NEW_OTHER, UN_NEW, DUDT, DVDT, DWDT
@@ -1986,17 +1998,17 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    MGM%VELOCITY_ERROR = 0.0_EB
 
-   UU => MGM%UU
-   VV => MGM%VV
-   WW => MGM%WW
+   !UU => MGM%UU
+   !VV => MGM%VV
+   !WW => MGM%WW
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> XXXX:MGM_VELOCITY_ERROR', NTYPE, DT
    WRITE(MSG%LU_DEBUG, *) 'HP'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(III, 1, KKK), III = 0, M%IBAR+1), KKK = M%KBAR+1, 0, -1)
    WRITE(MSG%LU_DEBUG, *) 'UU'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((UU(III, 1, KKK), III = 0, M%IBAR), KKK = M%KBAR, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'M%U'
+   !WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((UU(III, 1, KKK), III = 0, M%IBAR), KKK = M%KBAR, 0, -1)
+   !WRITE(MSG%LU_DEBUG, *) 'M%U'
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((M%U(III, 1, KKK), III = 0, M%IBAR), KKK = M%KBAR, 0, -1)
    WRITE(MSG%LU_DEBUG, *) 'M%W'
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((M%W(III, 1, KKK), III = 0, M%IBAR), KKK = M%KBAR, 0, -1)
@@ -2191,10 +2203,10 @@ WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
 WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
 WRITE(MSG%LU_DEBUG, *) 'MGM%WVEL'
 WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%WVEL(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
-WRITE(MSG%LU_DEBUG, *) 'MGM%OU3'
-WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%OU3(IW), IW = 1, L%N_WALL_CELLS_EXT)
-WRITE(MSG%LU_DEBUG, *) 'MGM%OW3'
-WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%OW3(IW), IW = 1, L%N_WALL_CELLS_EXT)
+WRITE(MSG%LU_DEBUG, *) 'MGM%OUVEL'
+WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%OUVEL(IW), IW = 1, L%N_WALL_CELLS_EXT)
+WRITE(MSG%LU_DEBUG, *) 'MGM%OWVEL'
+WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%OWVEL(IW), IW = 1, L%N_WALL_CELLS_EXT)
 WRITE(MSG%LU_DEBUG, *) 'MGM%VELOCITY_ERROR:', MGM%VELOCITY_ERROR
 #endif
          WALLCELLS_LAPLACE_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
@@ -2256,11 +2268,11 @@ WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, ITYPE, I, J, K-1, UN_NEW
             IF (GWC%BOUNDARY_TYPE == INTERPOLATED_BOUNDARY) THEN
                SELECT CASE(ABS(IOR0))
                   CASE( 1)
-                     UN_NEW_OTHER = MGM%OU3(IW)
+                     UN_NEW_OTHER = MGM%OUVEL(IW)
                   CASE( 2)
-                     UN_NEW_OTHER = MGM%OV3(IW)
+                     UN_NEW_OTHER = MGM%OVVEL(IW)
                   CASE( 3)
-                     UN_NEW_OTHER = MGM%OW3(IW)
+                     UN_NEW_OTHER = MGM%OWVEL(IW)
                END SELECT
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 2000) IOR0, IW, ITYPE, I, J, K, UN_NEW_OTHER

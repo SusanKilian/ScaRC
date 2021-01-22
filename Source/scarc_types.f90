@@ -501,14 +501,14 @@ TYPE SCARC_MGM_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP                 !< unstructured Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL                 !< unstructured Laplace MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_PREV            !< unstructured Laplace MGM solution (previous time step)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUIP                !< other unstructured Poisson MGM solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL                !< other unstructured Laplace MGM solution 
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL_PREV           !< other unstructured Laplace MGM solution (previous time step)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SCARC               !< structured ScaRC solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: USCARC              !< unstructured ScaRC solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: DSCARC              !< difference of structured and unstructured ScaRC solutions
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP_VS_USCARC       !< difference of unstructured Poisson MGM and UScaRC solutions
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_VS_DSCARC       !< difference of unstructured Laplace MGM and diff ScaRC-UScarC
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL                !< Boundary values of other mesh
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL_PREV           !< Boundary values of other mesh (previous time step)
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OU3, OV3, OW3       !< Velocity components along external boundaries
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: BC                  !< Boundary conditions along internal mesh interfaces
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: X, Y, B             !< RHS and solution vectors of LU (experimental)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: ASQ                 !< Matrix for LU-decomposition (experimental)
@@ -516,10 +516,18 @@ TYPE SCARC_MGM_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: USQ                 !< Upper part of LU-decomposition (experimental)
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: WEIGHT              !< Scaling weights for true boundary setting
 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UU, VV, WW          !< Velocity vectors predictor
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UVEL                !< u-velocity vector component
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: VVEL                !< v-velocity vector component
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: WVEL                !< w-velocity vector component
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUVEL               !< other u-velocity component
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OVVEL               !< other v-velocity component
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OWVEL               !< other w-velocity component 
+
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U1, V1, W1          !< Velocity vectors predictor
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U2, V2, W2          !< Velocity vectors predictor
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U3, V3, W3          !< Velocity vectors predictor
+
+   !REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U3, V3, W3          !< Velocity vectors predictor
+   !REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UU, VV, WW          !< Velocity vectors predictor
 
    REAL(EB)::  CAPPA_POISSON = 0.0_EB                              !< Convergence rate of Poisson solution
    REAL(EB)::  CAPPA_LAPLACE = 0.0_EB                              !< Max convergence rate of Laplace solutions
