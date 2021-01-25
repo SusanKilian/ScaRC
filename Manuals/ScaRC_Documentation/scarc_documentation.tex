@@ -6,10 +6,10 @@
 \def\utilPath{./utilities}
 
 % --------- Must be set to corresponding Manuals/Bibliography directory in official FDS installation path
-\def\bibPath{/Volumes/FettesBrot/GIT/github/FDS/00_Orig/Manuals/Bibliography}
+\def\bibPath{../../../B_FDS/Manuals/Bibliography}
 
 \input{\bibPath/commoncommands}
-\input{/Volumes/FettesBrot/GIT/github/FDS/01_ScaRC/Manuals/ScaRC_Guide/declarations.tex}
+\input{../ScaRC_Guide/declarations.tex}
 % --------- Packages
 \usepackage{ulem}
 \usepackage{amsmath,amssymb}
@@ -52,10 +52,7 @@
 \newcommand*\HPNT[1]{\HSPT^{\circled{\raisebox{0.1pt}{\scriptsize{#1}}}}} 
 
 \newcommand*\HLO[2]{\overline{\HS}_{#1}^{\;{#2}}}
-
 \newcommand*\HBO[1]{\overline{\HS}_{#1}}
-
-
 
 \newcommand*\UIK[1]{u_i^{*,{#1}}}
 \newcommand*\FIB{F_i^n  \bigg|_{\partial B}}
