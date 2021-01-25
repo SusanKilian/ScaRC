@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "ScaRC", "FDS\ScaRC.vfproj", "{9ED9CB00-4B14-4701-9606-23338BDFB8BD}"
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "ScaRC", "ScaRC\ScaRC.vfproj", "{9ED9CB00-4B14-4701-9606-23338BDFB8BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
