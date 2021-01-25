@@ -81,11 +81,10 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
    
       CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)       ! Then process unstructured discretization
       IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_INIT_EXACT) &
-         CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)            ! ... for global Poisson matrix
+         CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)            ! ... for global Poisson matrix (only if requested)
       CALL SCARC_SETUP_LOCAL_LAPLACE_SIZES (NLEVEL_MIN)         ! ... for local Laplace matrices
    
 END SELECT SELECT_SCARC_METHOD_SIZES
-
 
   
 ! ------ Assemble system matrices on requested grid levels and set boundary conditions
@@ -186,12 +185,14 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ! First assemble unstructured matrix with homogeneous Dirichlet boundary conditions
 
          CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
-         CALL SCARC_SETUP_POISSON (NM, NLEVEL_MIN)
-         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_INIT_EXACT) THEN
+            CALL SCARC_SETUP_POISSON (NM, NLEVEL_MIN)
+            CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         ENDIF
 
          TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
          IF (SCARC_MGM_USE_LU) THEN
-            CALL SCARC_SETUP_PERMUTED_LAPLACE (NM, NLEVEL_MIN)
+            CALL SCARC_SETUP_LAPLACE_PERMUTED (NM, NLEVEL_MIN)
          ELSE
             CALL SCARC_SETUP_LAPLACE (NM, NLEVEL_MIN)
          ENDIF
@@ -213,8 +214,7 @@ ENDDO MESHES_POISSON_LOOP
 IF (TYPE_MATRIX == NSCARC_MATRIX_COMPACT) THEN
    IF (IS_MGM) THEN
 
-      TYPE_SCOPE = NSCARC_SCOPE_GLOBAL
-      !TYPE_SCOPE = NSCARC_SCOPE_LOCAL
+      TYPE_SCOPE = NSCARC_SCOPE_GLOBAL              
       CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
       CALL SCARC_SETUP_GLOBAL_CELL_MAPPING(NLEVEL_MIN)
       CALL SCARC_SETUP_GLOBAL_POISSON_COLUMNS(NLEVEL_MIN)
@@ -239,7 +239,7 @@ ENDIF
 
 IF (SCARC_GET_MATRIX_TYPE(NLEVEL_MIN) == NSCARC_MATRIX_COMPACT) CALL SCARC_SETUP_GLOBAL_POISSON_OVERLAPS(NLEVEL_MIN)
 
- MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
+MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
 
    DO NL = NLEVEL_MIN+1, NLEVEL_MAX
       IF (SCARC_GET_MATRIX_TYPE(NL) /= NSCARC_MATRIX_COMPACT) CYCLE
@@ -750,16 +750,17 @@ CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE: NO BDRY')
  
 END SUBROUTINE SCARC_SETUP_LAPLACE
 
+
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Assemble local unstructured Laplace matrices
 ! The grid numbering is permuted in such a way that all the nonzero entries of the RHS 
 ! are located of the end of the corresponding vector
 ! this concerns the entries along internal obstructions and in case of a multi-mesh computation
 ! also the entries along the internal interfaces
-! All other entries of the RHS are zero for the local laplace problems, such that the
-! forward substitution process Ly=b only has the start from the nonzero entries on
+! All other entries of the RHS are zero for the local Laplace problems, such that the
+! forward substitution process Ly=b only must start from the nonzero entries on
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_PERMUTED_LAPLACE (NM, NL)
+SUBROUTINE SCARC_SETUP_LAPLACE_PERMUTED (NM, NL)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: IX, IY, IZ, IC, IP, KKC(-3:3), JJC(-3:3)
@@ -775,7 +776,6 @@ CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)              
 A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
 CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
-
 
 ! Assemble permuted Laplace matrix which will be stored in LAPLACE,
 ! determine the permuted cells that belong to the matrix stencil in a given cell
@@ -811,33 +811,15 @@ DO IC = 1, G%NC
       
    ! Lower subdiagonals
 
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX  , IY  , IZ-1, KKC( 3), IP,  3)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX  , IY-1, IZ  , KKC( 2), IP,  2)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX-1, IY  , IZ  , KKC( 1), IP,  1)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX  , IY  , IZ-1, KKC( 3), IP,  3)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX  , IY-1, IZ  , KKC( 2), IP,  2)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX-1, IY  , IZ  , KKC( 1), IP,  1)
 
    ! Upper subdiagonals
 
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX+1, IY  , IZ  , KKC(-1), IP, -1)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX  , IY+1, IZ  , KKC(-2), IP, -2)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_PERMUTED_SUBDIAG(IX, IY, IZ, IX  , IY  , IZ+1, KKC(-3), IP, -3)
-
-   ! Lower subdiagonals
-
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, 3)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KC), G%ICY(KC), G%ICZ(KS), IP,  3)
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, 2)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KC), G%ICY(KF), G%ICZ(KC), IP,  2)
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, 1)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KW), G%ICY(KC), G%ICZ(KC), IP,  1)
-
-   ! Upper subdiagonals
-
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KE), G%ICY(KC), G%ICZ(KC), IP, -1)
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KC), G%ICY(KB), G%ICZ(KC), IP, -2)
-   !IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) &
-   !   CALL SCARC_SETUP_SUBDIAG(KC, G%ICX(KC), G%ICY(KC), G%ICZ(KC), G%ICX(KC), G%ICY(KC), G%ICZ(KN), IP, -3)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX+1, IY  , IZ  , KKC(-1), IP, -1)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX  , IY+1, IZ  , KKC(-2), IP, -2)
+   IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG_PERMUTED(IX, IY, IZ, IX  , IY  , IZ+1, KKC(-3), IP, -3)
 
 ENDDO
    
@@ -849,10 +831,11 @@ CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_PERMUTED_LAPLACE: NO BDRY')
+CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE_PERMUTED: NO BDRY')
 #endif
  
-END SUBROUTINE SCARC_SETUP_PERMUTED_LAPLACE
+END SUBROUTINE SCARC_SETUP_LAPLACE_PERMUTED
+
 
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set main diagonal entry for Poisson matrix in compact storage technique
@@ -876,6 +859,7 @@ A%STENCIL(0) = A%VAL(IP)
 
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MAINDIAG
+
 
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell has a neighbor and, if yes, return corresponding wall cell index
@@ -977,7 +961,7 @@ END SUBROUTINE SCARC_SETUP_SUBDIAG
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_PERMUTED_SUBDIAG (IX1, IY1, IZ1, IX2, IY2, IZ2, ICOL, IP, IOR0)
+SUBROUTINE SCARC_SETUP_SUBDIAG_PERMUTED (IX1, IY1, IZ1, IX2, IY2, IZ2, ICOL, IP, IOR0)
 USE SCARC_POINTERS, ONLY: L, F, A
 INTEGER, INTENT(IN) :: IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0, ICOL
 INTEGER, INTENT(INOUT) :: IP
@@ -1011,7 +995,8 @@ IF (IS_INTERNAL_CELL .AND. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
    IP = IP + 1
 ENDIF
 
-END SUBROUTINE SCARC_SETUP_PERMUTED_SUBDIAG
+END SUBROUTINE SCARC_SETUP_SUBDIAG_PERMUTED
+
 
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set boundary conditions including the interfaces between the meshes

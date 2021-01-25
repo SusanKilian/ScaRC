@@ -1,9 +1,5 @@
 !=======================================================================================================================
 !
-!> \brief Scalable Recursive Clustering (ScaRC): Collection of alternative solvers for the FDS pressure equation
-!
-!=======================================================================================================================
-!
 ! MODULE SCRC
 !
 !  Basic setup and call of different variants of ScaRC/UScaRC 

@@ -27,12 +27,9 @@ CONTAINS
 !> \brief Allocate vectors and define variables needed for McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM(NLMIN, NLMAX)
-USE SCARC_POINTERS, ONLY: L, G, MGM, GWC, LM, UM, &
-                          SCARC_POINT_TO_LEVEL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, MGM, LM, UM, SCARC_POINT_TO_MGM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NLMIN, NLMAX
-INTEGER:: NM, NL, IC, IW, IOR0, I, J, K, TYPE_SCOPE_SAVE
-INTEGER, ALLOCATABLE, DIMENSION(:,:):: CNT
-REAL(EB):: SX, SY, SZ
+INTEGER:: NM, NL
 
 CROUTINE = 'SCARC_SETUP_MGM'
 IS_MGM = .TRUE.
@@ -40,7 +37,7 @@ IS_MGM = .TRUE.
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_LEVEL(NM, NL)
+      CALL SCARC_POINT_TO_MGM(NM, NL)
 
       ! Store number of cells and external/internal boundary cells for simpler use in MGM method
 
@@ -54,17 +51,18 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Allocate workspace for the storage of the different vectors in the MGM methods
 
-      !   SIP       : structured inhomogeneous Poisson solution (pass 1)
-      !   UIP       : unstructured inhomogeneous Poisson solution (merge)
-      !   UHL       : unstructured homogeneous Laplace solution (pass 2)
-      !   UHL_PREV  : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
-      !   OUIP      : other unstructured inhomogeneous Poisson solution on boundary
-      !   OUHL      : other unstructured homogeneous Laplace solution on boundary
-      !   OUHL_PREV : other unstructured homogeneous Laplace solution of previous time step on boundary
+      ! SIP       : structured inhomogeneous Poisson solution (pass 1)
+      ! UIP       : unstructured inhomogeneous Poisson solution (merge)
+      ! UHL       : unstructured homogeneous Laplace solution (pass 2)
+      ! UHL_PREV  : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
 
       CALL SCARC_ALLOCATE_REAL3(MGM%SIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SIP', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%UIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
+
+      ! OUIP      : other unstructured inhomogeneous Poisson solution on boundary
+      ! OUHL      : other unstructured homogeneous Laplace solution on boundary
+      ! OUHL_PREV : other unstructured homogeneous Laplace solution of previous time step on boundary
 
       CALL SCARC_ALLOCATE_REAL1(MGM%OUIP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUIP', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%OUHL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL', CROUTINE)
@@ -74,12 +72,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_ALLOCATE_REAL1(MGM%OUHL_PREV, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL_PREV', CROUTINE)
       ENDIF
 
-      !   UVEL  : u-velocity component in MGM pass
-      !   VVEL  : v-velocity component in MGM pass
-      !   WVEL  : w-velocity component in MGM pass
-      !   OUVEL : other u-velocity component in MGM pass on boundary
-      !   OVVEL : other v-velocity component in MGM pass on boundary
-      !   OWVEL : other w-velocity component in MGM pass on boundary
+      ! UVEL,   VVEL,  WVEL : u-, v- and w-velocity components 
+      ! OUVEL, OVVEL, OWVEL : u-, v- and w-velocity components of other mesh
 
       CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
@@ -89,24 +83,23 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL1(MGM%OVVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OVVEL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1(MGM%OWVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OWVEL', CROUTINE)
 
-      !   SCARC  : ScaRC solution (structured inhomogeneous)
-      !   USCARC : UScaRC solution (unstructured inhomogeneous)
-      !   DSCARC : difference of UScaRC and ScaRC solution 
+      ! SCARC  : ScaRC solution (structured inhomogeneous by construction)
+      ! USCARC : UScaRC solution (unstructured inhomogeneous by construction)
+      ! DSCARC : difference of UScaRC and ScaRC solution 
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC',  CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
 
-      !   UIP_VS_USCARC : difference vector of unstructured inhomogeneous Poisson versus UScaRC
-      !   UHL_VS_DSCARC : difference vector of unstructured homogeneous Laplace versus difference UScaRC-ScaRC
+      ! UIP_VS_USCARC : difference vector of unstructured inhomogeneous Poisson versus UScaRC
+      ! UHL_VS_DSCARC : difference vector of unstructured homogeneous Laplace versus difference UScaRC-ScaRC
 
       CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
 
-      !CALL SCARC_ALLOCATE_REAL3(MGM%UU, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%UU', CROUTINE)
-      !CALL SCARC_ALLOCATE_REAL3(MGM%VV, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%VV', CROUTINE)
-      !CALL SCARC_ALLOCATE_REAL3(MGM%WW, 0, L%NX, 0, L%NY, 0, L%NZ, NSCARC_INIT_ZERO, 'MGM%WW', CROUTINE)
- 
+      ! U1, V1, W1: u-, v- and w-velocity components in first MGM pass
+      ! U2, V2, W2: u-, v- and w-velocity components in second MGM pass
+
       CALL SCARC_ALLOCATE_REAL3(MGM%U1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U1', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%V1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V1', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W1', CROUTINE)
@@ -115,142 +108,52 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
 
+      ! BC: Store boundary values along interfaces (will still be transformed to overlap structures)
+
       CALL SCARC_ALLOCATE_REAL1(MGM%BC, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%BC ', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
 
 
-      ! The following settings are related to the unstructured pass of MGM:
-      ! Configure boundary cell counters for 'True Approximate' boundary setting
+      ! Configure boundary cell counters and weights for 'True Approximate' boundary setting
 
-      CALL SCARC_ALLOCATE_INT2(CNT, 1, G%NC, -3, 3, NSCARC_INIT_NONE, 'CNT', CROUTINE)
-      CNT = 2.0_EB;  CNT(:,0) = 0.0_EB
+      IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
 
-      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-      CALL SCARC_POINT_TO_GRID(NM, NL)
-      CALL SCARC_ALLOCATE_INT2(MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
+         ! BTYPE  : Type of boundary condition in single boundary cells (Dirichlet/Neumann/Internal)
+         ! WEIGHT : Weight for true approximate setting in single boundary cells
 
-      DO IW = 1, MGM%NWE
+         CALL SCARC_ALLOCATE_INT2(MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
 
-         GWC => G%WALL(IW)
+         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+         CALL SCARC_POINT_TO_GRID(NM, NL)
 
-         I = GWC%IXW
-         J = GWC%IYW
-         K = GWC%IZW
-      
-         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-     
-         IOR0 = GWC%IOR
-         IC = G%CELL_NUMBER(I, J, K)
-       
-         ! Counter for the main diagonal entries to be considered
+         CALL SCARC_SETUP_MGM_TRUE_APPROXIMATE 
 
-         IF (GWC%BTYPE == DIRICHLET) THEN
-            CNT(IC, IOR0) = CNT(IC, IOR0) + 1 
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, i4, A, i4, A, 7I4)') 'DIRICHLET: CNT(',IC, ',',IOR0, ')=', CNT(IC, IOR0)
-#endif
-         ELSE IF (GWC%BTYPE == NEUMANN) THEN
-            CNT(IC, IOR0) = CNT(IC, IOR0) - 1 
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, i4, A, i4, A, 7I4)') 'NEUMANN  : CNT(',IC, ',',IOR0, ')=', CNT(IC, IOR0)
-#endif
-         ENDIF
+      ENDIF
 
-      ENDDO
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) '============================================='
-DO IC = 1, G%NC
-WRITE(MSG%LU_DEBUG, '(A, i4, A, 7I4)') 'CNT(',IC, ',-3:3)=', (CNT(IC, I), I = -3, 3)
-ENDDO
-#endif
-      ! Configure boundary type information for 'True Approximate' boundary setting
-
-      DO IW = 1, MGM%NWE
-
-         GWC => G%WALL(IW)
-         IF (GWC%BTYPE /= INTERNAL) CYCLE
-
-         I = GWC%IXW
-         J = GWC%IYW
-         K = GWC%IZW
-      
-         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-         IC = G%CELL_NUMBER(I, J, K)
-
-         DO IOR0 = -3, 3
-            IF (CNT(IC, IOR0) > 2) THEN
-               MGM%BTYPE(IW, IOR0) = DIRICHLET
-            ELSE IF (CNT(IC, IOR0) < 2) THEN
-               MGM%BTYPE(IW, IOR0) = NEUMANN
-            ELSE
-               MGM%BTYPE(IW, IOR0) = INTERNAL
-            ENDIF
-         ENDDO
-
-         IF (TWO_D) THEN
-            SX = REAL(CNT(IC, 1) + CNT(IC, -1) - 2, EB)
-            SZ = REAL(CNT(IC, 3) + CNT(IC, -3) - 2, EB)
-            MGM%WEIGHT(IW) = 1.0_EB/(SX*L%DXI2+SZ*L%DZI2)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, i4, A, 3E14.6, A, 7I4)') 'MGM%WEIGHT(',IW, ')=', MGM%WEIGHT(IW), SX, SZ, ' : ', &
-                                                  (MGM%BTYPE(IW, I), I = -3, 3)
-#endif
-         ELSE
-            SX = REAL(CNT(IC, 1) + CNT(IC, -1) - 2, EB)
-            SY = REAL(CNT(IC, 2) + CNT(IC, -2) - 2, EB)
-            SZ = REAL(CNT(IC, 3) + CNT(IC, -3) - 2, EB)
-            MGM%WEIGHT(IW) = 1.0_EB/(SX*L%DXI2+SY*L%DYI2+SZ*L%DZI2)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, i4, A, 4E14.6, A, 7I4)') 'MGM%WEIGHT(',IW, ')=', MGM%WEIGHT(IW), SX, SY, SZ, ' : ', &
-                                                  (MGM%BTYPE(IW, I), I = -3, 3)
-#endif
-         ENDIF
-         
-      ENDDO
-
-      CALL SCARC_DEALLOCATE_INT2(CNT, 'CNT', CROUTINE)
-
-       
       ! The following code is purely experimental and addresses the solution of the LU method with fully stored matrices
       ! Note that SCARC_MGM_USE_LU is set to FALSE by default
 
       IF (SCARC_MGM_USE_LU) THEN
 
-         TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
-         TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
+         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+         CALL SCARC_POINT_TO_GRID(NM, NL)
 
          LM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
          UM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
-         LM%N_VAL = G%NC**2 / 2
-         LM%N_ROW = G%NC+1
-
-         UM%N_VAL = G%NC**2 / 2
-         UM%N_ROW = G%NC+1
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
-WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
-WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
-#endif
-
          CALL SCARC_ALLOCATE_CMATRIX (LM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%L', CROUTINE)
          CALL SCARC_ALLOCATE_CMATRIX (UM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%U', CROUTINE)
-
-         CALL SCARC_ALLOCATE_REAL2(MGM%ASQ, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%ASQ', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL2(MGM%LSQ, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%LSQ', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL2(MGM%USQ, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%USQ', CROUTINE)
-   
+         
+         ! Only temporarily use full versions of A, L and U just for proof of concept - will be removed afterwards
+         CALL SCARC_ALLOCATE_REAL2(MGM%AAA, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%AAA', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL2(MGM%LLL, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%LLL', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL2(MGM%UUU, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%UUU', CROUTINE)
+         
          CALL SCARC_ALLOCATE_REAL1(MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
-   
-         CALL SCARC_SETUP_MGM_LU(NM, NLEVEL_MIN)
 
-         TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
+         CALL SCARC_SETUP_MGM_LU(NM, NLEVEL_MIN)
 
       ENDIF
 
@@ -259,6 +162,103 @@ ENDDO
 
 END SUBROUTINE SCARC_SETUP_MGM
 
+! ---------------------------------------------------------------------------------------------
+!> \brief Setup structures for the true approximate boundary setting in MGM
+! ---------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE 
+USE SCARC_POINTERS, ONLY: L, G, GWC, MGM
+INTEGER:: IW, I, J, K, IOR0, IC 
+INTEGER, ALLOCATABLE, DIMENSION(:,:):: CNT
+REAL(EB):: SX, SY, SZ
+
+! temporarily allocate counter
+
+CALL SCARC_ALLOCATE_INT2(CNT, 1, G%NC, -3, 3, NSCARC_INIT_NONE, 'CNT', CROUTINE)
+CNT = 2;  CNT(:,0) = 0
+
+DO IW = 1, MGM%NWE
+
+   GWC => G%WALL(IW)
+
+   I = GWC%IXW
+   J = GWC%IYW
+   K = GWC%IZW
+
+   IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+
+   IOR0 = GWC%IOR
+   IC = G%CELL_NUMBER(I, J, K)
+ 
+   ! Counter for the main diagonal entries to be considered
+
+   IF (GWC%BTYPE == DIRICHLET) THEN
+      CNT(IC, IOR0) = CNT(IC, IOR0) + 1 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, '(A, i4, A, i4, A, 7I4)') 'DIRICHLET: CNT(',IC, ',',IOR0, ')=', CNT(IC, IOR0)
+#endif
+   ELSE IF (GWC%BTYPE == NEUMANN) THEN
+      CNT(IC, IOR0) = CNT(IC, IOR0) - 1 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, '(A, i4, A, i4, A, 7I4)') 'NEUMANN  : CNT(',IC, ',',IOR0, ')=', CNT(IC, IOR0)
+#endif
+   ENDIF
+
+ENDDO
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) '============================================='
+DO IC = 1, G%NC
+WRITE(MSG%LU_DEBUG, '(A, i4, A, 7I4)') 'CNT(',IC, ',-3:3)=', (CNT(IC, I), I = -3, 3)
+ENDDO
+#endif
+! Configure boundary type information for 'True Approximate' boundary setting
+
+DO IW = 1, MGM%NWE
+
+   GWC => G%WALL(IW)
+   IF (GWC%BTYPE /= INTERNAL) CYCLE
+
+   I = GWC%IXW
+   J = GWC%IYW
+   K = GWC%IZW
+
+   IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+   IC = G%CELL_NUMBER(I, J, K)
+
+   DO IOR0 = -3, 3
+      IF (CNT(IC, IOR0) > 2) THEN
+         MGM%BTYPE(IW, IOR0) = DIRICHLET
+      ELSE IF (CNT(IC, IOR0) < 2) THEN
+         MGM%BTYPE(IW, IOR0) = NEUMANN
+      ELSE
+         MGM%BTYPE(IW, IOR0) = INTERNAL
+      ENDIF
+   ENDDO
+
+   IF (TWO_D) THEN
+      SX = REAL(CNT(IC, 1) + CNT(IC, -1) - 2, EB)
+      SZ = REAL(CNT(IC, 3) + CNT(IC, -3) - 2, EB)
+      MGM%WEIGHT(IW) = 1.0_EB/(SX*L%DXI2+SZ*L%DZI2)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, '(A, i4, A, 3E14.6, A, 7I4)') 'MGM%WEIGHT(',IW, ')=', MGM%WEIGHT(IW), SX, SZ, ' : ', &
+                                                  (MGM%BTYPE(IW, I), I = -3, 3)
+#endif
+   ELSE
+      SX = REAL(CNT(IC, 1) + CNT(IC, -1) - 2, EB)
+      SY = REAL(CNT(IC, 2) + CNT(IC, -2) - 2, EB)
+      SZ = REAL(CNT(IC, 3) + CNT(IC, -3) - 2, EB)
+      MGM%WEIGHT(IW) = 1.0_EB/(SX*L%DXI2+SY*L%DYI2+SZ*L%DZI2)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, '(A, i4, A, 4E14.6, A, 7I4)') 'MGM%WEIGHT(',IW, ')=', MGM%WEIGHT(IW), SX, SY, SZ, ' : ', &
+                                                  (MGM%BTYPE(IW, I), I = -3, 3)
+#endif
+   ENDIF
+   
+ENDDO
+
+CALL SCARC_DEALLOCATE_INT2(CNT, 'CNT', CROUTINE)
+
+END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 
 ! ---------------------------------------------------------------------------------------------
 !> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
@@ -267,6 +267,7 @@ SUBROUTINE SCARC_SETUP_MGM_LU(NM, NL)
 USE SCARC_POINTERS, ONLY: G, MGM, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: I, J, IC0, IC, JC, KC, ICOL, IP, NMAX_U, NMAX_L
+REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU
 REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL
 INTEGER:: TYPE_SCOPE_SAVE
 
@@ -275,6 +276,28 @@ TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
 
 CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)
+
+! Use pointers just for better readability
+
+AAA => MGM%AAA
+LLL => MGM%LLL
+UUU => MGM%UUU
+
+! First assume dense settings and reduce later once the real sizes are known
+!
+LM%N_VAL = G%NC**2 / 2
+LM%N_ROW = G%NC+1
+
+UM%N_VAL = G%NC**2 / 2
+UM%N_ROW = G%NC+1
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
+WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
+#endif
 
 A  => G%LAPLACE
 
@@ -303,30 +326,31 @@ DO IC = 1, G%NC
       WRITE(MSG%LU_DEBUG, *) 'PERMUTATION ICOL ', ICOL, A%VAL(IP), ' TO ', IC, ICOL
 #endif
 
-      MGM%ASQ(JC, ICOL) = A%VAL(IP)
+      AAA(JC, ICOL) = A%VAL(IP)
    ENDDO
 ENDDO
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) '------- MGM%A-Copy (1:24)'
 DO IC = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%ASQ(IC, JC), JC = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(IC, JC), JC = 1, 24)
 ENDDO
 #endif
 
 ! Temporarily extract full matrix from compact storage technique-just for proof of concept
+! These are stored in AAA, LLL and UUU which will be removed after POC is done
 ! Consider permutation in G%PERM
  
 LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
-UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
+CNTUM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
+! Preset with one-value columns - they just contain the main diagonal element
+!
 DO JC = 1, G%NC
    !IC = G%PERM_FW(JC)
    IC = JC
-   UM%ROW(IC) = IC
-   UM%COL(IC) = IC
-   LM%ROW(IC) = IC
-   LM%COL(IC) = IC
+   UM%ROW(IC) = IC ;  UM%COL(IC) = IC
+   LM%ROW(IC) = IC ;  LM%COL(IC) = IC
 ENDDO
 UM%ROW(G%NC+1) = G%NC+1
 LM%ROW(G%NC+1) = G%NC+1
@@ -342,12 +366,13 @@ WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0
    !IC = G%PERM_FW(IC0)
    IC = IC0
 
+   ! Preset main diagonal element of L with 1.0
    VAL = 1.0_EB
-   MGM%LSQ(IC, IC) = VAL
+   LLL(IC, IC) = VAL
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1000) IC
-WRITE(MSG%LU_DEBUG, 1100) IC, IC, MGM%LSQ(IC, IC)
+WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
 #endif
    CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, IC, IC, G%NC, NMAX_L, 'LM')
 
@@ -356,7 +381,7 @@ WRITE(MSG%LU_DEBUG, 1100) IC, IC, MGM%LSQ(IC, IC)
       SCAL  = 0.0_EB
       SCAL2 = 0.0_EB
       DO KC = 1, IC-1
-         SCAL = SCAL+MGM%LSQ(IC, KC) * MGM%USQ(KC, JC)
+         SCAL = SCAL + LLL(IC, KC) * UUU(KC, JC)
          VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
          SCAL2 = SCAL2+VL*VU
@@ -364,11 +389,11 @@ WRITE(MSG%LU_DEBUG, 1100) IC, IC, MGM%LSQ(IC, IC)
 WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, SCAL, VL, VU, SCAL2
 #endif
       ENDDO
-      VAL = MGM%ASQ(IC, JC) - SCAL
-      MGM%USQ(IC, JC) = VAL
+      VAL = AAA(IC, JC) - SCAL
+      UUU(IC, JC) = VAL
 
 #ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1300) IC, JC, MGM%ASQ(IC, JC), IC, JC, MGM%USQ(IC, JC)
+WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
 #endif
       !VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
       CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
@@ -376,7 +401,7 @@ WRITE(MSG%LU_DEBUG, 1300) IC, JC, MGM%ASQ(IC, JC), IC, JC, MGM%USQ(IC, JC)
       SCAL = 0.0_EB
       SCAL2 = 0.0_EB
       DO KC = 1, IC-1
-         SCAL = SCAL+MGM%LSQ(JC, KC) * MGM%USQ(KC, IC)
+         SCAL = SCAL + LLL(JC, KC) * UUU(KC, IC)
          VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
          SCAL2 = SCAL2+VL*VU
@@ -384,14 +409,14 @@ WRITE(MSG%LU_DEBUG, 1300) IC, JC, MGM%ASQ(IC, JC), IC, JC, MGM%USQ(IC, JC)
 WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL2
 #endif
       ENDDO
-      VAL = (MGM%ASQ(JC, IC) - SCAL)/MGM%USQ(IC, IC)
-      MGM%LSQ(JC, IC) = VAL
+      VAL = (AAA(JC, IC) - SCAL)/UUU(IC, IC)
+      LLL(JC, IC) = VAL
 
 
 #ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1400) JC, IC, MGM%ASQ(JC, IC), IC, IC, MGM%USQ(IC, IC), JC, IC, MGM%LSQ(IC, JC)
+WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
 #endif
-      !VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/MGM%USQ(IC, IC)
+      !VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/UUU(IC, IC)
       CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
@@ -403,15 +428,15 @@ ENDDO ROW_LOOP
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) '=============================== MGM%A (1:24) '
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%ASQ(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
 ENDDO
 WRITE(MSG%LU_DEBUG, *) 'MGM%L'
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%LSQ(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
 ENDDO
 WRITE(MSG%LU_DEBUG, *) 'MGM%U'
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%USQ(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
 ENDDO
 #endif
 #ifdef WITH_SCARC_DEBUG
@@ -421,10 +446,10 @@ CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U-FINAL', 'SETUP_MGM_LU ')
 
 DO I = 1, G%NC
    DO J = 1, I-1
-      MGM%ASQ(I, J) = MGM%LSQ(I, J)
+      AAA(I, J) = LLL(I, J)
    ENDDO
    DO J = I, G%NC
-      MGM%ASQ(I, J) = MGM%USQ(I, J)
+      AAA(I, J) = UUU(I, J)
    ENDDO
 ENDDO
 
@@ -432,10 +457,10 @@ TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG2
 1000 FORMAT('================= IC : ', I2, ' ===========================')
-1100 FORMAT('LSQ(',I2, ',',I2, '):', E14.6)
-1200 FORMAT('LSQ(',I2, ',',I2, '),  USQ(',I2, ',',I2, ') --> JC:', I2, ',  SCAL:', E14.6, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
-1300 FORMAT('ASQ(',I2, ',',I2, '):',E14.6, ',  USQ(',I2, ',',I2, '):', E14.6)
-1400 FORMAT('ASQ(',I2, ',',I2, '):',E14.6, ',  USQ(',I2, ',',I2, '):', E14.6, ',  LSQ(',I2, ',',I2, '):', E14.6)
+1100 FORMAT('LLL(',I2, ',',I2, '):', E14.6)
+1200 FORMAT('LLL(',I2, ',',I2, '),  UUU(',I2, ',',I2, ') --> JC:', I2, ',  SCAL:', E14.6, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
+1300 FORMAT('AAA(',I2, ',',I2, '):',E14.6, ',  UUU(',I2, ',',I2, '):', E14.6)
+1400 FORMAT('AAA(',I2, ',',I2, '):',E14.6, ',  UUU(',I2, ',',I2, '):', E14.6, ',  LLL(',I2, ',',I2, '):', E14.6)
 #endif
 END SUBROUTINE SCARC_SETUP_MGM_LU
 
@@ -2329,6 +2354,7 @@ USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_GRID, SCARC_P
 INTEGER, INTENT(IN):: NS, NL
 INTEGER:: J, K, N, NM
 REAL(EB):: VAL
+REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
 #ifdef WITH_SCARC_DEBUG
 INTEGER:: I
 #endif
@@ -2341,6 +2367,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
    UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
+   AAA => MGM%AAA             ! only temporarily - just for better readability
+   LLL => MGM%LLL
+   UUU => MGM%UUU
+
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
    N = G%NC
@@ -2351,15 +2381,15 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, *) '=============================== A'
    DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%ASQ(I, J), J = 1, 24)
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
    ENDDO
    WRITE(MSG%LU_DEBUG, *) '=============================== L'
    DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%LSQ(I, J), J = 1, 24)
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
    ENDDO
    WRITE(MSG%LU_DEBUG, *) '=============================== U'
    DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (MGM%USQ(I, J), J = 1, 24)
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
    ENDDO
 #endif
 #ifdef WITH_SCARC_DEBUG
@@ -2381,10 +2411,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       DO K = 1, J-1
          VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
          MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
-         !MGM%Y(J) = MGM%Y(J) - MGM%ASQ(J, K)*MGM%Y(K)
+         !MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), MGM%ASQ(J, K), LM(J, K):', J, K,  &
-                        MGM%Y(J), MGM%Y(K), MGM%ASQ(J, K), VAL
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
+                        MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
 #endif
       ENDDO
    ENDDO
@@ -2395,14 +2425,14 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
          MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), MGM%ASQ(J, K), UM(J, K):', J, K,  &
-                        MGM%X(J), MGM%X(K), MGM%ASQ(J, K), VAL
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
+                        MGM%X(J), MGM%X(K), AAA(J, K), VAL
 #endif
       ENDDO
       VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
       MGM%X(J) = MGM%X(J)/VAL
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), MGM%ASQ(J, J):', J, MGM%X(J), MGM%ASQ(J, J), VAL
+   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
 #endif
    ENDDO
 

@@ -86,6 +86,8 @@ SELECT CASE (NERROR)
       CERROR = 'Wrong receive exchange structure'
    CASE (NSCARC_ERROR_EXCHANGE_SEND)
       CERROR = 'Wrong send exchange structure'
+   CASE (NSCARC_ERROR_MGM_LU_PERMUTATION)
+      CERROR = 'Error in MGM permutation for LU'
 END SELECT
 
 ! Specify more detailed information if available
