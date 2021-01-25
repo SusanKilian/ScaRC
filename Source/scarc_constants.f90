@@ -288,6 +288,7 @@ INTEGER, PARAMETER :: NSCARC_VECTOR_HS               = 18        !< Flag for 3D-
 INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_PRECON   =  1        !< Type of warning message: No MKL available for preconditioner
 INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_SMOOTH   =  2        !< Type of warning message: No MKL available for smoother
 INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_LU       =  3        !< Type of warning message: Using LU instead of MKL
+INTEGER, PARAMETER :: NSCARC_WARNING_NO_GLOBAL_SCOPE =  4        !< Type of warning message: Using LU instead of MKL
 
 INTEGER, PARAMETER :: NSCARC_UNDEF_INT               = -1        !< Flag for undefined integer value
 INTEGER, PARAMETER :: NSCARC_ZERO_INT                =  0        !< Flag for zero integer value
