@@ -342,7 +342,7 @@ ENDDO
 ! Consider permutation in G%PERM
  
 LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
-CNTUM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
+UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
 ! Preset with one-value columns - they just contain the main diagonal element
 !
@@ -743,7 +743,10 @@ END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
 !> \brief Copy specified vectors in McKeeney-Greengard-Mayo method 
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_LEVEL
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_POINTERS, ONLY: M
+#endif
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM
 INTEGER:: IX, IY, IZ
@@ -892,7 +895,10 @@ END SUBROUTINE SCARC_MGM_COPY
 !> \brief Build difference of specified vectors in McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DIFF(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_LEVEL
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_POINTERS, ONLY: M
+#endif
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IX, IY, IZ, IOR0, IW
 #ifdef WITH_SCARC_DEBUG
