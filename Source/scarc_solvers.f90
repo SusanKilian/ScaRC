@@ -2,10 +2,13 @@
 !
 !> \brief Scalable Recursive Clustering (ScaRC): Collection of alternative solvers for the FDS pressure equation
 !
+!=======================================================================================================================
+!
+! MODULE SCRC
+!
 !  Basic setup and call of different variants of ScaRC/UScaRC 
 !
 !=======================================================================================================================
-
 MODULE SCRC
 
 USE PRECISION_PARAMETERS, ONLY: EB
@@ -41,7 +44,7 @@ TNOW = CURRENT_TIME()
  
 CALL SCARC_SETUP_STORAGE
 CALL SCARC_SETUP_MESSAGES
-CALL SCARC_SETUP_TIMINGS
+CALL SCARC_SETUP_CPU
 
 ! Parse ScaRC related input parameters in &PRES namelist
 
@@ -168,5 +171,4 @@ CPU(MYID)%OVERALL=CPU(MYID)%OVERALL+CURRENT_TIME()-TNOW
 END SUBROUTINE SCARC_SOLVER
 
 END MODULE SCRC
-
 

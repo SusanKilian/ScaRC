@@ -21,10 +21,10 @@ CONTAINS
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup time measurements
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_TIMINGS
+SUBROUTINE SCARC_SETUP_CPU
 ALLOCATE (CPU(0:N_MPI_PROCESSES-1), STAT = IERROR)
-CALL CHKMEMERR ('SCARC_SETUP_TIMINGS', 'CPU', IERROR)
-END SUBROUTINE SCARC_SETUP_TIMINGS
+CALL CHKMEMERR ('SCARC_SETUP_CPU', 'CPU', IERROR)
+END SUBROUTINE SCARC_SETUP_CPU
 
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Dump CPU times of several routines
