@@ -1,11 +1,11 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_MESSAGES
-
+!
 !> \brief Organize directive-based messages services available in ScaRC/UScaRC 
-
+!
 !   This includes verbosing, debugging and dumping of different data in the course of the used methods
-
+!
 !=======================================================================================================================
 MODULE SCARC_MESSAGES
   
@@ -22,9 +22,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup debug file if requested
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MESSAGES
 #if defined(WITH_SCARC_VERBOSE) || defined(WITH_SCARC_DEBUG)
 INTEGER :: NM, LASTID
@@ -81,25 +81,25 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_MESSAGES
 
 #ifdef WITH_SCARC_VERBOSE
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Verbose version only: Print out Verbose information for compactly stored matrix
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_CMATRIX(A, CNAME, CTEXT)
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+! ----------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_CMATRIX(A, CMYSELF, CTEXT)
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
 INTEGER :: IC, ICOL
 CHARACTER(40) :: CFORM
 
 WRITE(MSG%LU_VERBOSE,*)
-WRITE(MSG%LU_VERBOSE,*) '============ START VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_VERBOSE,*) '============ START VERBOSE MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_VERBOSE,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
 WRITE(MSG%LU_VERBOSE,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
 WRITE(MSG%LU_VERBOSE,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
 
 WRITE(MSG%LU_VERBOSE,*)
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%ROW:'
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CMYSELF),'%ROW:'
 WRITE(MSG%LU_VERBOSE,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COL:'
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CMYSELF),'%COL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
    IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -114,7 +114,7 @@ DO IC = 1, A%N_ROW-1
    WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
 IF (ALLOCATED(A%COLG)) THEN
-   WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%COLG:'
+   WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CMYSELF),'%COLG:'
    DO IC = 1, A%N_ROW-1
       IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -130,7 +130,7 @@ IF (ALLOCATED(A%COLG)) THEN
    ENDDO
 ENDIF
 IF (ALLOCATED(A%VAL)) THEN
-WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CNAME),'%VAL:'
+WRITE(MSG%LU_VERBOSE,*) "------------->", TRIM(CMYSELF),'%VAL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -145,32 +145,32 @@ DO IC = 1, A%N_ROW-1
    !WRITE(MSG%LU_VERBOSE,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
    WRITE(MSG%LU_VERBOSE,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
-WRITE(MSG%LU_VERBOSE,*) '============ END VERBOSE MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_VERBOSE,*) '============ END VERBOSE MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
 ENDIF
 
 END SUBROUTINE SCARC_VERBOSE_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Verbose version only: Dump out information for specified 1-dimensional vector
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_VECTOR1 (VC, NM, NL, NG, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_VECTOR1 (VC, NM, NL, NG, CMYSELF)
 USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NM, NL, NG
 REAL(EB), DIMENSION(:), INTENT(IN) :: VC
 REAL(EB), DIMENSION(0:100) :: VALUES
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 CHARACTER(80) :: FN_DUMP
 INTEGER :: IC, IX, IY, IZ
 INTEGER, SAVE :: LU_DUMP
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                    
    
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CMYSELF),'_',ICYC
 
 LU_DUMP = GET_FILE_NUMBER()
 OPEN (LU_DUMP, FILE=FN_DUMP)
 !WRITE(LU_DUMP,*) '============================================================='
-!WRITE(LU_DUMP,*) ' DEBUG vector ', CNAME
+!WRITE(LU_DUMP,*) ' DEBUG vector ', CMYSELF
 !WRITE(LU_DUMP,*) '============================================================='
 DO IZ = L%NZ, 1, -1
    IF (.NOT.TWO_D) WRITE(LU_DUMP,*) '-------- IZ = ', IZ,' ------------------------------------------'
@@ -199,18 +199,18 @@ CLOSE(LU_DUMP)
 
 END SUBROUTINE SCARC_VERBOSE_VECTOR1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Verbose version only: Dump out information for specified 3-dimensional vector
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_VERBOSE_VECTOR3 (HP, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_VERBOSE_VECTOR3 (HP, CMYSELF)
 USE SCARC_POINTERS, ONLY: L
 REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 CHARACTER(80) :: FN_DUMP
 INTEGER :: IX, IY, IZ
 INTEGER, SAVE :: LU_DUMP
 
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CMYSELF),'_',ICYC
 
 LU_DUMP = GET_FILE_NUMBER()
 OPEN (LU_DUMP, FILE=FN_DUMP)
@@ -226,9 +226,9 @@ CLOSE(LU_DUMP)
 END SUBROUTINE SCARC_VERBOSE_VECTOR3
 
 #ifdef WITH_SCARC_AMG
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for BLENDER
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES(NM, NL)
 USE SCARC_POINTERS, ONLY: M, L, OL, G, OG, F, XCOR, YCOR, ZCOR, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID
@@ -240,7 +240,7 @@ CHARACTER(60) :: CAGG
 WRITE(*,*) 'Printing out blender information '
 !IF (NL /= NLEVEL_MIN .AND. TYPE_COARSENING /= NSCARC_COARSENING_CUBIC) RETURN
 
-CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
 IF (NL == NLEVEL_MIN) THEN
    XCOR => M%X; YCOR => M%Y; ZCOR => M%Z
@@ -368,9 +368,9 @@ END SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES
 #endif
 #endif
 #ifdef WITH_SCARC_DEBUG
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Assign formats for debug messages dependent on length of mesh
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_FORMATS(NLEN)
 INTEGER, INTENT(IN) :: NLEN
 
@@ -394,9 +394,9 @@ ENDIF
 
 END SUBROUTINE SCARC_DEBUG_FORMATS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Debug different vectors within a single method
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_METHOD(CTEXT, NTYPE)
 USE SCARC_POINTERS, ONLY: M, L, MGM, A, G, SCARC_POINT_TO_CMATRIX
 CHARACTER(*), INTENT(IN) :: CTEXT
@@ -512,9 +512,9 @@ ENDDO
 
 END SUBROUTINE SCARC_DEBUG_METHOD
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out specified MGM vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DUMP (CTYPE, ITE_MGM)
 USE SCARC_POINTERS, ONLY: L, MGM, HP, SCARC_POINT_TO_LEVEL
 INTEGER, INTENT(IN):: ITE_MGM
@@ -565,19 +565,19 @@ ENDDO
 
 END SUBROUTINE SCARC_MGM_DUMP
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_VECTOR3 (VC, NM, NL, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_VECTOR3 (VC, NM, NL, CMYSELF)
 USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NM, NL
 REAL(EB), DIMENSION(:,:,:), INTENT(IN) :: VC
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 INTEGER :: IX, IY, IZ
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                    
 WRITE(MSG%LU_DEBUG,*) '============================================================='
-WRITE(MSG%LU_DEBUG,*) ' DEBUG vector ', CNAME
+WRITE(MSG%LU_DEBUG,*) ' DEBUG vector ', CMYSELF
 WRITE(MSG%LU_DEBUG,*) '============================================================='
 DO IZ = L%NZ, 1, -1
    IF (.NOT.TWO_D) WRITE(MSG%LU_DEBUG,*) '-------- IZ = ', IZ,' ------------------------------------------'
@@ -589,17 +589,17 @@ WRITE(MSG%LU_DEBUG,*) '=========================================================
 
 END SUBROUTINE SCARC_DEBUG_VECTOR3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_VECTOR3_BIG (HH, NM, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_VECTOR3_BIG (HH, NM, CMYSELF)
 INTEGER, INTENT(IN) :: NM
 REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HH
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 INTEGER :: IX, IY, IZ
 
 WRITE(MSG%LU_DEBUG,*) '============================================================='
-WRITE(MSG%LU_DEBUG,*) ' DEBUG VECTOR3 ', CNAME
+WRITE(MSG%LU_DEBUG,*) ' DEBUG VECTOR3 ', CMYSELF
 WRITE(MSG%LU_DEBUG,*) '============================================================='
 DO IZ = MESHES(NM)%KBP1, 0, -1
    !IF (.NOT.TWO_D) WRITE(MSG%LU_DEBUG,*) '-------- IZ = ', IZ,' ------------------------------------------'
@@ -617,33 +617,33 @@ END SUBROUTINE SCARC_DEBUG_VECTOR3_BIG
 ! Start  WITH_SCARC_DEBUG  - Part
 ! Collection of routines which print out different quantities or allow to preset them
 ! =================================================================================================================
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for integer vector
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_INT1(ARR, I1, I2, CNAME, CTEXT)
+! ----------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_INT1(ARR, I1, I2, CMYSELF, CTEXT)
 INTEGER, DIMENSION(:), INTENT(IN) :: ARR
 INTEGER, INTENT(IN) :: I1, I2
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
 INTEGER :: IC
-WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING INT1 ARRAY ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING INT1 ARRAY ', CMYSELF, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_DEBUG,'(8I6)') (ARR(IC), IC=I1, I2)
 END SUBROUTINE SCARC_DEBUG_INT1
 
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for double precision vector
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_REAL1(ARR, I1, I2, CNAME, CTEXT)
+! ----------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_REAL1(ARR, I1, I2, CMYSELF, CTEXT)
 REAL(EB), DIMENSION(:), INTENT(IN) :: ARR
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
 INTEGER, INTENT(IN) :: I1, I2
 INTEGER :: IC
-WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING REAL1 ARRAY ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING REAL1 ARRAY ', CMYSELF, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_DEBUG,'(8E14.6)') (ARR(IC), IC=I1, I2)
 END SUBROUTINE SCARC_DEBUG_REAL1
 
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for aggregation zones
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_ZONES(G, IC, ITYPE, CTEXT)
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN) :: G
 INTEGER, INTENT(IN) :: IC, ITYPE
@@ -665,25 +665,25 @@ WRITE(MSG%LU_DEBUG,*) '-------------- ZONE_CENTERS'
 WRITE(MSG%LU_DEBUG,'(8I12)') G%ZONE_CENTERS
 END SUBROUTINE SCARC_DEBUG_ZONES
 
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_CMATRIX(A, CNAME, CTEXT)
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+! ----------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_CMATRIX(A, CMYSELF, CTEXT)
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
 INTEGER :: IC, ICOL
 CHARACTER(40) :: CFORM
 
 WRITE(MSG%LU_DEBUG,*)
-WRITE(MSG%LU_DEBUG,*) '============ START DEBUGGING MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ START DEBUGGING MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_DEBUG,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
 WRITE(MSG%LU_DEBUG,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
 WRITE(MSG%LU_DEBUG,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
 
 WRITE(MSG%LU_DEBUG,*)
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%ROW:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%ROW:'
 WRITE(MSG%LU_DEBUG,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%COL:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%COL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
    IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -698,7 +698,7 @@ DO IC = 1, A%N_ROW-1
    WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
 IF (ALLOCATED(A%COLG)) THEN
-   WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%COLG:'
+   WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%COLG:'
    DO IC = 1, A%N_ROW-1
       IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -714,7 +714,7 @@ IF (ALLOCATED(A%COLG)) THEN
    ENDDO
 ENDIF
 IF (ALLOCATED(A%VAL)) THEN
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%VAL:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%VAL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -729,30 +729,30 @@ DO IC = 1, A%N_ROW-1
    !WRITE(MSG%LU_DEBUG,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
    WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
-WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
 ENDIF
 
 END SUBROUTINE SCARC_DEBUG_CMATRIX
 
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
-! ------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_RELAX(A, CNAME, CTEXT)
-CHARACTER(*), INTENT(IN) :: CNAME, CTEXT
+! ----------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_RELAX(A, CMYSELF, CTEXT)
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
 INTEGER :: IC, ICOL
 CHARACTER(40) :: CFORM
 
 WRITE(MSG%LU_DEBUG,*)
-WRITE(MSG%LU_DEBUG,*) '============ START DEBUGGING RELAX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ START DEBUGGING RELAX ', CMYSELF, ' AT ', TRIM(CTEXT)
 WRITE(MSG%LU_DEBUG,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
 WRITE(MSG%LU_DEBUG,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
 WRITE(MSG%LU_DEBUG,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
 
 WRITE(MSG%LU_DEBUG,*)
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%ROW:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%ROW:'
 WRITE(MSG%LU_DEBUG,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%COL:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%COL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
    IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -767,7 +767,7 @@ DO IC = 1, A%N_ROW-1
    WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
 IF (ALLOCATED(A%RELAX)) THEN
-WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CNAME),'%VAL:'
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%VAL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
@@ -782,14 +782,14 @@ DO IC = 1, A%N_ROW-1
    WRITE(MSG%LU_DEBUG,*) IC,':', (A%RELAX(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
    !WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%RELAX(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
 ENDDO
-WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CNAME, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
 ENDIF
 
 END SUBROUTINE SCARC_DEBUG_RELAX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_LEVEL (NV, CVEC, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -800,7 +800,7 @@ CHARACTER (*), INTENT(IN) :: CVEC
 !IF (TYPE_SOLVER /= NSCARC_SOLVER_MAIN) RETURN
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
 
    NNX=MIN(10,L%NX)
@@ -849,9 +849,9 @@ ENDDO
 2002 FORMAT('=== NC = ',I6, ': NX, NY, NZ=',3I6,': NV=',I6,': GRID=', I6)
 END SUBROUTINE SCARC_DEBUG_LEVEL
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified combination of vector and mesh
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_LEVEL_MESH (X, CVEC, NTYPE, NM, NL)
 USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID
 TYPE (SCARC_LEVEL_TYPE), POINTER :: LL=>NULL()
@@ -898,13 +898,13 @@ WRITE(MSG%LU_DEBUG, '(4E14.6)') (X(IC), IC = GG%NC+1, GG%NCE)
 2002 FORMAT('=== NC = ',I6, ': NX, NY, NZ=',3I6)
 END SUBROUTINE SCARC_DEBUG_LEVEL_MESH
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_PRESSURE (HP, NM, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_PRESSURE (HP, NM, CMYSELF)
 INTEGER, INTENT(IN) :: NM
 REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 CHARACTER(80) :: FN_DUMP, FN_DEBUG1
 INTEGER :: LU_DUMP, IX, IY, IZ
 INTEGER, SAVE :: LU_DEBUG1
@@ -924,7 +924,7 @@ ELSE
    WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: HS'
 ENDIF
 WRITE(LU_DEBUG1,*) '==========================================================================='
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CNAME),'_',ICYC
+WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CMYSELF),'_',ICYC
 
 LU_DUMP = GET_FILE_NUMBER()
 OPEN (LU_DUMP, FILE=FN_DUMP)
@@ -965,9 +965,9 @@ ENDDO
 
 END SUBROUTINE SCARC_DEBUG_PRESSURE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified quantity
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_QUANTITY(NTYPE, NL, CQUANTITY)
 USE SCARC_POINTERS, ONLY: M, L, OL, G, OG, SV, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NTYPE, NL
@@ -976,9 +976,9 @@ CHARACTER (*), INTENT(IN) :: CQUANTITY
 
 SELECT CASE (NTYPE)
 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    ! Debug FACEINFO
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_FACE)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -1039,14 +1039,14 @@ SELECT CASE (NTYPE)
          ENDDO
       ENDDO
 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    ! Debug Pressure information 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_PRESSURE)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-         CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
          NNX=MIN(8,L%NX)
          NNY=MIN(8,L%NY)
@@ -1099,9 +1099,9 @@ SELECT CASE (NTYPE)
 
       ENDDO
 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    ! Debug stack information
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_STACK)
 
       WRITE(MSG%LU_DEBUG,*) 'N_STACK_TOTAL=',N_STACK_TOTAL
@@ -1138,13 +1138,13 @@ SELECT CASE (NTYPE)
          WRITE(MSG%LU_DEBUG,*) 'Z   = ',SV%Z
       ENDDO
 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    ! Debug WALLINFO
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_WALL)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
          WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
          WRITE(MSG%LU_DEBUG,*) 'SIZE(G%ICE_TO_IWG)=',SIZE(G%ICE_TO_IWG)
          WRITE(MSG%LU_DEBUG,*) 'NM  =',NM
@@ -1261,12 +1261,12 @@ SELECT CASE (NTYPE)
       ENDDO
       !ENDIF
 
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    ! Debug complete grid information
-   ! ------------------------------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_GRID)
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
          WRITE(MSG%LU_DEBUG,*) 'M%N_OBST=',M%N_OBST
          WRITE(MSG%LU_DEBUG,*) 'M%OBST ... I1, I2, J1, J2, K1, K2'
          DO IWG = 1, M%N_OBST
@@ -1336,27 +1336,27 @@ END SELECT
 
 END SUBROUTINE SCARC_DEBUG_QUANTITY
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out vector information on specified level for MATLAB
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MATLAB_VECTOR (NV, CVEC, NL)
 USE SCARC_POINTERS, ONLY: G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
 INTEGER :: NM 
 CHARACTER (*), INTENT(IN) :: CVEC
 INTEGER :: JC, MVEC
-CHARACTER(60) :: CNAME, CFORM
+CHARACTER(60) :: CMYSELF, CFORM
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
-   WRITE (CNAME, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CVEC,'_mesh',NM,'_level',NL,'_vec.txt'
+   WRITE (CMYSELF, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CVEC,'_mesh',NM,'_level',NL,'_vec.txt'
    WRITE (CFORM, '(I3, A)' ) G%NC-1, "(F7.2,;),F7.2"
    MVEC=GET_FILE_NUMBER()
 
-   OPEN(MVEC,FILE=CNAME)
+   OPEN(MVEC,FILE=CMYSELF)
    WRITE(MVEC, *) CVEC, ' = ['
    WRITE(MVEC,'(8F12.2)') (VC(JC),JC=1,G%NC)
    WRITE(MVEC, *) ' ]'
@@ -1366,26 +1366,26 @@ ENDDO
 
 END SUBROUTINE SCARC_MATLAB_VECTOR
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for MATLAB
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MATLAB_MATRIX(VAL, ROW, COL, NC1, NC2, NM, NL, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MATLAB_MATRIX(VAL, ROW, COL, NC1, NC2, NM, NL, CMYSELF)
 REAL(EB), DIMENSION(:), INTENT(IN) :: VAL
 INTEGER, DIMENSION(:), INTENT(IN) :: ROW
 INTEGER, DIMENSION(:), INTENT(IN) :: COL
 INTEGER, INTENT(IN) :: NM, NL, NC1, NC2
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CMYSELF
 INTEGER :: IC, JC, ICOL, MMATRIX
 CHARACTER(60) :: CFILE, CFORM
 REAL(EB) :: MATRIX_LINE(1000)
 
-WRITE (CFILE, '(A,A,A,i2.2,A,i2.2,A)') 'matlab/',TRIM(CNAME),'_mesh',NM,'_level',NL,'_mat.txt'
+WRITE (CFILE, '(A,A,A,i2.2,A,i2.2,A)') 'matlab/',TRIM(CMYSELF),'_mesh',NM,'_level',NL,'_mat.txt'
 !WRITE (CFORM, '(A,I3, 2A)' ) "(", NC2-1, "(F9.3,','),F9.3,';')"
 !WRITE (CFORM, '(A,I3, 2A)' ) "(", NC2-1, "(F9.3,' '),F9.3,' ')"
 WRITE (CFORM, '(A,I3, 2A)' ) "(", NC2-1, "(F9.3,' '),F9.3,' ')"
 MMATRIX=GET_FILE_NUMBER()
 OPEN(MMATRIX,FILE=CFILE)
-!WRITE(MMATRIX, *) CNAME, ' = ['
+!WRITE(MMATRIX, *) CID, ' = ['
 DO IC = 1, NC1
    MATRIX_LINE=0.0_EB
    DO JC = 1, NC2
@@ -1401,13 +1401,13 @@ CLOSE(MMATRIX)
 
 END SUBROUTINE SCARC_MATLAB_MATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for PYTHON
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PYTHON_MATRIX(NL, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PYTHON_MATRIX(NL, CID)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CID
 INTEGER :: NM, IC, JC, ICOL, MVAL, MCOL, MROW, I, J, NLEN
 CHARACTER(60) :: CVAL, CROW, CCOL
 INTEGER :: STENCIL(7) = 99999999, COLUMNS(7) = 99999999
@@ -1416,12 +1416,12 @@ if (NL /= NLEVEL_MIN) RETURN
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
 
-   WRITE (CVAL, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CNAME),'_m',NM,'_l',NL,'.val'
-   WRITE (CCOL, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CNAME),'_m',NM,'_l',NL,'.col'
-   WRITE (CROW, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CNAME),'_m',NM,'_l',NL,'.row'
+   WRITE (CVAL, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CID),'_m',NM,'_l',NL,'.val'
+   WRITE (CCOL, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CID),'_m',NM,'_l',NL,'.col'
+   WRITE (CROW, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CID),'_m',NM,'_l',NL,'.row'
 
    MVAL=GET_FILE_NUMBER()
    MCOL=GET_FILE_NUMBER()
@@ -1490,19 +1490,19 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_PYTHON_MATRIX
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out aggregation zones information on specified level for PYTHON
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PYTHON_ZONES(NM, NL, CNAME)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PYTHON_ZONES(NM, NL, CID)
 USE SCARC_POINTERS, ONLY: G, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NM, NL
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CID
 INTEGER :: IC, MAGG
 CHARACTER(60) :: CAGG
 
 CALL SCARC_POINT_TO_GRID(NM, NL)
 
-WRITE (CAGG, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CNAME),'_m',NM,'_l',NL,'.val'
+WRITE (CAGG, '(5A,i2.2,A,i2.2,A)') 'python/',TRIM(CHID),'_',TRIM(CID),'_m',NM,'_l',NL,'.val'
 MAGG=GET_FILE_NUMBER()
 OPEN(MAGG,FILE=CAGG)
 !WRITE(MAGG, *) '['

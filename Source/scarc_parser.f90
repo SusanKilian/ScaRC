@@ -3,7 +3,7 @@
 ! MODULE SCARC_PARSER
 ! 
 !> \brief Parse ScaRC related input parameters and initialize basic ScaRC structures
-
+!
 !=======================================================================================================================
 MODULE SCARC_PARSER
   
@@ -20,9 +20,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Determine input parameters needed for setting up the discretization structure
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PARSE_INPUT
 
 ITERATE_PRESSURE = .TRUE.  ! Although there is no need to do pressure iterations to drive down 

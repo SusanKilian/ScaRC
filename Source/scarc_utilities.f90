@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_UTILITIES
-
+!
 !> \brief Provide a set of helper routines that are needed at different points in the code.
-
+!
 !=======================================================================================================================
 MODULE SCARC_UTILITIES
   
@@ -32,11 +32,11 @@ IF (OM%NIC_R == 0 .AND. OM%NIC_S == 0) ARE_NEIGHBORS = .FALSE.
 
 END FUNCTION ARE_NEIGHBORS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SET_GRID_TYPE(NTYPE)
 INTEGER, INTENT(IN) :: NTYPE
 
@@ -55,11 +55,11 @@ END SELECT
 
 END SUBROUTINE SCARC_SET_GRID_TYPE
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SET_SYSTEM_TYPE(NGRID, NMATRIX)
 INTEGER, INTENT(IN) :: NGRID, NMATRIX
 
@@ -87,9 +87,9 @@ END SELECT
 
 END SUBROUTINE SCARC_SET_SYSTEM_TYPE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the data type of the currently processed array
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 CHARACTER(10) FUNCTION SCARC_GET_DATA_TYPE(NDATA)
 INTEGER, INTENT(IN) :: NDATA
 
@@ -112,9 +112,9 @@ END SELECT
 
 END FUNCTION SCARC_GET_DATA_TYPE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the dimension of the currently processed array
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 CHARACTER(10) FUNCTION SCARC_GET_DIMENSION(NDIM)
 INTEGER, INTENT(IN) :: NDIM
 
@@ -131,9 +131,9 @@ END SELECT
 
 END FUNCTION SCARC_GET_DIMENSION
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the initialization type of the currently processed array
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 CHARACTER(10) FUNCTION SCARC_GET_INIT_TYPE(NINIT, NDATA, NSTATE)
 INTEGER, INTENT(IN) :: NINIT, NDATA, NSTATE
 
@@ -163,9 +163,9 @@ IF (NSTATE == NSCARC_STORAGE_REMOVE) SCARC_GET_INIT_TYPE = ' '
 
 END FUNCTION SCARC_GET_INIT_TYPE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Get type of matrix storage scheme for specified grid level
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_GET_MATRIX_TYPE(NL)
 INTEGER, INTENT(IN) :: NL
 
@@ -177,11 +177,11 @@ ENDIF
 
 END FUNCTION SCARC_GET_MATRIX_TYPE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Check if a subdiagonal entry must be computed in a specified coordinate direction
 ! If a structured discretization is used, then subdiagonals are built in every direction
 ! Else check the type of the neighboring cell in direction IOR0
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION IS_VALID_DIRECTION(IX, IY, IZ, IOR0)
 USE SCARC_POINTERS, ONLY: L, G
 INTEGER, INTENT(IN)  :: IX, IY, IZ, IOR0
@@ -192,7 +192,7 @@ IF (TWO_D .AND. ABS(IOR0) == 2) RETURN
 
 SELECT CASE (TYPE_GRID)
    CASE (NSCARC_GRID_STRUCTURED)
-      IS_VALID_DIRECTION = .TRUE.                                                ! always build subdiagonals
+      IS_VALID_DIRECTION = .TRUE.                                           ! always build subdiagonals
       RETURN
    CASE (NSCARC_GRID_UNSTRUCTURED)
       IC_INDEX = L%CELL_INDEX_PTR(IX, IY, IZ)                               ! cell index of corresponding cell
@@ -213,9 +213,9 @@ RETURN
 
 END FUNCTION IS_VALID_DIRECTION
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Get grid permutation (MGM only)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION GET_PERM(JC)
 USE SCARC_POINTERS, ONLY : G
 INTEGER, INTENT(IN) :: JC
@@ -223,9 +223,9 @@ GET_PERM = -1
 IF (JC > 0 .AND. JC <= G%NC) GET_PERM = G%PERM_FW(JC)
 END FUNCTION GET_PERM
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Filter out mean value
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_FILTER_MEANVALUE(NV, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -233,7 +233,7 @@ INTEGER :: NM, IC, I, J, K
 
 MESH_REAL = 0.0_EB
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC => SCARC_POINT_TO_VECTOR(NM, NL, NV)
    DO IC = 1, G%NC
       MESH_REAL(NM) = MESH_REAL(NM) + VC(IC)
@@ -247,7 +247,7 @@ IF (N_MPI_PROCESSES > 1) &
 GLOBAL_REAL = SUM(MESH_REAL(1:NMESHES))/REAL(NC_GLOBAL(NL))
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC  => SCARC_POINT_TO_VECTOR(NM, NL, NV)
    DO K = 1, L%NZ
       DO J = 1, L%NY
@@ -262,9 +262,9 @@ ENDDO
 
 END SUBROUTINE SCARC_FILTER_MEANVALUE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Restore last cell of last mesh
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RESTORE_LAST_CELL (XX, NL)
 USE SCARC_POINTERS, ONLY: S, VC, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: XX, NL
@@ -277,9 +277,9 @@ VC(S%NC) = S%RHS_END
 
 END SUBROUTINE SCARC_RESTORE_LAST_CELL
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell should be considered during packing of zone numbers
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION SCARC_FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
 INTEGER, DIMENSION(:), INTENT(IN) :: SEND_BUFFER_INT
 INTEGER, INTENT(IN) :: IZ, ICG1, ICG2
@@ -296,10 +296,10 @@ DO ICG = ICG1, ICG2
 ENDDO
 END FUNCTION SCARC_FORBIDDEN_ZONE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Control multigrid cycling (F/V/W)
 ! Note: NLEVEL_MIN corresponds to finest level, NLEVEL_MAX to coarsest level
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_CYCLING_CONTROL(NTYPE, NL)
 USE SCARC_POINTERS, ONLY: MG
 INTEGER, INTENT(IN) :: NTYPE, NL
@@ -377,3 +377,4 @@ RETURN
 END FUNCTION SCARC_CYCLING_CONTROL
 
 END MODULE SCARC_UTILITIES
+

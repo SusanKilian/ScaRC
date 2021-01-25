@@ -1,10 +1,10 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_POSTPROCESSING
-
+!
 !> \brief Dump out several structures to perform a postprocessing of selected data with
 !   a separate stand-alone program
-
+!
 !=======================================================================================================================
 MODULE SCARC_POSTPROCESSING
   
@@ -22,9 +22,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! --------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Dump matrix and vectors belonging to current pressure system 
-! --------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_SYSTEM (NSTACK, ITYPE)
 USE SCARC_POINTERS, ONLY: SV, ST, S, L, G, A, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NSTACK, ITYPE
@@ -195,9 +195,9 @@ ENDDO
 END SUBROUTINE SCARC_DUMP_SYSTEM
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Dump complete FDS environment needed for ScaRC-setup (only for developping purposes)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_ENVIRONMENT
 USE SCARC_POINTERS, ONLY: M
 INTEGER:: NM, NOM, I, J, K, IW
@@ -410,9 +410,9 @@ SCARC_DUMP = .FALSE.
 END SUBROUTINE SCARC_DUMP_ENVIRONMENT
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Dump several arrays and structures needed for ScaRC (only for developping purposes)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RESTORE_ENVIRONMENT
 USE SCARC_POINTERS, ONLY: M
 INTEGER:: NM, NOM, I, J, K, IW, LU
@@ -751,9 +751,9 @@ ENDDO
 END SUBROUTINE SCARC_RESTORE_ENVIRONMENT
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Allocate and initialize vectors pressure diagnostics (only for developping purposes)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PRESSURE()
 USE SCARC_POINTERS, ONLY: L, G, PRES, SCARC_POINT_TO_GRID
 INTEGER:: NM
@@ -781,9 +781,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_PRESSURE
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief POSTPROCESSING version only: Compute Differences between old and new pressure solutions-only for developping purposes
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRESSURE_DIFFERENCE(NL)
 USE SCARC_POINTERS, ONLY: M, L, PRES, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NL

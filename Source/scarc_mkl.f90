@@ -1,10 +1,10 @@
 !=======================================================================================================================
-
+!
 ! Module SCARC_MKL
-
+!
 !> \brief Setup environment necessary for the call of the IntelMKL local and global LU-solvers
 !   PARDISO and CLUSTER_SPARSE_SOLVER
-
+!
 !=======================================================================================================================
 MODULE SCARC_MKL
   
@@ -28,9 +28,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
 INTEGER :: NSTACK
 
@@ -49,9 +49,9 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MKL(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
@@ -89,9 +89,9 @@ CALL SCARC_SETUP_REFERENCES(.TRUE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE.
 
 END SUBROUTINE SCARC_SETUP_MKL
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Initialize CLUSTER_SPARSE_SOLVER from MKL-library
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_CLUSTER(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -106,7 +106,7 @@ CROUTINE = 'SCARC_SETUP_CLUSTER'
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
       MKL => L%MKL
       AS  => G%POISSON_SYM
@@ -210,9 +210,9 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_CLUSTER
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Initialize PARDISO solver from MKL-library
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PARDISO(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -227,7 +227,7 @@ CROUTINE = 'SCARC_SETUP_PARDISO'
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       MKL => L%MKL
       AS  => G%POISSON_SYM
 

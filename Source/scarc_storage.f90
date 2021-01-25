@@ -1,12 +1,12 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_STORAGE
-
+!
 !> \brief Organize the allocation, deallocation and resizing of different data structures
-
+!
 !   This includes 1-, 2- or 3-dimensional vectors of different types 
 !   and compactly or bandwise stored matrices
-
+!
 !=======================================================================================================================
 MODULE SCARC_STORAGE
 
@@ -24,22 +24,22 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup memory management
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_STORAGE
 ALLOCATE (STORAGE%ALLOCATION_LIST(NSCARC_STORAGE_MAX), STAT = IERROR)
 CALL CHKMEMERR ('SCARC_SETUP_MEMORY_MANAGMENT', 'ALLOCATION_LIST', IERROR)
 END SUBROUTINE SCARC_SETUP_STORAGE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Update list of arrays within ScaRC memory management
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UPDATE_STORAGE(NDATA, NSTATE, NDIM, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UPDATE_STORAGE(NDATA, NSTATE, NDIM, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CID, CSCOPE)
 USE SCARC_POINTERS, ONLY : AL
 INTEGER, INTENT(IN) :: NDATA, NSTATE, NDIM, NINIT, NL1, NR1, NL2, NR2, NL3, NR3
 INTEGER :: NWORK, NLEN(3), I, IP
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 CHARACTER(20) :: CTYPE, CSTATE, CINIT, CDIM
 
 STORAGE%IP = STORAGE%IP + 1
@@ -52,7 +52,7 @@ IF (NSTATE /= NSCARC_STORAGE_REMOVE) THEN
 
    AL => STORAGE%ALLOCATION_LIST(STORAGE%IP)
 
-   AL%CNAME  = CNAME
+   AL%CNAME  = CID
    AL%CSCOPE = CSCOPE
 
    AL%LBND = NSCARC_INIT_ZERO
@@ -69,7 +69,7 @@ ELSE
 
    DO IP = 1, STORAGE%N_ARRAYS
       AL => STORAGE%ALLOCATION_LIST(IP)
-      IF (TRIM(CNAME) == AL%CNAME) EXIT
+      IF (TRIM(CID) == AL%CNAME) EXIT
    ENDDO
 
 ENDIF
@@ -112,9 +112,9 @@ ENDIF
 #endif
 END SUBROUTINE SCARC_UPDATE_STORAGE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Update memory statistics w.r.t to occupied workspace and number of allocated arrays
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UPDATE_STORAGE_COUNTERS(NDATA, NWORK, NSCAL)
 INTEGER, INTENT(IN) :: NDATA, NWORK, NSCAL
 
@@ -142,17 +142,17 @@ END SELECT
 
 END SUBROUTINE SCARC_UPDATE_STORAGE_COUNTERS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 1
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_INT1(WORKSPACE, NL1, NR1, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_INT1(WORKSPACE, NL1, NR1, NINIT, CID, CSCOPE)
 INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT1', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT1', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_INT
@@ -164,25 +164,25 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
          WORKSPACE = NSCARC_HUGE_INT
    END SELECT
 ELSE
-   IF (SIZE(WORKSPACE,1) /= NR1-NL1+1) CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+   IF (SIZE(WORKSPACE,1) /= NR1-NL1+1) CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_INT1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 2
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CID, CSCOPE)
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 INTEGER, DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT2', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT2', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_INT
@@ -196,26 +196,26 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_INT2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize integer array of dimension 3
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_INT3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_INT3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CID, CSCOPE)
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 INTEGER, DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NL3, NR3, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2, NL3:NR3), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_INT
@@ -230,26 +230,26 @@ ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1 .OR. &
       SIZE(WORKSPACE,3) /= NR3-NL3+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_INT3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 1
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_LOG1(WORKSPACE, NL1, NR1, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_LOG1(WORKSPACE, NL1, NR1, NINIT, CID, CSCOPE)
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 LOGICAL, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT1', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT1', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_TRUE)
          WORKSPACE = .TRUE.
@@ -258,26 +258,26 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    END SELECT
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_LOG1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 2
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_LOG2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_LOG2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CID, CSCOPE)
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 LOGICAL, DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_TRUE)
          WORKSPACE = .TRUE.
@@ -287,26 +287,26 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_LOG2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize Logical array of dimension 3
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_LOG3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_LOG3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CID, CSCOPE)
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 LOGICAL, DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NL3, NR3, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2, NL3:NR3), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_INT3', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_TRUE)
          WORKSPACE = .TRUE.
@@ -317,28 +317,28 @@ ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1 .OR. &
       SIZE(WORKSPACE,3) /= NR3-NL3+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_LOG3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 1
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_REAL1(WORKSPACE, NL1, NR1, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_REAL1(WORKSPACE, NL1, NR1, NINIT, CID, CSCOPE)
 USE PRECISION_PARAMETERS, ONLY: EB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 REAL(EB), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
 
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL1', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL1', CID, IERROR)
 
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
@@ -353,26 +353,26 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
 
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1) &
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 1
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_REAL1_FB(WORKSPACE, NL1, NR1, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_REAL1_FB(WORKSPACE, NL1, NR1, NINIT, CID, CSCOPE)
 USE PRECISION_PARAMETERS, ONLY: FB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 REAL(FB), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL1_FB', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL1_FB', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_REAL_FB
@@ -385,26 +385,26 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    END SELECT
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1) &
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_FB, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_FB, NSCARC_STORAGE_CREATE, 1, NINIT, NL1, NR1, -1, -1, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL1_FB
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 2
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_REAL2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_REAL2(WORKSPACE, NL1, NR1, NL2, NR2, NINIT, CID, CSCOPE)
 USE PRECISION_PARAMETERS, ONLY: EB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 REAL(EB), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL2', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL2', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_REAL_EB
@@ -418,27 +418,27 @@ IF (.NOT.ALLOCATED(WORKSPACE)) THEN
 ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 2, NINIT, NL1, NR1, NL2, NR2, -1, -1, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize real array of dimension 3
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_REAL3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_REAL3(WORKSPACE, NL1, NR1, NL2, NR2, NL3, NR3, NINIT, CID, CSCOPE)
 USE PRECISION_PARAMETERS, ONLY: EB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 REAL(EB), DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2, NL3, NR3, NINIT
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2, NL3:NR3), STAT=IERROR)
-   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL3', CNAME, IERROR)
+   CALL CHKMEMERR ('SCARC_ALLOCATE_REAL3', CID, IERROR)
    SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEF)
          WORKSPACE = NSCARC_UNDEF_REAL_EB
@@ -453,141 +453,141 @@ ELSE
    IF (SIZE(WORKSPACE,1) /= NR1-NL1+1 .OR. &
       SIZE(WORKSPACE,2) /= NR2-NL2+1 .OR. &
       SIZE(WORKSPACE,3) /= NR3-NL3+1) THEN
-      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CNAME, NSCARC_NONE)
+      CALL SCARC_ERROR(NSCARC_ERROR_VECTOR_LENGTH, CID, NSCARC_NONE)
    ENDIF
 ENDIF
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_CREATE, 3, NINIT, NL1, NR1, NL2, NR2, NL3, NR3, CID, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_REAL3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional integer vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_INT1(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_INT1(WORKSPACE, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional integer vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_INT2(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_INT2(WORKSPACE, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional integer vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_INT3(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_INT3(WORKSPACE, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:,:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_INTEGER, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_INT3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional logical vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_LOG1(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_LOG1(WORKSPACE, CID, CSCOPE)
 LOGICAL, ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional logical vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_LOG2(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_LOG2(WORKSPACE, CID, CSCOPE)
 LOGICAL, ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional logical vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_LOG3(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_LOG3(WORKSPACE, CID, CSCOPE)
 LOGICAL, ALLOCATABLE, DIMENSION(:,:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_LOGICAL, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_LOG3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional double precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL1(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL1(WORKSPACE, CID, CSCOPE)
 REAL(EB), ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate two-dimensional double precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL2(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL2(WORKSPACE, CID, CSCOPE)
 REAL(EB), ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate three-dimensional double precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL3(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL3(WORKSPACE, CID, CSCOPE)
 REAL(EB), ALLOCATABLE, DIMENSION(:,:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL3
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL1_FB(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL1_FB(WORKSPACE, CID, CSCOPE)
 REAL(FB), ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL1_FB
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL2_FB(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL2_FB(WORKSPACE, CID, CSCOPE)
 REAL(FB), ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 2, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL2_FB
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate one-dimensional single precision vector 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_REAL3_FB(WORKSPACE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_REAL3_FB(WORKSPACE, CID, CSCOPE)
 REAL(FB), ALLOCATABLE, DIMENSION(:,:,:), INTENT(INOUT) :: WORKSPACE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 DEALLOCATE(WORKSPACE) 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_REAL_EB, NSCARC_STORAGE_REMOVE, 3, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 END SUBROUTINE SCARC_DEALLOCATE_REAL3_FB
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Resize one-dimensional integer vector to requested bounds
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RESIZE_INT1(WORKSPACE, NL1, NR1, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_RESIZE_INT1(WORKSPACE, NL1, NR1, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER, ALLOCATABLE, DIMENSION(:) :: AUX
 INTEGER :: NLC1, NRC1, NSC, NS
 
@@ -603,9 +603,9 @@ ELSE
 
    ALLOCATE(AUX(1:NSC), STAT = IERROR)                        ! don't track it in memory management, only auxiliary
    AUX(1:NSC) = WORKSPACE(NLC1:NRC1)
-   CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CNAME, CSCOPE)
+   CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CID, CSCOPE)
 
-   CALL SCARC_ALLOCATE_INT1(WORKSPACE, NL1, NR1, NSCARC_INIT_NONE, CNAME, CSCOPE)
+   CALL SCARC_ALLOCATE_INT1(WORKSPACE, NL1, NR1, NSCARC_INIT_NONE, CID, CSCOPE)
 
    IF (NS < NSC) THEN
       WORKSPACE(NL1:NL1 + NS) = AUX(1:NS)
@@ -618,13 +618,13 @@ ENDIF
 
 END SUBROUTINE SCARC_RESIZE_INT1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Resize two-dimensional integer vector to requested bounds
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RESIZE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_RESIZE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NL1, NR1, NL2, NR2
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: AUX
 INTEGER :: NLC1, NRC1, NSC1, NS1
 INTEGER :: NLC2, NRC2, NSC2, NS2
@@ -648,9 +648,9 @@ ELSE
 
    ALLOCATE(AUX(1: NSC1, 1: NSC2), STAT = IERROR)                     ! don't track it in memory management, only auxiliary
    AUX(1:NSC1, 1:NSC2) = WORKSPACE(NLC1:NRC1, NLC2:NRC2)
-   CALL SCARC_DEALLOCATE_INT2(WORKSPACE, CNAME, CSCOPE)
+   CALL SCARC_DEALLOCATE_INT2(WORKSPACE, CID, CSCOPE)
 
-   CALL SCARC_ALLOCATE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, NSCARC_INIT_NONE, CNAME, CSCOPE)
+   CALL SCARC_ALLOCATE_INT2(WORKSPACE, NL1, NR1, NL2, NR2, NSCARC_INIT_NONE, CID, CSCOPE)
 
    IF (NS1 < NSC1 .AND. NS2 < NSC2) THEN
       WORKSPACE(NL1:NL1+NS1, NL2:NL2+NS2) = AUX(1:NS1, 1:NS2)
@@ -668,13 +668,13 @@ ENDIF
 
 END SUBROUTINE SCARC_RESIZE_INT2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer vector
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_REDUCE_INT1(WORKSPACE, NSIZE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_REDUCE_INT1(WORKSPACE, NSIZE, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NSIZE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER, ALLOCATABLE, DIMENSION(:) :: AUX
 
 IF (NSIZE == SIZE(WORKSPACE)) THEN
@@ -683,22 +683,22 @@ ELSE IF (NSIZE < SIZE(WORKSPACE)) THEN
 
    ALLOCATE(AUX(1: NSIZE), STAT = IERROR)
    AUX(1:NSIZE) = WORKSPACE(1:NSIZE)
-   CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CNAME, CSCOPE)
+   CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CID, CSCOPE)
 
-   CALL SCARC_ALLOCATE_INT1(WORKSPACE, 1, NSIZE, NSCARC_INIT_NONE, CNAME, CSCOPE)
+   CALL SCARC_ALLOCATE_INT1(WORKSPACE, 1, NSIZE, NSCARC_INIT_NONE, CID, CSCOPE)
    WORKSPACE(1:NSIZE) = AUX(1:NSIZE)
    DEALLOCATE(AUX)
 ENDIF
 
 END SUBROUTINE SCARC_REDUCE_INT1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer array with dimension 2
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_REDUCE_INT2(WORKSPACE, NSIZE1, NSIZE2, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_REDUCE_INT2(WORKSPACE, NSIZE1, NSIZE2, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:,:), INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NSIZE1, NSIZE2
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER :: NWORK1, NWORK2, I1, I2
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: AUX
 
@@ -714,9 +714,9 @@ ELSE IF (NSIZE1 <= NWORK1 .AND. NSIZE2 <= NWORK2) THEN
          AUX(I1, I2) = WORKSPACE(I1, I2)
       ENDDO
    ENDDO
-   CALL SCARC_DEALLOCATE_INT2 (WORKSPACE, CNAME, CSCOPE)
+   CALL SCARC_DEALLOCATE_INT2 (WORKSPACE, CID, CSCOPE)
 
-   CALL SCARC_ALLOCATE_INT2(WORKSPACE, 1, NSIZE1, 1, NSIZE2, NSCARC_INIT_NONE, TRIM(CNAME), CSCOPE)
+   CALL SCARC_ALLOCATE_INT2(WORKSPACE, 1, NSIZE1, 1, NSIZE2, NSCARC_INIT_NONE, TRIM(CID), CSCOPE)
    DO I2 = 1, NSIZE2
       DO I1 = 1, NSIZE1
          WORKSPACE(I1, I2) = AUX(I1, I2)
@@ -729,33 +729,33 @@ ENDIF
 
 END SUBROUTINE SCARC_REDUCE_INT2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Expand size of integer vector
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_EXPAND_INT1(WORKSPACE, WORKSPACE_ADD, NSIZE, NSIZE_ADD, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_EXPAND_INT1(WORKSPACE, WORKSPACE_ADD, NSIZE, NSIZE_ADD, CID, CSCOPE)
 INTEGER, ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE, WORKSPACE_ADD
 INTEGER, INTENT(IN) :: NSIZE, NSIZE_ADD
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER, ALLOCATABLE, DIMENSION(:) :: AUX
 
 ALLOCATE(AUX(1: NSIZE + NSIZE_ADD), STAT = IERROR)
 AUX(1:NSIZE) = WORKSPACE(1:NSIZE)
 AUX(NSIZE+1:NSIZE+NSIZE_ADD) = WORKSPACE_ADD(NSIZE+1:NSIZE+NSIZE_ADD)
-CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CNAME, CSCOPE)
+CALL SCARC_DEALLOCATE_INT1 (WORKSPACE, CID, CSCOPE)
 
-CALL SCARC_ALLOCATE_INT1(WORKSPACE, 1, NSIZE + NSIZE_ADD, NSCARC_INIT_NONE, TRIM(CNAME), CSCOPE)
+CALL SCARC_ALLOCATE_INT1(WORKSPACE, 1, NSIZE + NSIZE_ADD, NSCARC_INIT_NONE, TRIM(CID), CSCOPE)
 WORKSPACE(1:NSIZE+NSIZE_ADD) = AUX(1:NSIZE+NSIZE_ADD)
 DEALLOCATE(AUX)
 
 END SUBROUTINE SCARC_EXPAND_INT1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Reduce size of integer vector
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_REDUCE_REAL1(WORKSPACE, NSIZE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_REDUCE_REAL1(WORKSPACE, NSIZE, CID, CSCOPE)
 REAL(EB), ALLOCATABLE, DIMENSION(:), INTENT(INOUT) :: WORKSPACE
 INTEGER, INTENT(IN) :: NSIZE
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 REAL(EB), ALLOCATABLE, DIMENSION(:) :: AUX
 
 IF (NSIZE == SIZE(WORKSPACE)) THEN
@@ -764,29 +764,29 @@ ELSE IF (NSIZE < SIZE(WORKSPACE)) THEN
 
    ALLOCATE(AUX(1: NSIZE), STAT = IERROR)
    AUX(1:NSIZE) = WORKSPACE(1:NSIZE)
-   CALL SCARC_DEALLOCATE_REAL1 (WORKSPACE, CNAME, CSCOPE)
+   CALL SCARC_DEALLOCATE_REAL1 (WORKSPACE, CID, CSCOPE)
 
-   CALL SCARC_ALLOCATE_REAL1(WORKSPACE, 1, NSIZE, NSCARC_INIT_NONE, TRIM(CNAME), CSCOPE)
+   CALL SCARC_ALLOCATE_REAL1(WORKSPACE, 1, NSIZE, NSCARC_INIT_NONE, TRIM(CID), CSCOPE)
    WORKSPACE(1:NSIZE) = AUX(1:NSIZE)
    DEALLOCATE(AUX)
 ENDIF
 
 END SUBROUTINE SCARC_REDUCE_REAL1
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate matrix in compact storage format
 ! Allocate matrix with corresponding pointer and length structures
 !    NTYPE == NSCARC_MATRIX_FULL    :  ALLOCATE VAL, COL and COLG
 !    NTYPE == NSCARC_MATRIX_LIGHT   :  ALLOCATE VAL, COL 
 !    NTYPE == NSCARC_MATRIX_MINIMAL :  ALLOCATE COL 
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_CMATRIX(A, NL, NPREC, NTYPE, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_CMATRIX(A, NL, NPREC, NTYPE, CID, CSCOPE)
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
 INTEGER, INTENT(IN) :: NPREC, NTYPE, NL
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER :: NDUMMY
 
-A%CNAME = TRIM(CNAME)
+A%CNAME = TRIM(CID)
 A%NTYPE = NTYPE
 A%NPREC = NPREC
 NDUMMY = NL
@@ -794,7 +794,7 @@ NDUMMY = NL
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '1:ALLOCATING A ', A%N_ROW, A%N_VAL, TYPE_SCOPE(0), TYPE_MATVEC
 #endif
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
 CALL SCARC_ALLOCATE_INT1(A%ROW, 1, A%N_ROW, NSCARC_INIT_ZERO, 'A%ROW', CSCOPE)
 CALL SCARC_ALLOCATE_INT1(A%COL, 1, A%N_VAL, NSCARC_INIT_ZERO, 'A%COL', CSCOPE)
@@ -802,7 +802,7 @@ CALL SCARC_ALLOCATE_INT1(A%COL, 1, A%N_VAL, NSCARC_INIT_ZERO, 'A%COL', CSCOPE)
 IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. (NTYPE == NSCARC_MATRIX_LIGHT .OR. NTYPE == NSCARC_MATRIX_FULL)) THEN
    CALL SCARC_ALLOCATE_INT1(A%COLG, 1, A%N_VAL, NSCARC_INIT_ZERO, 'A%COLG', CSCOPE)
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) '4:ALLOCATING A%COLG FOR ', CNAME, CSCOPE, NTYPE, TYPE_SCOPE(0)
+   WRITE(MSG%LU_DEBUG,*) '4:ALLOCATING A%COLG FOR ', CID, CSCOPE, NTYPE, TYPE_SCOPE(0)
 #endif
 ENDIF
 
@@ -816,12 +816,12 @@ ENDIF
 
 END SUBROUTINE SCARC_ALLOCATE_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Dellocate matrix in compact storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_CMATRIX(A, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_CMATRIX(A, CID, CSCOPE)
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 A%N_STENCIL   = 0
 A%N_CONDENSED = 0
@@ -832,7 +832,7 @@ A%NPREC       = 0
 A%STENCIL     = 0
 A%POS         = 0
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_REMOVE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_REMOVE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
 IF (ALLOCATED(A%VAL))   CALL SCARC_DEALLOCATE_REAL1 (A%VAL, 'A%VAL', CSCOPE)
 IF (ALLOCATED(A%ROW))   CALL SCARC_DEALLOCATE_INT1 (A%ROW, 'A%ROW', CSCOPE)
@@ -842,9 +842,9 @@ IF (ALLOCATED(A%RELAX)) CALL SCARC_DEALLOCATE_REAL1 (A%RELAX, 'A%RELAX', CSCOPE)
 
 END SUBROUTINE SCARC_DEALLOCATE_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Insert value at specified position in matrix of compact storage format
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 REAL(EB) FUNCTION SCARC_EVALUATE_CMATRIX(A, IC, JC) 
 TYPE (SCARC_CMATRIX_TYPE), INTENT(IN) :: A
 INTEGER, INTENT(IN) :: IC, JC
@@ -866,22 +866,22 @@ ENDDO
 
 END FUNCTION SCARC_EVALUATE_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Insert value at specified position in matrix of compact storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_INSERT_TO_CMATRIX(A, VAL, IC, JC, NC, NP, CNAME) 
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_INSERT_TO_CMATRIX(A, VAL, IC, JC, NC, NP, CID) 
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
 INTEGER, INTENT(IN) :: IC, JC, NC
 INTEGER, INTENT(INOUT) :: NP
-CHARACTER(*), INTENT(IN) :: CNAME
+CHARACTER(*), INTENT(IN) :: CID
 REAL(EB), INTENT(IN) :: VAL
 INTEGER :: IP
 CHARACTER(1) :: CSAVE
 REAL(EB) :: TOL = 1.0E-14_EB
 
-CSAVE = CNAME(1:1)              ! dummy command to prevent warning in case that DEBUG flag is not set
+CSAVE = CID(1:1)              ! dummy command to prevent warning in case that DEBUG flag is not set
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,1000) CNAME, IC, JC, VAL, NC, NP
+WRITE(MSG%LU_DEBUG,1000) CID, IC, JC, VAL, NC, NP
 #endif
 
 IF (NP == A%N_VAL) WRITE(*,*) MYID+1,': SCARC_INSERT_TO_CMATRIX: Error, maximum length already reached'
@@ -909,19 +909,19 @@ ELSE
 ENDIF
 
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX (A, CNAME, 'SCARC_INSERT_TO_CMATRIX')
+CALL SCARC_DEBUG_CMATRIX (A, CID, 'SCARC_INSERT_TO_CMATRIX')
 1000 FORMAT('INSERT_TO_CMATRIX, ', A4,'(',I3,',',I3,')=',E14.6,',       NC:', I3,', NP:', I3)
 #endif
 END SUBROUTINE SCARC_INSERT_TO_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Reduce size of matrix in compact storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_COPY_CMATRIX(A1, A2, CNAME2, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_COPY_CMATRIX(A1, A2, CID, CSCOPE)
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A1, A2
-CHARACTER(*), INTENT(IN) :: CNAME2, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
-A2%CNAME = TRIM(CNAME2)
+A2%CNAME       = TRIM(CID)
 A2%N_STENCIL   = A1%N_STENCIL
 A2%N_CONDENSED = A1%N_CONDENSED
 A2%N_ROW       = A1%N_ROW
@@ -934,7 +934,7 @@ A2%POS         = A1%POS
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '1:ALLOCATING A2 ', A2%N_ROW, A2%N_VAL, TYPE_SCOPE(0), TYPE_MATVEC
 #endif
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
 CALL SCARC_ALLOCATE_INT1(A2%ROW, 1, A2%N_ROW, NSCARC_INIT_NONE, 'A2%ROW', CSCOPE)
 A2%ROW = A1%ROW
@@ -947,12 +947,12 @@ A2%VAL = A1%VAL
 
 END SUBROUTINE SCARC_COPY_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Reduce size of matrix in compact storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_REDUCE_CMATRIX(A, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_REDUCE_CMATRIX(A, CID, CSCOPE)
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 REAL(EB), ALLOCATABLE, DIMENSION(:) :: VAL
 REAL(FB), ALLOCATABLE, DIMENSION(:) :: VAL_FB
 INTEGER , ALLOCATABLE, DIMENSION(:) :: COL, COLG
@@ -961,7 +961,7 @@ INTEGER :: NVAL_CURRENT, NVAL_ALLOCATED
 NVAL_CURRENT = A%ROW(A%N_ROW)
 NVAL_ALLOCATED = SIZE(A%COL)
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_RESIZE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_RESIZE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
 ! If the matrix already has the desired size or specified values are to small, return or shutdown
 IF (NVAL_ALLOCATED == NVAL_CURRENT) THEN
@@ -971,9 +971,9 @@ IF (NVAL_ALLOCATED == NVAL_CURRENT) THEN
    RETURN
 ELSE IF (NVAL_ALLOCATED < NVAL_CURRENT) THEN
 #ifdef WITH_SCARC_VERBOSE
-   WRITE(MSG%LU_VERBOSE,*) 'Reducing CMATRIX ',CNAME,' from ',NVAL_ALLOCATED,' to ', NVAL_CURRENT,' failed '
+   WRITE(MSG%LU_VERBOSE,*) 'Reducing CMATRIX ',CID,' from ',NVAL_ALLOCATED,' to ', NVAL_CURRENT,' failed '
 #endif
-   CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SIZE, CNAME, NSCARC_NONE)
+   CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SIZE, CID, NSCARC_NONE)
 ENDIF
 
 ! If the allocated size of the matrix values workspace is too large, reduce it to the real size
@@ -1019,39 +1019,39 @@ ENDIF
 
 END SUBROUTINE SCARC_REDUCE_CMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate matrix in bandwise storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_BMATRIX(A, NL, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_ALLOCATE_BMATRIX(A, NL, CID, CSCOPE)
 TYPE (SCARC_BMATRIX_TYPE), INTENT(INOUT) :: A
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 INTEGER, INTENT(IN) :: NL
 CHARACTER(40) :: CINFO
 
-A%CNAME = CNAME
+A%CNAME = CID
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_BMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_BMATRIX, NSCARC_STORAGE_CREATE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
-WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CNAME),'_LEV',NL,'.AUX'
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CID),'_LEV',NL,'.AUX'
 CALL SCARC_ALLOCATE_REAL1(A%AUX, 1, A%N_DIAG, NSCARC_INIT_ZERO, CINFO, CSCOPE)
-WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CNAME),'_LEV',NL,'.VAL'
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CID),'_LEV',NL,'.VAL'
 CALL SCARC_ALLOCATE_REAL2(A%VAL, 1, A%N_DIAG, 1, A%N_STENCIL, NSCARC_INIT_ZERO, CINFO, CSCOPE)
 
 END SUBROUTINE SCARC_ALLOCATE_BMATRIX
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Deallocate matrix in bandwise storage format
-! ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_BMATRIX(A, CNAME, CSCOPE)
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEALLOCATE_BMATRIX(A, CID, CSCOPE)
 TYPE (SCARC_BMATRIX_TYPE), INTENT(INOUT) :: A
-CHARACTER(*), INTENT(IN) :: CNAME, CSCOPE
+CHARACTER(*), INTENT(IN) :: CID, CSCOPE
 
 A%N_STENCIL   = 0
 A%N_CONDENSED = 0
 A%N_VAL       = 0
 A%N_DIAG      = 0
 
-CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_BMATRIX, NSCARC_STORAGE_REMOVE, -1, -1, -1, -1, -1, -1, -1, -1, CNAME, CSCOPE)
+CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_BMATRIX, NSCARC_STORAGE_REMOVE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
 IF (ALLOCATED(A%AUX))    CALL SCARC_DEALLOCATE_REAL1 (A%AUX, 'A%AUX', CSCOPE)
 IF (ALLOCATED(A%VAL))    CALL SCARC_DEALLOCATE_REAL2 (A%VAL, 'A%VAL', CSCOPE)

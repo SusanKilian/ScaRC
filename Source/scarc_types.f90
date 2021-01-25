@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_TYPES
-
+!
 !> \brief Collection of data types used for the different ScaRC/UScaRC solvers
-
+!
 !=======================================================================================================================
 MODULE SCARC_TYPES
 
@@ -377,6 +377,7 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN                       !< Galerkin matrix (AMG only)
+
 #ifdef WITH_MKL
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix (only for MKL)
    TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN_SYM                   !< Galerkin matrix symmetric version (AMG only)
@@ -547,6 +548,7 @@ TYPE SCARC_LEVEL_TYPE
    TYPE (SCARC_FFT_TYPE)       :: FFT                          !< FFT preconditioner based on CRAYFISHPAK
    TYPE (SCARC_MGM_TYPE)       :: MGM                          !< McKenney-Greengard-Mayo method 
    TYPE (SCARC_MULTIGRID_TYPE) :: MG                           !< Multigrid method information
+
 #ifdef WITH_MKL
    TYPE (SCARC_MKL_TYPE)       :: MKL                          !< MKL preconditioner based on Intel MKL
 #endif

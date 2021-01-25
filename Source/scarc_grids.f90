@@ -1,13 +1,13 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_GRIDS
-
+!
 !> \brief Setup all structures related to the different grid types (structured/unstructured) and
 !   the different grid resolution levels
-
+!
 !   This includes information w.r.t the mesh faces and the wall cells along external, interface and
 !   internal boundaries
-
+!
 !=======================================================================================================================
 MODULE SCARC_GRIDS
   
@@ -24,7 +24,7 @@ USE SCARC_STORAGE, ONLY: SCARC_ALLOCATE_INT1, SCARC_DEALLOCATE_INT1, &
                          SCARC_ALLOCATE_INT2, SCARC_ALLOCATE_INT3, &
                          SCARC_ALLOCATE_REAL1, SCARC_ALLOCATE_LOG3
 USE SCARC_UTILITIES, ONLY: ARE_NEIGHBORS, SCARC_SET_GRID_TYPE
-USE SCARC_TIMINGS, ONLY: CPU
+USE SCARC_CPU, ONLY: CPU
 USE SCARC_TROUBLESHOOTING, ONLY: SCARC_ERROR
 USE SCARC_MPI, ONLY: SCARC_SETUP_EXCHANGE_DIMENSIONS
 
@@ -32,9 +32,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate basic ScaRC-structures for all needed levels
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BASICS
 USE SCARC_POINTERS, ONLY: S, SCARC_POINT_TO_MESH
 INTEGER :: NM
@@ -61,10 +61,10 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_BASICS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Determine number of grid levels 
 ! NLEVEL_MIN corresponds to finest grid resolution, NLEVEL_MAX to coarsest resolution
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LEVELS
 #ifdef WITH_MKL
 INTEGER :: NL
@@ -176,9 +176,9 @@ ENDDO
 #endif
 END SUBROUTINE SCARC_SETUP_LEVELS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup single level in case of default Krylov method
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_GET_NUMBER_OF_LEVELS(NTYPE)
 USE SCARC_POINTERS, ONLY: M
 INTEGER, INTENT(IN) :: NTYPE
@@ -228,10 +228,10 @@ END SELECT SELECT_LEVEL_TYPE
 
 END SUBROUTINE SCARC_GET_NUMBER_OF_LEVELS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Determine maximum number of possible levels 
 ! In case of GMG- or 2-Level-method, NC must be divisable by 2 at least one time
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_GET_MAX_LEVEL(NC, IOR0)
 INTEGER, INTENT(IN) :: NC, IOR0
 INTEGER :: NC0, NL
@@ -299,7 +299,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    LEVEL_LOOP1: DO NL = NLEVEL_MIN, NLEVEL_MAX
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
       L%NX = IBAR;  L%NY = JBAR;  L%NZ = KBAR
 
@@ -841,9 +841,9 @@ ENDDO MESHES_LOOP1
 END SUBROUTINE SCARC_SETUP_GRID_LEVEL
 
 
-! ----------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------------
 !> \brief Get information about global numbers of unknowns for unstructured discretization
-! ----------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_DIMENSIONS(NL)
 USE SCARC_POINTERS, ONLY: G, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
@@ -852,7 +852,7 @@ INTEGER :: NM, NM2
 ! Preset communication array MESH_INT with local numbers of cells for all meshes depending on type of discretization
 MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    MESH_INT(NM) = G%NC_LOCAL(NM)
 
 !   DO NM2 = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -870,7 +870,7 @@ NC_GLOBAL(NL) = SUM(MESH_INT(1:NMESHES))
 ! Store information on local and global cells numbers on data structure of corresponding discretization type
 MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    G%NC_LOCAL(1:NMESHES) = MESH_INT(1:NMESHES)
    G%NC_GLOBAL = SUM(MESH_INT(1:NMESHES))
@@ -892,13 +892,13 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_DIMENSIONS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Setup structures related to mesh faces on finest grid level
 !   - get dimensions for each of the 6 faces of a mesh
 !   - get grid width vector along face
 !   - get information for adjacent neighbors
 !   - allocate pointer arrays for data exchanges with neighbors
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FACES
 USE SCARC_POINTERS, ONLY: M, S, L, LC, F, OL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID
 INTEGER :: NL, NM, NOM
@@ -1022,9 +1022,9 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_FACES
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup subdivision information 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIVISION
 USE SCARC_POINTERS, ONLY: SUB
 INTEGER, ALLOCATABLE, DIMENSION(:) :: BUFFER_INT
@@ -1086,9 +1086,9 @@ CALL SCARC_DEALLOCATE_INT1(BUFFER_INT, 'BUFFER_INT', CROUTINE)
 END SUBROUTINE SCARC_SETUP_SUBDIVISION
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup neighborship structure for data exchanges along mesh interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_NEIGHBORS
 USE SCARC_POINTERS, ONLY: OS, OLF, OLC
 INTEGER :: NM, NOM, NL
@@ -1155,9 +1155,9 @@ ENDDO LEVEL_MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_NEIGHBORS
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Determine basic data for single faces (orientation, dimensions, numbers)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FACE_BASICS(L)
 USE SCARC_POINTERS, ONLY: F
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: L
@@ -1289,9 +1289,9 @@ ENDDO FACES_OF_MESH_LOOP
 END SUBROUTINE SCARC_SETUP_FACE_BASICS
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Setup wall related structures and boundary conditions
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WALLS(NGRID_TYPE)
 USE SCARC_POINTERS, ONLY: M, L, LF, LC, FF, FC, OL, OLF, OLC, G, GC, GF, OG, OGC, OGF, GWC, MWC, EWC, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MULTIGRID, &  
@@ -1829,11 +1829,11 @@ ENDIF
 END SUBROUTINE SCARC_SETUP_WALL_INDEX
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup all necessary information for a wall cell with neighbor in case of MG method
 ! Number of obstructions on coarse level is the same as on fine level
 ! TODO: Only works for special cases which run for GMG, must still be extended!!
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WALL_COORDS(L, G)
 USE SCARC_POINTERS, ONLY: OB, GWC
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: L
@@ -1952,9 +1952,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_WALL_COORDS
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Correct boundary type array related to internal obstructions on ghost cells
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_IDENTIFY_INTERNAL_NEUMANNS(L, G) 
 USE SCARC_POINTERS, ONLY: GWC
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: L
@@ -1986,9 +1986,9 @@ ENDDO
 END SUBROUTINE SCARC_IDENTIFY_INTERNAL_NEUMANNS
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup all necessary information for a wall cell with neighbor
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_COUNT_EXTERNAL_WALL_CELLS(LF, LC, GF)
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: LF, LC
 TYPE (SCARC_GRID_TYPE),  POINTER, INTENT(IN) :: GF
@@ -2174,9 +2174,9 @@ SCARC_COUNT_EXTERNAL_WALL_CELLS = IWC
 END FUNCTION SCARC_COUNT_EXTERNAL_WALL_CELLS
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup all necessary information for a wall cell with neighbor
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_COUNT_INTERNAL_WALL_CELLS(LF, LC, GC)
 USE SCARC_POINTERS, ONLY: OBF, OBC
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: LF, LC
@@ -2284,9 +2284,9 @@ SCARC_COUNT_INTERNAL_WALL_CELLS = NW_INT
 END FUNCTION SCARC_COUNT_INTERNAL_WALL_CELLS
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Count external wall cells on specified face if mesh
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION IS_EXTERNAL_WALLCELL(L, G, IOR0, ICF, NCNT)
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: L
 TYPE (SCARC_GRID_TYPE),  POINTER, INTENT(IN) :: G
@@ -2322,9 +2322,9 @@ ENDIF
 END FUNCTION IS_EXTERNAL_WALLCELL
 
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup all necessary information for a wall cell with neighbor
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WALL_NEIGHBOR(G, OG, NX1, NX2, NY1, NY2, NZ1, NZ2, IWG, NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: GWC, SCARC_POINT_TO_OTHER_GRID
 TYPE (SCARC_GRID_TYPE),  POINTER, INTENT(IN) :: G, OG
@@ -2398,9 +2398,9 @@ OG%ICG_TO_ICE(ICG, 1) = ICE                                    ! map local wall 
 END SUBROUTINE SCARC_SETUP_WALL_NEIGHBOR
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Check divisibility by 2 of a given number of elements (in one grid direction)
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_CHECK_DIVISIBILITY(NN, CDIR)
 INTEGER, INTENT(IN) :: NN
 CHARACTER(*) , INTENT(IN) :: CDIR
@@ -2408,9 +2408,9 @@ IF (MOD(NN,2) /= 0) CALL SCARC_ERROR(NSCARC_ERROR_GRID_NUMBER, CDIR, NSCARC_NONE
 END SUBROUTINE SCARC_CHECK_DIVISIBILITY
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Set wall cell information on coarse level
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WALL_LEVEL(LF, LC, GF, GC, IOR0, IWC, IREFINE, NM, NL)
 USE SCARC_POINTERS, ONLY: FF, FC, WF, WC, OGC, SCARC_POINT_TO_OTHER_MULTIGRID
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN) :: LF, LC

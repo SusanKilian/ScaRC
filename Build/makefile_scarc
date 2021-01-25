@@ -103,14 +103,14 @@ endif
 endif # OS test
 endif # MKLROOT test
 
-#FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
-FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG 
+FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
+#FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG 
 
 # -----------------------------------------------------------------------------------------------------------------------
 # Objects to compile
 # -----------------------------------------------------------------------------------------------------------------------
 
-obj_scarc = scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o scarc_messages.o scarc_troubleshooting.o scarc_utilities.o scarc_storage.o scarc_convergence.o scarc_postprocessing.o scarc_timings.o scarc_stack.o scarc_parser.o scarc_mpi.o scarc_mkl.o scarc_vectors.o scarc_grids.o scarc_matrices.o scarc_fft.o scarc_amg.o scarc_gmg.o scarc_mgm.o scarc_methods.o scarc_solvers.o 
+obj_scarc = scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o scarc_messages.o scarc_troubleshooting.o scarc_utilities.o scarc_storage.o scarc_convergence.o scarc_postprocessing.o scarc_cpu.o scarc_stack.o scarc_parser.o scarc_mpi.o scarc_mkl.o scarc_vectors.o scarc_grids.o scarc_matrices.o scarc_fft.o scarc_amg.o scarc_gmg.o scarc_mgm.o scarc_methods.o scarc_solvers.o 
 
 obj_fds1 =  prec.o cons.o devc.o type.o data.o mesh.o func.o gsmv.o smvv.o rcal.o turb.o soot.o ieva.o pois.o evac.o geom.o
 obj_fds2 =  radi.o part.o vege.o ctrl.o samr.o dump.o hvac.o mass.o read.o wall.o fire.o divg.o velo.o pres.o init.o main.o
@@ -330,12 +330,12 @@ turb.o : prec.o func.o cons.o mesh.o
 soot.o : prec.o mesh.o cons.o func.o turb.o
 ieva.o : func.o prec.o cons.o type.o mesh.o
 pois.o : prec.o cons.o
-scarc_amg.o : cons.o mesh.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_storage.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_mpi.o scarc_postprocessing.o scarc_matrices.o scarc_storage.o scarc_pointers.o 
+scarc_amg.o : cons.o mesh.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_storage.o scarc_utilities.o scarc_messages.o scarc_cpu.o scarc_mpi.o scarc_postprocessing.o scarc_matrices.o scarc_storage.o scarc_pointers.o 
 scarc_constants.o : prec.o cons.o 
 scarc_convergence.o : prec.o scarc_constants.o scarc_variables.o scarc_messages.o
-scarc_fft.o : cons.o prec.o mesh.o pois.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_timings.o scarc_troubleshooting.o scarc_vectors.o scarc_matrices.o scarc_convergence.o scarc_pointers.o
+scarc_fft.o : cons.o prec.o mesh.o pois.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_cpu.o scarc_troubleshooting.o scarc_vectors.o scarc_matrices.o scarc_convergence.o scarc_pointers.o
 scarc_gmg.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_pointers.o scarc_mpi.o 
-scarc_grids.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_storage.o scarc_utilities.o scarc_timings.o scarc_troubleshooting.o scarc_mpi.o scarc_pointers.o
+scarc_grids.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_storage.o scarc_utilities.o scarc_cpu.o scarc_troubleshooting.o scarc_mpi.o scarc_pointers.o
 scarc_matrices.o : cons.o prec.o mesh.o func.o scarc_constants.o scarc_utilities.o scarc_storage.o scarc_mpi.o scarc_grids.o scarc_pointers.o
 scarc_messages.o : prec.o cons.o func.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o
 scarc_methods.o : prec.o cons.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_stack.o scarc_vectors.o scarc_messages.o scarc_postprocessing.o scarc_convergence.o scarc_mkl.o scarc_pointers.o scarc_mgm.o scarc_fft.o scarc_gmg.o scarc_utilities.o 
@@ -348,12 +348,12 @@ scarc_postprocessing.o : cons.o prec.o func.o scarc_constants.o scarc_variables.
 scarc_solvers.o : prec.o cons.o func.o scarc_constants.o scarc_methods.o scarc_parser.o scarc_grids.o scarc_matrices.o scarc_mkl.o scarc_amg.o scarc_convergence.o
 scarc_stack.o : cons.o prec.o func.o scarc_constants.o scarc_variables.o scarc_messages.o scarc_storage.o scarc_convergence.o scarc_pointers.o
 scarc_storage.o : cons.o mesh.o func.o scarc_constants.o scarc_types.o scarc_variables.o scarc_messages.o scarc_troubleshooting.o scarc_utilities.o scarc_pointers.o
-scarc_timings.o : cons.o prec.o func.o scarc_constants.o scarc_messages.o 
+scarc_cpu.o : cons.o prec.o func.o scarc_constants.o scarc_messages.o 
 scarc_troubleshooting.o : cons.o func.o mesh.o scarc_constants.o scarc_variables.o 
 scarc_types.o : prec.o geom.o scarc_constants.o 
 scarc_utilities.o : cons.o mesh.o scarc_constants.o scarc_types.o scarc_variables.o scarc_pointers.o
 scarc_variables.o : prec.o scarc_constants.o scarc_types.o
-scarc_vectors.o : cons.o prec.o func.o mesh.o scarc_constants.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_timings.o scarc_mpi.o scarc_pointers.o
+scarc_vectors.o : cons.o prec.o func.o mesh.o scarc_constants.o scarc_variables.o scarc_utilities.o scarc_messages.o scarc_cpu.o scarc_mpi.o scarc_pointers.o
 evac.o : func.o prec.o cons.o type.o mesh.o ieva.o data.o
 geom.o : gsmv.o func.o prec.o cons.o mesh.o turb.o
 radi.o : func.o prec.o cons.o type.o mesh.o rcal.o geom.o
@@ -387,12 +387,12 @@ turb.obj : prec.obj func.obj cons.obj mesh.o
 soot.obj : prec.obj mesh.obj cons.obj func.obj turb.o
 ieva.obj : func.obj prec.obj cons.obj type.obj mesh.o
 pois.obj : prec.obj cons.o
-scarc_amg.obj : cons.obj mesh.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_storage.obj scarc_utilities.obj scarc_messages.obj scarc_timings.obj scarc_mpi.obj scarc_postprocessing.obj scarc_matrices.obj scarc_storage.obj scarc_pointers.obj 
+scarc_amg.obj : cons.obj mesh.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_storage.obj scarc_utilities.obj scarc_messages.obj scarc_cpu.obj scarc_mpi.obj scarc_postprocessing.obj scarc_matrices.obj scarc_storage.obj scarc_pointers.obj 
 scarc_constants.obj : prec.obj cons.obj 
 scarc_convergence.obj : prec.obj scarc_constants.obj scarc_variables.obj scarc_messages.o
-scarc_fft.obj : cons.obj prec.obj pois.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_messages.obj scarc_timings.obj scarc_troubleshooting.obj scarc_vectors.obj scarc_matrices.obj scarc_convergence.obj scarc_pointers.o
+scarc_fft.obj : cons.obj prec.obj pois.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_messages.obj scarc_cpu.obj scarc_troubleshooting.obj scarc_vectors.obj scarc_matrices.obj scarc_convergence.obj scarc_pointers.o
 scarc_gmg.obj : cons.obj prec.obj mesh.obj func.obj scarc_constants.obj scarc_variables.obj scarc_messages.obj scarc_pointers.obj scarc_mpi.obj 
-scarc_grids.obj : cons.obj prec.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_messages.obj scarc_storage.obj scarc_utilities.obj scarc_timings.obj scarc_troubleshooting.obj scarc_mpi.obj scarc_pointers.o
+scarc_grids.obj : cons.obj prec.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_messages.obj scarc_storage.obj scarc_utilities.obj scarc_cpu.obj scarc_troubleshooting.obj scarc_mpi.obj scarc_pointers.o
 scarc_matrices.obj : cons.obj prec.obj mesh.obj func.obj scarc_constants.obj scarc_utilities.obj scarc_storage.obj scarc_mpi.obj scarc_grids.obj scarc_pointers.o
 scarc_messages.obj : prec.obj cons.obj func.obj mesh.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_pointers.o
 scarc_methods.obj : prec.obj cons.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_stack.obj scarc_vectors.obj scarc_messages.obj scarc_postprocessing.obj scarc_convergence.obj scarc_mkl.obj scarc_pointers.obj scarc_mgm.obj scarc_fft.obj scarc_gmg.obj scarc_utilities.obj 
@@ -405,12 +405,12 @@ scarc_postprocessing.obj : cons.obj prec.obj func.obj scarc_constants.obj scarc_
 scarc_solvers.obj : prec.obj cons.obj func.obj scarc_constants.obj scarc_methods.obj scarc_parser.obj scarc_grids.obj scarc_matrices.obj scarc_mkl.obj scarc_amg.obj scarc_convergence.o
 scarc_stack.obj : cons.obj prec.obj func.obj scarc_constants.obj scarc_variables.obj scarc_messages.obj scarc_storage.obj scarc_convergence.obj scarc_pointers.o
 scarc_storage.obj : cons.obj mesh.obj func.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_messages.obj scarc_troubleshooting.obj scarc_utilities.obj scarc_pointers.o
-scarc_timings.obj : cons.obj prec.obj func.obj scarc_constants.obj scarc_messages.obj 
+scarc_cpu.obj : cons.obj prec.obj func.obj scarc_constants.obj scarc_messages.obj 
 scarc_troubleshooting.obj : cons.obj func.obj mesh.obj scarc_constants.obj scarc_variables.obj 
 scarc_types.obj : prec.obj geom.obj scarc_constants.obj 
 scarc_utilities.obj : cons.obj mesh.obj scarc_constants.obj scarc_types.obj scarc_variables.obj scarc_pointers.o
 scarc_variables.obj : prec.obj scarc_constants.obj scarc_types.o
-scarc_vectors.obj : cons.obj prec.obj func.obj mesh.obj scarc_constants.obj scarc_variables.obj scarc_utilities.obj scarc_messages.obj scarc_timings.obj scarc_mpi.obj scarc_pointers.o
+scarc_vectors.obj : cons.obj prec.obj func.obj mesh.obj scarc_constants.obj scarc_variables.obj scarc_utilities.obj scarc_messages.obj scarc_cpu.obj scarc_mpi.obj scarc_pointers.o
 evac.obj : func.obj prec.obj cons.obj type.obj mesh.obj ieva.obj data.o
 geom.obj : gsmv.obj func.obj prec.obj cons.obj mesh.obj turb.o
 radi.obj : func.obj prec.obj cons.obj type.obj mesh.obj rcal.obj geom.o

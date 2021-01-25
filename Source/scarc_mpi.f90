@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_MPI
-
+!
 !> \brief Organize MPI communication structures needed for the different data exchanges in ScaRC/UScaRC
-
+!
 !=======================================================================================================================
 MODULE SCARC_MPI
   
@@ -25,9 +25,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup dimensions for data exchanges
-! -------------------------------------------------------------------------------------------------
+! -----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_EXCHANGE_DIMENSIONS(G, OG, NOM, IREFINE)
 USE SCARC_POINTERS, ONLY: GWC
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN) :: G, OG
@@ -74,9 +74,9 @@ N_EXCHANGES = N_EXCHANGES+1
 
 END SUBROUTINE SCARC_SETUP_EXCHANGE_DIMENSIONS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate several global structures for data exchange
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_GLOBALS
 INTEGER :: NM, NP
 
@@ -107,9 +107,9 @@ CALL SCARC_ALLOCATE_REAL1(MESH_REAL, 1, NMESHES, NSCARC_INIT_ZERO, 'MESH_REAL', 
 
 END SUBROUTINE SCARC_SETUP_GLOBALS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate workspace for data exchanges of different data types and sizes and perform basic exchanges
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_EXCHANGES
 USE SCARC_POINTERS, ONLY: S, OS, OL, OG, OGF, SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID
 INTEGER :: NL, NM, NOM, NLEN
@@ -276,7 +276,7 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_EXCHANGES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Perform data exchange corresponding to requested exchange type 
 ! 
 ! NSCARC_EXCHANGE_BASIC_SIZES     :  exchange initial information about interface sizes
@@ -295,7 +295,7 @@ END SUBROUTINE SCARC_SETUP_EXCHANGES
 ! NSCARC_EXCHANGE_ZONE_NEIGHBORS  :  exchange number of aggregation zones (AMG only)
 ! NSCARC_EXCHANGE_ZONE_TYPES      :  exchange aggregation zone types (AMG only)
 ! 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_EXCHANGE (NTYPE, NPARAM, NL)
 USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID
 INTEGER, INTENT(IN) :: NTYPE, NPARAM, NL
@@ -605,9 +605,9 @@ ENDDO SEND_UNPACK_MESHES_LOOP
 
 END SUBROUTINE SCARC_EXCHANGE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Receive data of type integer
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RECV_MESSAGE_INT(NM, NOM, NL, NTYPE, CTEXT)
 USE SCARC_POINTERS, ONLY: OS, OG
 INTEGER, INTENT(IN) :: NM, NOM, NL, NTYPE
@@ -650,9 +650,9 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_INT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Receive data of type real
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RECV_MESSAGE_REAL(NM, NOM, NL, NTYPE, CTEXT)
 USE SCARC_POINTERS, ONLY: OS, OG
 INTEGER, INTENT(IN) :: NM, NOM, NL, NTYPE
@@ -695,9 +695,9 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_REAL
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Send data of integer type
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SEND_MESSAGE_INT(NM, NOM, NL, NTYPE, CTEXT)
 USE SCARC_POINTERS, ONLY: OS, OG
 CHARACTER(*), INTENT(IN) :: CTEXT
@@ -736,9 +736,9 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_INT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Send data of real type
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SEND_MESSAGE_REAL(NM, NOM, NL, NTYPE, CTEXT)
 USE SCARC_POINTERS, ONLY: OS, OG
 CHARACTER(*), INTENT(IN) :: CTEXT
@@ -777,9 +777,9 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_REAL
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack numbers of cells which are overlapped by neighbor
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_CELL_NUMBERS
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG
 INTEGER :: IOR0, ICG, IWG, IXW, IYW, IZW
@@ -801,9 +801,9 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_CELL_NUMBERS: OL%GHOST_FIRSTE(',IOR0,')=', OL%GHOST_
 ENDDO
 END SUBROUTINE SCARC_PACK_CELL_NUMBERS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack numbers of cells which are overlapped by neighbor
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_CELL_NUMBERS (NM, NOM)
 USE SCARC_POINTERS, ONLY: L, G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM
@@ -834,9 +834,9 @@ WRITE(MSG%LU_DEBUG,*) 'ICE_TO_ICN(',ICE,')=', G%ICE_TO_ICN(ICE), TYPE_GRID
 ENDDO
 END SUBROUTINE SCARC_UNPACK_CELL_NUMBERS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack cell width information 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_CELL_SIZES
 USE SCARC_POINTERS, ONLY: L, OS
 
@@ -849,9 +849,9 @@ OS%SEND_BUFFER_REAL0(6) = L%DZL(L%NZ)
 
 END SUBROUTINE SCARC_PACK_CELL_SIZES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack cell width information 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_CELL_SIZES (NM, NOM)
 USE SCARC_POINTERS, ONLY: L, OL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -867,9 +867,9 @@ IF (OL%GHOST_LASTW( 3) /= 0) L%DZL(L%NZ) = 0.5_EB*(RECV_BUFFER_REAL(6) + L%DZL(L
 
 END SUBROUTINE SCARC_UNPACK_CELL_SIZES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack initial exchange sizes along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_BASIC_SIZES
 USE SCARC_POINTERS, ONLY: OS, OG
 
@@ -878,9 +878,9 @@ OS%SEND_BUFFER_INT0(2)=OG%NZG
 
 END SUBROUTINE SCARC_PACK_BASIC_SIZES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack initial exchange sizes along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_BASIC_SIZES (NM, NOM)
 USE SCARC_POINTERS, ONLY: OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM
@@ -892,10 +892,10 @@ OG%NZG = RECV_BUFFER_INT(2)
 
 END SUBROUTINE SCARC_UNPACK_BASIC_SIZES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
 ! Note: Vector VC is numbered via I, J, K values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_PRESSURE(NM)
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG, OS, SCARC_POINT_TO_HVECTOR
 INTEGER, INTENT(IN) :: NM
@@ -917,10 +917,10 @@ DO IOR0 = -3, 3
 ENDDO
 END SUBROUTINE SCARC_PACK_PRESSURE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
 ! Note: Vector VC is numbered via I, J, K values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_PRESSURE(NM, NOM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL, SCARC_POINT_TO_HVECTOR
 INTEGER, INTENT(IN) :: NM, NOM
@@ -947,9 +947,9 @@ DO IOR0 = -3, 3
 ENDDO
 END SUBROUTINE SCARC_UNPACK_PRESSURE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MGM_TRUE(NM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, OS
 INTEGER, INTENT(IN) :: NM
@@ -1022,9 +1022,9 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 
 END SUBROUTINE SCARC_PACK_MGM_TRUE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MGM_TRUE(NM, NOM)
 USE SCARC_POINTERS, ONLY: 
 USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_REAL, OUHL, OUHL_PREV, SCARC_POINT_TO_BUFFER_REAL
@@ -1050,9 +1050,9 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_TRUE: NM, NOM, ICG, IWG, OUHL
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_TRUE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MGM_MEAN(NM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, OS, UHL
 INTEGER, INTENT(IN) :: NM
@@ -1085,9 +1085,9 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 
 END SUBROUTINE SCARC_PACK_MGM_MEAN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MGM_MEAN(NM, NOM)
 USE SCARC_POINTERS, ONLY: OL, OG, OUHL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -1116,10 +1116,10 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MGM_MEAN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
 ! Note: Vector VC is numbered via I, J, K values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MGM_VELO(NM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, OS, UU, VV, WW
 INTEGER, INTENT(IN) :: NM
@@ -1182,10 +1182,10 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 1E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
 ! Note: Vector VC is numbered via I, J, K values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MGM_VELO2(NM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, OS, UU, VV, WW
 INTEGER, INTENT(IN) :: NM
@@ -1256,9 +1256,9 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 3E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MGM_VELO(NM, NOM)
 USE SCARC_POINTERS, ONLY: OL, OG, OVEL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -1288,9 +1288,9 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 1E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OVEL
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MGM_VELO2(NM, NOM)
 USE SCARC_POINTERS, ONLY: OL, OG, OUIP, OVEL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -1322,9 +1322,9 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OUIP
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO2
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping auxiliary vector 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_AUXILIARY(NL)
 USE SCARC_POINTERS, ONLY: L, G, OL, OG, OS, F
 INTEGER, INTENT(IN) :: NL
@@ -1358,9 +1358,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_AUXILIARY
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping auxiliary vector 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_AUXILIARY (NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM, NL
@@ -1387,9 +1387,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_AUXILIARY
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack and unpack overlapping nullspace vector 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_NULLSPACE(NL)
 USE SCARC_POINTERS, ONLY: L, G, F, OL, OG, OS
 INTEGER, INTENT(IN) :: NL
@@ -1423,9 +1423,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_NULLSPACE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping nullspace vector 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_NULLSPACE (NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM, NL
@@ -1452,9 +1452,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_NULLSPACE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_VECTOR_PLAIN(NM, NL, NV)
 USE SCARC_POINTERS, ONLY: OL, OG, OS, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NM, NL, NV
@@ -1484,9 +1484,9 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') VC
 
 END SUBROUTINE SCARC_PACK_VECTOR_PLAIN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_VECTOR_PLAIN(NM, NOM, NL, NVECTOR)
 USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NM, NOM, NL, NVECTOR
@@ -1519,9 +1519,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_VECTOR_PLAIN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of solid vector IS_SOLID
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_SOLIDS
 USE SCARC_POINTERS, ONLY: L, G, OL, OG, OS
 INTEGER :: IOR0, ICG, IWG, IXW, IYW, IZW
@@ -1545,9 +1545,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_SOLIDS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_SOLIDS(NM, NOM)
 USE SCARC_POINTERS, ONLY: L, G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM
@@ -1578,9 +1578,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_SOLIDS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping and internal parts of specified vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_VECTOR_MEAN(NM, NL, NVECTOR)
 USE SCARC_POINTERS, ONLY: OL, OG, OS, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NM, NL, NVECTOR
@@ -1608,9 +1608,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_VECTOR_MEAN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping and internal parts of specified vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_VECTOR_MEAN(NM, NOM, NL, NVECTOR)
 USE SCARC_POINTERS, ONLY: G, OG, OL, RECV_BUFFER_REAL, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM, NL, NVECTOR
@@ -1640,9 +1640,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_VECTOR_MEAN
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix columns (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MATRIX_COLS(NMATRIX)                
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG, AC, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NMATRIX
@@ -1680,9 +1680,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_COLS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix columns (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MATRIX_COLS(NM, NOM, NMATRIX)
 USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
@@ -1725,9 +1725,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_COLS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix columns (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MATRIX_COLSG(NMATRIX)                
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG, AC, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NMATRIX
@@ -1768,9 +1768,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_COLSG
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix columns (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MATRIX_COLSG(NM, NOM, NMATRIX)
 USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
@@ -1816,9 +1816,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_COLSG
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix values (both storage techniques)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MATRIX_VALS(NMATRIX, NL)
 USE SCARC_POINTERS, ONLY: G, AB, AC, OS, OL, OG, SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NMATRIX, NL
@@ -1863,9 +1863,9 @@ END SELECT
 
 END SUBROUTINE SCARC_PACK_MATRIX_VALS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix values (both storage techniques)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MATRIX_VALS(NM, NOM, NL, NMATRIX)
 USE SCARC_POINTERS, ONLY: OL, OG, OAB, OAC, RECV_BUFFER_REAL, &
                           SCARC_POINT_TO_OTHER_BMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_REAL
@@ -1915,9 +1915,9 @@ END SELECT
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_VALS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack information about matrix sizes into send vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MATRIX_SIZES(NL)
 USE SCARC_POINTERS, ONLY: OS, OG
 INTEGER, INTENT(IN) :: NL
@@ -1935,9 +1935,9 @@ END SELECT
 
 END SUBROUTINE SCARC_PACK_MATRIX_SIZES
    
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack information about matrix sizes into send vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MATRIX_SIZES(NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM, NL
@@ -1956,9 +1956,9 @@ END SELECT
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_SIZES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix diagonals (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_MATRIX_DIAGS(NTYPE)
 USE SCARC_POINTERS, ONLY: G, AC, OS, OL, OG, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NTYPE
@@ -1983,9 +1983,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_DIAGS
       
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping information about matrix diagonals (compact storage technique only)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS(NM, NOM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -2009,9 +2009,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_CELL_NEIGHBORS(NL)
 USE SCARC_POINTERS, ONLY: L, G, OS, OL, OG, A, F, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
@@ -2047,9 +2047,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_CELL_NEIGHBORS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS(NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM, NL
@@ -2083,9 +2083,9 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_ZONE_NEIGHBORS(NL)
 USE SCARC_POINTERS, ONLY: L, G, OS, OL, OG, A, F, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
@@ -2128,9 +2128,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_ZONE_NEIGHBORS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_ZONE_NEIGHBORS(NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM, NL
@@ -2170,9 +2170,9 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_ZONE_NEIGHBORS:B: ICG, OZONE, GZONE :', &
 ENDDO
 END SUBROUTINE SCARC_UNPACK_ZONE_NEIGHBORS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_LAYER2_NUMS
 USE SCARC_POINTERS, ONLY: OS, OL, OG, L, G
 INTEGER :: IOR0, ICG, INUM
@@ -2198,9 +2198,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_NUMS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_LAYER2_NUMS(NM, NOM)
 USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM
@@ -2222,9 +2222,9 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_NUMS: ICG, LAYER2_NUMS:', ICG, RECV_BUFFER_
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_NUMS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_LAYER2_VALS
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG
 INTEGER :: IOR0, ICG, IC
@@ -2243,9 +2243,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_VALS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_LAYER2_VALS(NM, NOM)
 USE SCARC_POINTERS, ONLY: L, OL, G, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
@@ -2270,9 +2270,9 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_VALS: ICG, L%L2PTR, G%ELAYER2_VALS:', ICG, 
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_VALS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones information into send vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_ZONE_TYPES
 USE SCARC_POINTERS, ONLY: G, OS, OL, OG
 INTEGER :: IOR0, ICG, ICW, ICE, LL
@@ -2303,9 +2303,9 @@ DO IOR0 = -3, 3
 ENDDO
 END SUBROUTINE SCARC_PACK_ZONE_TYPES
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones information into send vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UNPACK_ZONE_TYPES(NM, NOM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
 INTEGER, INTENT(IN) :: NM, NOM

@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_FFT
-
+!
 !> \brief Define environment needed for the use of the FFT preconditioner based on Crayfishpak
-
+!
 !=======================================================================================================================
 MODULE SCARC_FFT
   
@@ -16,7 +16,7 @@ USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
 USE SCARC_MESSAGES
-USE SCARC_TIMINGS, ONLY: CPU
+USE SCARC_CPU, ONLY: CPU
 USE SCARC_TROUBLESHOOTING
 USE SCARC_VECTORS
 USE SCARC_MATRICES
@@ -26,10 +26,10 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Setup data structures for the use of blockwise FFT methods as preconditioners
 ! New here: Perform own initialization of FFT based on H2CZIS/H3CZIS and use own SAVE and WORK arrays
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FFT(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: M, S, L, FFT, SCARC_POINT_TO_GRID
 USE POIS, ONLY: H2CZIS, H3CZIS
@@ -43,7 +43,7 @@ CROUTINE = 'SCARC_SETUP_FFT'
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       FFT => SCARC(NM)%LEVEL(NL)%FFT
 
       FFT%LBC = M%LBC
@@ -140,10 +140,10 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_FFT
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for blockwise FFT methods with overlap
 ! New here: Perform own initialization of FFT based on H2CZIS/H3CZIS and use own SAVE and WORK arrays
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FFTO(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: M, S, L, FFT, SCARC_POINT_TO_GRID
 USE POIS, ONLY: H2CZIS, H3CZIS
@@ -157,7 +157,7 @@ CROUTINE = 'SCARC_SEtUP_FFTO'
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       FFT => SCARC(NM)%LEVEL(NL)%FFT
 
       FFT%LBC = M%LBC

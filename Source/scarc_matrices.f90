@@ -1,12 +1,12 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_MATRICES
-
+!
 !> \brief Setup and organize the matrix types needed for the different ScaRC/UscaRC solvers
-
+!
 !   This inlcudes local/global Poisson and Laplace matrices, their boundary conditions and 
 !   a corresponding condensing in the purely Neumann case
-
+!
 !=======================================================================================================================
 MODULE SCARC_MATRICES
   
@@ -26,10 +26,10 @@ IMPLICIT NONE
 CONTAINS
 
 
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Setup system of equations (Poisson matrix + BC's) for different variants of ScaRC
 ! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
-! ----------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEMS
 INTEGER :: NM, NL
 #ifdef WITH_MKL
@@ -286,9 +286,9 @@ CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_FACE  , NLEVEL_MIN, 'FACE_AFTER_SYSTEM')
 END SUBROUTINE SCARC_SETUP_SYSTEMS
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Define sizes for system matrix A (including extended regions related to overlaps)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON_SIZES(NL)
 USE SCARC_POINTERS, ONLY: S, L, G, OG, A, OA, AB, OAB, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
@@ -299,7 +299,7 @@ INTEGER :: NM, NOM, INBR
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    
    SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
    
@@ -435,9 +435,9 @@ IF (NMESHES > 1) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MATRIX_SIZES, NSCARC_MATRI
 END SUBROUTINE SCARC_SETUP_POISSON_SIZES
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Define sizes for local unstructured Laplace matrices
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LOCAL_LAPLACE_SIZES(NL)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
@@ -473,13 +473,13 @@ INTEGER :: NM, IC, ICOL, JC
 
 IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
    DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON)
       A%COLG = A%COL
    ENDDO
 ELSE
    DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON)
       DO IC = 1, G%NC
          DO ICOL = A%ROW(IC), A%ROW(IC+1)-1
@@ -531,9 +531,9 @@ ENDDO MESHES_FINE_LOOP
 END SUBROUTINE SCARC_SETUP_GLOBAL_POISSON_OVERLAPS
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Check if specified cell is within a given mesh
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION SCARC_CELL_WITHIN_MESH(G, NM, IC)
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN) :: G
 INTEGER, INTENT(IN) :: NM, IC
@@ -552,7 +552,7 @@ RETURN
 END FUNCTION SCARC_CELL_WITHIN_MESH
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate Poisson matrix for the usual 5-point-stencil (2D) or 7-point-stencil (3D)
 ! Compact storage technique (POISSON)
 !    Compression technique to store sparse matrices, non-zero entries are stored
@@ -563,7 +563,7 @@ END FUNCTION SCARC_CELL_WITHIN_MESH
 !    COL points to the columns which non-zero entries in the matrix stencil
 ! Bandwise storage technique (POISSONB)
 !    explanation to come ...
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON (NM, NL)
 USE SCARC_POINTERS, ONLY: S, L, G, OG, A, AB, OA, OAB, &
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
@@ -587,7 +587,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
    
       ! Allocate main matrix on non-overlapping part of mesh
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON)
       CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
 
@@ -643,7 +643,7 @@ CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
    
       ! Allocate main matrix on non-overlapping part of mesh
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       AB => SCARC_POINT_TO_BMATRIX (G, NSCARC_MATRIX_POISSON)
       CALL SCARC_ALLOCATE_BMATRIX(AB, NL, 'G%POISSONB', CROUTINE)
    
@@ -689,9 +689,9 @@ END SELECT SELECT_STORAGE_TYPE
 END SUBROUTINE SCARC_SETUP_POISSON
 
 
-! ---------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup local Laplace matrices 
-! ---------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LAPLACE (NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
@@ -704,7 +704,7 @@ CROUTINE = 'SCARC_SETUP_LAPLACE'
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_POISSON: TYPE_SCOPE:', TYPE_SCOPE(0)
 #endif
-CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
 CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
 
@@ -750,7 +750,7 @@ CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE: NO BDRY')
  
 END SUBROUTINE SCARC_SETUP_LAPLACE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Assemble local unstructured Laplace matrices
 ! The grid numbering is permuted in such a way that all the nonzero entries of the RHS 
 ! are located of the end of the corresponding vector
@@ -758,7 +758,7 @@ END SUBROUTINE SCARC_SETUP_LAPLACE
 ! also the entries along the internal interfaces
 ! All other entries of the RHS are zero for the local laplace problems, such that the
 ! forward substitution process Ly=b only has the start from the nonzero entries on
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PERMUTED_LAPLACE (NM, NL)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
@@ -854,12 +854,12 @@ CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_PERMUTED_LAPLACE: NO BDRY')
  
 END SUBROUTINE SCARC_SETUP_PERMUTED_LAPLACE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set main diagonal entry for Poisson matrix in compact storage technique
 ! These values correspond to the full matrix of the global problem
 ! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
 USE SCARC_POINTERS, ONLY: L, A
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
@@ -877,9 +877,9 @@ A%STENCIL(0) = A%VAL(IP)
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MAINDIAG
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell has a neighbor and, if yes, return corresponding wall cell index
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)
 USE SCARC_POINTERS, ONLY: L, G, F, GWC
 INTEGER, INTENT(IN) :: IC, IOR0
@@ -913,9 +913,9 @@ ENDDO SEARCH_WALL_CELLS_LOOP
 END FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAG (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
 USE SCARC_POINTERS, ONLY: L, F, G, A
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
@@ -974,9 +974,9 @@ ENDIF
 END SUBROUTINE SCARC_SETUP_SUBDIAG
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PERMUTED_SUBDIAG (IX1, IY1, IZ1, IX2, IY2, IZ2, ICOL, IP, IOR0)
 USE SCARC_POINTERS, ONLY: L, F, A
 INTEGER, INTENT(IN) :: IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0, ICOL
@@ -1013,9 +1013,9 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_PERMUTED_SUBDIAG
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set boundary conditions including the interfaces between the meshes
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY_WITH_INTERFACES (NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NM, NL
@@ -1187,12 +1187,12 @@ CALL SCARC_DEBUG_CMATRIX(A, 'LAPLACE', 'LAPLACE AFTER MGM_SETUP_BOUNDARY')
 END SUBROUTINE SCARC_SETUP_BOUNDARY_WITH_INTERFACES
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set main diagonal entry for Poisson matrix in bandwise storage technique
 ! These values correspond to the full matrix of the global problem
 ! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAGB (IC, IX, IY, IZ)
 USE SCARC_POINTERS, ONLY: L, G, AB
 INTEGER, INTENT(IN)  :: IC, IX, IY, IZ
@@ -1210,9 +1210,9 @@ AB%STENCIL(0) = AB%VAL(IC, ID)
 END SUBROUTINE SCARC_SETUP_MAINDIAGB
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in bandwise storage technique on specified face
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAGB (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0)
 USE SCARC_POINTERS, ONLY: L, F, G, AB
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
@@ -1268,13 +1268,13 @@ ENDIF
 END SUBROUTINE SCARC_SETUP_SUBDIAGB
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Get maximum stencil size in specified matrix 
 ! This is known to be 7 for the 3D-Poisson matrix on finest level
 ! In algebraic multigrid-method this size results only in the course and can be much larger
 ! (required for dimensioning the coarse-level matrices)
 ! If NTYPE == 0, only internal matrix part is considered, if NTYPE == 1, also the overlap
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_GET_MATRIX_STENCIL_MAX (A, NLEN)
 TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
 INTEGER, INTENT(IN) :: NLEN
@@ -1292,9 +1292,9 @@ END SUBROUTINE SCARC_GET_MATRIX_STENCIL_MAX
 
 
 #ifdef WITH_MKL
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup symmetric version of Poisson matrix for MKL solver in double precision
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON_MKL (NM, NL)
 USE SCARC_POINTERS, ONLY: G, A, AS, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
@@ -1308,7 +1308,7 @@ INTEGER, POINTER, DIMENSION(:) :: ACOLG, ASCOLG
 
 CROUTINE = 'SCARC_SETUP_POISSON_MKL'
 
-CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 A  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON)
 AS => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON_SYM)
 
@@ -1499,7 +1499,7 @@ END SUBROUTINE SCARC_SETUP_POISSON_MKL
 #endif
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Insert correct boundary conditions into system matrix
 
 ! If A is a pure Neumann matrix, get neighboring cell indices of communicated stencil legs for 
@@ -1510,13 +1510,13 @@ END SUBROUTINE SCARC_SETUP_POISSON_MKL
 
 ! If there are no Dirichlet BC's transform sytem into condensed one by replacing the
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY (NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
 
-CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
 SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
@@ -1661,10 +1661,10 @@ END SELECT
 END SUBROUTINE SCARC_SETUP_BOUNDARY
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup condensed system for compact matrix storage technique
 ! Define switch entries for toggle between original and condensed values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_CMATRIX_CONDENSED (NM)
 USE SCARC_POINTERS, ONLY: L, G, A, ACO, GWC
 INTEGER, INTENT(IN) :: NM
@@ -1798,10 +1798,10 @@ A%N_CONDENSED = ICO
 END SUBROUTINE SCARC_SETUP_CMATRIX_CONDENSED
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup condensed system for bandwise matrix storage technique
 ! Define switch entries for toggle between original and condensed values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BMATRIX_CONDENSED (NM)
 USE SCARC_POINTERS, ONLY: L, G, AB, ABCO, GWC
 INTEGER, INTENT(IN) :: NM
@@ -1916,9 +1916,9 @@ AB%N_CONDENSED = ICO
 END SUBROUTINE SCARC_SETUP_BMATRIX_CONDENSED
 
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Setup condensed system in case of periodic or pure Neumann boundary conditions
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEM_CONDENSED (NV, NL, ITYPE)
 USE SCARC_POINTERS, ONLY: L, G, OG, F, OL, VC, A, ACO, AB, ABCO, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_VECTOR
@@ -1987,7 +1987,7 @@ ENDDO
  
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    SNODE = PROCESS(NM)
    RNODE = PROCESS(NMESHES)
@@ -2030,9 +2030,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_SYSTEM_CONDENSED
 
 
-! --------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------------------
 !> \brief Extract overlapping matrix parts after data exchange with neighbors and add them to main matrix
-! --------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_EXTRACT_MATRIX_OVERLAPS (NMATRIX, NTYPE, NL)
 USE SCARC_POINTERS, ONLY: G, F, OL, OG, A, OA, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
@@ -2119,9 +2119,9 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_EXTRACT_MATRIX_OVERLAPS
 
 
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Extract diagonal of Poisson matrix and store it in a separate vector for further use
-! ------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_EXTRACT_MATRIX_DIAGONAL(NL)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NL
@@ -2131,7 +2131,7 @@ CROUTINE = 'SCARC_EXTRACT_MATRIX_DIAGONAL'
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON)
 
    CALL SCARC_ALLOCATE_REAL1 (G%DIAG, 1, G%NCE2, NSCARC_INIT_ZERO, 'G%DIAG', CROUTINE)

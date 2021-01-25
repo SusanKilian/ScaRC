@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_VECTORS
-
+!
 !> \brief Define a set of Linear Algebra operations based on vectors and matrices
-
+!
 !=======================================================================================================================
 MODULE SCARC_VECTORS
   
@@ -16,7 +16,7 @@ USE MPI
 USE SCARC_CONSTANTS
 USE SCARC_VARIABLES
 USE SCARC_UTILITIES, ONLY: SCARC_GET_MATRIX_TYPE
-USE SCARC_TIMINGS, ONLY: SCARC_SETUP_TIMINGS
+USE SCARC_CPU, ONLY: SCARC_SETUP_TIMINGS
 USE SCARC_MPI, ONLY: SCARC_SETUP_GLOBALS, SCARC_SETUP_EXCHANGES, SCARC_EXCHANGE
 #ifdef WITH_SCARC_DEBUG
 USE SCARC_MESSAGES, ONLY: SCARC_DEBUG_LEVEL
@@ -26,10 +26,10 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Vector multiplied with a constant scalar is added to another vector 
 !     DY(I) = DA * DX(I) + DY(I) 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DAXPY_CONSTANT(N, DA, DX, DY)
 REAL(EB), INTENT(IN):: DA
 REAL(EB), INTENT(IN), DIMENSION(:):: DX
@@ -45,10 +45,10 @@ ENDDO
 
 END SUBROUTINE SCARC_DAXPY_CONSTANT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Vector multiplied with a constant scalar is added to vector multiplied with another scalar
 !     DY(I) = DA1 * DX(I) + DA2 * DY(I) 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DAXPY_CONSTANT_DOUBLE(N, DA1, DX, DA2, DY)
 REAL(EB), INTENT(IN):: DA1, DA2
 REAL(EB), INTENT(IN), DIMENSION(:):: DX
@@ -64,10 +64,10 @@ ENDDO
 
 END SUBROUTINE SCARC_DAXPY_CONSTANT_DOUBLE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Vector multiplied with variable scalars (componentwise) is added to another vector 
 !     DY(I) = DA(I)*DX(I) + DY(I)
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DAXPY_VARIABLE(N, DA, DX, DY)
 REAL(EB), INTENT(IN), DIMENSION(:):: DA, DX
 REAL(EB), INTENT(INOUT), DIMENSION(:):: DY
@@ -85,10 +85,10 @@ ENDDO
 
 END SUBROUTINE SCARC_DAXPY_VARIABLE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Vector is multiplied with a constant scalar 
 !     DY(I) = DA(I)*DX(I) 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SCALING_CONSTANT(N, SCAL, DX, DY)
 REAL(EB), INTENT(IN), DIMENSION(:):: DX
 REAL(EB), INTENT(INOUT), DIMENSION(:):: DY
@@ -104,10 +104,10 @@ ENDDO
 
 END SUBROUTINE SCARC_SCALING_CONSTANT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Vector is multiplied with variable scalars (componentwise)
 !     DY(I) = DA(I)*DX(I) 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SCALING_VARIABLE(N, DA, DX, DY)
 REAL(EB), INTENT(IN), DIMENSION(:):: DA, DX
 REAL(EB), INTENT(INOUT), DIMENSION(:):: DY
@@ -122,9 +122,9 @@ ENDDO
 
 END SUBROUTINE SCARC_SCALING_VARIABLE
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Compute global scalar-product including global data exchange
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 REAL(EB) FUNCTION SCARC_SCALAR_PRODUCT(NV1, NV2, NL)
 USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
@@ -144,7 +144,7 @@ MESH_REAL = 0.0_EB
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)
@@ -174,9 +174,9 @@ SCARC_SCALAR_PRODUCT = RANK_REAL
 CPU(MYID)%SCALAR_PRODUCT = CPU(MYID)%SCALAR_PRODUCT + CURRENT_TIME()-TNOW
 END FUNCTION SCARC_SCALAR_PRODUCT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Compute global L2-norm including global data exchange
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 REAL(EB) FUNCTION SCARC_L2NORM(NV1, NL)
 INTEGER, INTENT(IN) :: NV1, NL
 REAL(EB) :: TNOW
@@ -190,9 +190,9 @@ SCARC_L2NORM = GLOBAL_REAL
 CPU(MYID)%L2NORM =CPU(MYID)%L2NORM+CURRENT_TIME()-TNOW
 END FUNCTION SCARC_L2NORM
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Compute linear combination of two vectors for bandwise storage technique
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VECTOR_SUM(NV1, NV2, SCAL1, SCAL2, NL)
 USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
@@ -204,7 +204,7 @@ EXTERNAL :: DAXPBY
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
@@ -219,9 +219,9 @@ ENDDO
 
 END SUBROUTINE SCARC_VECTOR_SUM
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Define vector2 to be a scaled copy of vector 1
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VECTOR_COPY(NV1, NV2, SCAL1, NL)
 USE SCARC_POINTERS, ONLY: G, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV1, NV2, NL
@@ -233,7 +233,7 @@ EXTERNAL :: DCOPY, DSCAL
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
@@ -248,25 +248,25 @@ ENDDO
 
 END SUBROUTINE SCARC_VECTOR_COPY
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Clear vector
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VECTOR_CLEAR(NV, NL)
 USE SCARC_POINTERS, ONLY: VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
 INTEGER :: NM
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC => SCARC_POINT_TO_VECTOR(NM, NL, NV)
    VC =  0.0_EB
 ENDDO
 
 END SUBROUTINE SCARC_VECTOR_CLEAR
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specified value
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VECTOR_RANDOM_INIT (NV, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -275,7 +275,7 @@ REAL (EB) :: VAL
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
 
@@ -296,9 +296,9 @@ ENDDO
 
 END SUBROUTINE SCARC_VECTOR_RANDOM_INIT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specified value
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_VECTOR_INIT (NV, VAL, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -307,7 +307,7 @@ INTEGER :: IC, NM, I, J, K
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
 
@@ -330,9 +330,9 @@ ENDDO
 
 END SUBROUTINE SCARC_VECTOR_INIT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set exact solution according to specified function
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 DOUBLE PRECISION FUNCTION EXACT(X,Z)
 REAL (EB), INTENT(IN) :: X, Z
 !EXACT = (X**2 - X**4) * (Z**4 - Z**2)                              
@@ -341,9 +341,9 @@ REAL (EB), INTENT(IN) :: X, Z
 EXACT = - X * (0.8_EB - X) * Z * (0.8_EB - Z)        ! FUNCTION 3
 END FUNCTION EXACT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Set right hand side according to specified function
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 DOUBLE PRECISION FUNCTION RHS(X,Z)
 REAL (EB), INTENT(IN) :: X, Z
 !RHS = 2.0_EB*((1.0_EB - 6.0_EB*X**2)*Z**2*(1.0_EB-Z**2)+(1.0_EB-6.0_EB*Z**2)*X**2*(1.0_EB-X**2))
@@ -352,9 +352,9 @@ REAL (EB), INTENT(IN) :: X, Z
 RHS = 2.0_EB * (X * (0.8_EB - X) + Z * (0.8_EB - Z))
 END FUNCTION RHS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Preset right hand side in such a way that exact solution is known
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRESET_EXACT (NE, NL)
 USE SCARC_POINTERS, ONLY: M, L, G, VC, XMID, ZMID, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 USE SCARC_CONVERGENCE, ONLY: ITE_TOTAL
@@ -386,9 +386,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PRESET_EXACT
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Preset vector with specific values
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRESET_VECTOR (NV, NL)
 USE SCARC_POINTERS, ONLY: M, L, G, VC, XMID, ZMID, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -396,7 +396,7 @@ INTEGER :: IC, NM, I, K
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
 
    VC = 0.0_EB
@@ -423,9 +423,9 @@ ENDDO
 
 END SUBROUTINE SCARC_PRESET_VECTOR
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Preset right hand side in such a way that exact solution is known
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRESET_RHS (NV, NL)
 USE SCARC_POINTERS, ONLY: M, L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
@@ -442,7 +442,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    M%BZS = 0.0_EB
    M%BZF = 0.0_EB
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
 
    DO K = 1, L%NZ
@@ -459,11 +459,11 @@ ENDDO
 
 END SUBROUTINE SCARC_PRESET_RHS
 
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Compute global matrix-vector product A*x = y on grid level NL
 ! where NV1 is a reference to X and NV2 is a reference to Y
 ! including data exchange along internal boundaries
-! ------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MATVEC_PRODUCT(NV1, NV2, NL)
 USE SCARC_POINTERS, ONLY: L, OL, G, F, OG, GWC, A, AB, V1, V2, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
@@ -501,7 +501,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
       MESHES_COMPACT_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
-         CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
          IF (IS_LAPLACE) THEN
             A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE)
          ELSE
@@ -552,7 +552,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
          
             MESHES_BANDWISE_VARIABLE_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          
-               CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+               CALL SCARC_POINT_TO_GRID (NM, NL)                                    
                AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
          
                V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)               ! point to X-vector
@@ -599,7 +599,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
 
             MESHES_BANDWISE_CONSTANT_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          
-               CALL SCARC_POINT_TO_GRID (NM, NL)                                   ! Sets grid pointer G
+               CALL SCARC_POINT_TO_GRID (NM, NL)                                    
                AB => G%POISSONB
          
                V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)               ! point to X-vector

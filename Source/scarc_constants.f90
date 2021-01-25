@@ -1,9 +1,9 @@
 !=======================================================================================================================
-
+!
 ! MODULE SCARC_CONSTANTS
-
+!
 !> \brief Define all constants needed in for the different solution strategies in ScaRC/UScaRC
-
+!
 !=======================================================================================================================
 MODULE SCARC_CONSTANTS
 
@@ -165,10 +165,10 @@ INTEGER, PARAMETER :: NSCARC_MAX_FACE_NEIGHBORS      = 10        !< Maximum sett
 INTEGER, PARAMETER :: NSCARC_MAX_STENCIL             =  7        !< Maximum settings: Number of legs in Poisson stencil
 INTEGER, PARAMETER :: NSCARC_MAX_BUFFER0             = 10        !< Maximum settings: Buffer size for initial data exchanges
 
-INTEGER, PARAMETER :: NSCARC_STORAGE_CREATE           =  1       !< Type of memory operation: create array
-INTEGER, PARAMETER :: NSCARC_STORAGE_REMOVE           =  2       !< Type of memory operation: remove array
-INTEGER, PARAMETER :: NSCARC_STORAGE_RESIZE           =  3       !< Type of memory operation: resize array
-INTEGER, PARAMETER :: NSCARC_STORAGE_MAX              = 10000    !< Current maximum of allocatable arrays (may be increased)
+INTEGER, PARAMETER :: NSCARC_STORAGE_CREATE          =  1        !< Type of memory operation: create array
+INTEGER, PARAMETER :: NSCARC_STORAGE_REMOVE          =  2        !< Type of memory operation: remove array
+INTEGER, PARAMETER :: NSCARC_STORAGE_RESIZE          =  3        !< Type of memory operation: resize array
+INTEGER, PARAMETER :: NSCARC_STORAGE_MAX             = 10000     !< Current maximum of allocatable arrays (may be increased)
                    
 INTEGER, PARAMETER :: NSCARC_METHOD_KRYLOV           =  1        !< Global ScaRC method: Krylov solver
 INTEGER, PARAMETER :: NSCARC_METHOD_MULTIGRID        =  2        !< Global ScaRC method: Multigrid solver
@@ -320,7 +320,6 @@ REAL(EB), PARAMETER :: W4     =  4.0_EB                          !< Weighting pa
 REAL(EB), PARAMETER :: W9     =  9.0_EB                          !< Weighting parameter for geometric multigrid method
 REAL(EB), PARAMETER :: W12    = 12.0_EB                          !< Weighting parameter for geometric multigrid method
 REAL(EB), PARAMETER :: W16    = 16.0_EB                          !< Weighting parameter for geometric multigrid method
-
 #ifdef WITH_SCARC_POSTPROCESSING
 INTEGER, PARAMETER :: NSCARC_DUMP_A                  =  1        !< Flag for the dumping of matrix A
 INTEGER, PARAMETER :: NSCARC_DUMP_B                  =  2        !< Flag for the dumping of right hand side B
@@ -329,5 +328,4 @@ INTEGER, PARAMETER :: NSCARC_DUMP_MESH               =  4        !< Flag for the
 #endif
 
 END MODULE SCARC_CONSTANTS
-
 
