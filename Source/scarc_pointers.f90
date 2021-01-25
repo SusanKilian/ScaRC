@@ -186,10 +186,12 @@ L => NULL();  LF => NULL();  LC => NULL()
 G => NULL();  GF => NULL();  GC => NULL()
 F => NULL();  FF => NULL();  FC => NULL()
 A => NULL();  AF => NULL();  AC => NULL()
+#ifdef WITH_SCARC_AMG
 P => NULL();  PF => NULL();  PC => NULL()
 R => NULL();  RF => NULL();  RC => NULL()
 C => NULL();  CF => NULL();  CC => NULL()
 Z => NULL();  ZF => NULL();  ZC => NULL()
+#endif
 
 END SUBROUTINE SCARC_POINT_TO_NONE
 
