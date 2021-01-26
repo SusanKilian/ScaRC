@@ -50,7 +50,7 @@ IF (MYID == 0) THEN
    WRITE (MSG%FILE_MEM, '(A,A)') TRIM(CHID),'_scarc.mem'
    MSG%LU_MEM = GET_FILE_NUMBER()
    OPEN (MSG%LU_MEM, FILE=MSG%FILE_MEM)
-   WRITE(MSG%LU_MEM,1001) 'Number','Rank','Name of array','Calling routine', &
+   WRITE(MSG%LU_MEM,1000) 'Number','Rank','Name of array','Calling routine', &
                           'State','Type','Dimension','Left1','Right1', &
                           'Left2','Right2','Left3','Right3','Size(array)', &
                           'Sum(LOGICAL)','Sum(INTEGER)','Sum(REAL_EB)','Sum(REAL_FB)'
@@ -75,7 +75,7 @@ DO NM=LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 #endif
 #ifdef WITH_SCARC_VERBOSE
-1001 FORMAT(A8,',',A8,',',A30,',',A40,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',&
+1000 FORMAT(A8,',',A8,',',A30,',',A40,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',A10,',',&
             A10,',',A10,',',A15,',',A15,',',A15,',',A15,',',A15)
 #endif
 END SUBROUTINE SCARC_SETUP_MESSAGES
@@ -225,7 +225,6 @@ CLOSE(LU_DUMP)
 
 END SUBROUTINE SCARC_VERBOSE_VECTOR3
 
-#ifdef WITH_SCARC_AMG
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for BLENDER
 ! --------------------------------------------------------------------------------------------------------------------------
@@ -366,7 +365,7 @@ CLOSE(MAGG)
 1000 FORMAT(I8,',', I8,',', E14.6,',',  E14.6,',', E14.6)
 END SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES
 #endif
-#endif
+
 #ifdef WITH_SCARC_DEBUG
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Assign formats for debug messages dependent on length of mesh
@@ -613,10 +612,6 @@ WRITE(MSG%LU_DEBUG,*) '=========================================================
 
 END SUBROUTINE SCARC_DEBUG_VECTOR3_BIG
 
-! =================================================================================================================
-! Start  WITH_SCARC_DEBUG  - Part
-! Collection of routines which print out different quantities or allow to preset them
-! =================================================================================================================
 ! ----------------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for integer vector
 ! ----------------------------------------------------------------------------------------------------------------------------
@@ -718,13 +713,13 @@ WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%VAL:'
 DO IC = 1, A%N_ROW-1
    IF (A%ROW(IC) == 0) CYCLE
       IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
-         CFORM = "(I8,A,10E10.2)"
+         CFORM = "(I8,A,10E11.3)"
       ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
-         CFORM = "(I8,A,20E10.2)"
+         CFORM = "(I8,A,20E11.3)"
       ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
-         CFORM = "(I8,A,30E10.2)"
+         CFORM = "(I8,A,30E11.3)"
       ELSE
-         CFORM = "(I8,A,40E10.2)"
+         CFORM = "(I8,A,40E11.3)"
       ENDIF
    !WRITE(MSG%LU_DEBUG,*) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
    WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
@@ -949,16 +944,12 @@ DO IZ = MESHES(NM)%KBP1, 0, -1
    IF (TWO_D) THEN
       DO IY = MESHES(NM)%JBAR, 1, -1
          WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#endif
       ENDDO
    ELSE
       DO IY = MESHES(NM)%JBP1, 0, -1
          WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-#endif
       ENDDO
    ENDIF
 ENDDO
@@ -1488,7 +1479,6 @@ ENDDO MESHES_LOOP
 1001 FORMAT(I8,',')
 1002 FORMAT(E10.2,',')
 END SUBROUTINE SCARC_PYTHON_MATRIX
-
 
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out aggregation zones information on specified level for PYTHON

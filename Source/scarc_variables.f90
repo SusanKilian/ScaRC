@@ -95,7 +95,7 @@ LOGICAL :: SCARC_ERROR_FILE = .FALSE.                            !< Print ScaRC 
 INTEGER :: IERROR = 0                                            !< General error flag - used at different positions
 
 #ifdef WITH_SCARC_POSTPROCESSING
-LOGICAL :: SCARC_DUMP = .TRUE.                                   !< Dump out several arrays for POSTPROCESSING use of ScaRC
+LOGICAL :: SCARC_DUMP = .FALSE.                                  !< Dump out several arrays for POSTPROCESSING use of ScaRC
 #endif
 
 ! ---------- Logical indicators for different methods and mechanisms

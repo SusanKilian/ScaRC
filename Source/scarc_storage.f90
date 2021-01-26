@@ -880,7 +880,7 @@ CHARACTER(1) :: CSAVE
 REAL(EB) :: TOL = 1.0E-14_EB
 
 CSAVE = CID(1:1)              ! dummy command to prevent warning in case that DEBUG flag is not set
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,1000) CID, IC, JC, VAL, NC, NP
 #endif
 
@@ -903,12 +903,12 @@ ELSE
    A%VAL(IP+1:NP+1) = A%VAL(IP:NP)               ! COL and ROW must be shifted
    A%COL(IP+1:NP+1) = A%COL(IP:NP)
    A%ROW(IC+1:NC+1) = A%ROW(IC+1:NC+1) + 1
-   A%VAL(IP) = VAL                               ! COL and ROW already correct
+   A%VAL(IP) = VAL           
    A%COL(IP) = JC
    NP = NP + 1
 ENDIF
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 CALL SCARC_DEBUG_CMATRIX (A, CID, 'SCARC_INSERT_TO_CMATRIX')
 1000 FORMAT('INSERT_TO_CMATRIX, ', A4,'(',I3,',',I3,')=',E14.6,',       NC:', I3,', NP:', I3)
 #endif

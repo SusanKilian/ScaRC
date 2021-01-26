@@ -285,7 +285,7 @@ NG = TYPE_GRID
 
 
 #ifdef WITH_SCARC_POSTPROCESSING
-IF (ICYC == 1) THEN
+IF (SCARC_DUMP .AND. ICYC == 1) THEN
    CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_MESH)
    CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_A)
 ENDIF
@@ -328,7 +328,7 @@ IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
 ENDIF
 
 #ifdef WITH_SCARC_POSTPROCESSING
-CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_B)
+IF (SCARC_DUMP) CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_B)
 #endif
 
 #ifdef WITH_SCARC_DEBUG
@@ -453,8 +453,10 @@ IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
    CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
    CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
 #ifdef WITH_SCARC_POSTPROCESSING
-   CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
-   CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_X)
+   IF (SCARC_DUMP) THEN
+      CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
+      CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_X)
+   ENDIF
 #endif
 ENDIF
 
@@ -550,7 +552,6 @@ INTEGER :: ITE_MGM, STATE_MGM
 LOGICAL :: COMPARE_USCARC_VS_SCARC = .TRUE., USE_OVERLAPS = .TRUE.
 
 CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: START, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
@@ -566,55 +567,44 @@ CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)
 CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)      
 CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)
 CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)
-
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_MGM_DUMP('SIP',0)
 CALL SCARC_MGM_DUMP('UIP',0)
 #endif
 
 STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0)
-   
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER POISSON ITE, CAPPA, TPI=', ITE, CAPPA, STATE_MGM, &
                           TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
    CALL SCARC_DEBUG_METHOD ('PART1 of MGM: AFTER POISSON SOLUTION',2)                     
 #endif
    
-! If requested accuracy already reached, reset method type (which has been changed during Krylov method) to MGM and leave
-IF (STATE_MGM == NSCARC_MGM_SUCCESS) THEN
+! If requested accuracy already has been reached, leave 
+! Otherwise start pass 2: Local solution of homogeneous Laplace problems
+IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
    
-   TYPE_METHOD = NSCARC_METHOD_MGM                      
    
-
-! Pass 2: Solve local homogeneous Laplace problems:
-! Perform iteration based on the solution of local homogeneous Laplace problems
-! As BC's to neighbors simple mean values of the previous Laplaces solutions along interfaces are used
-
-ELSE
-   
-   ! If comparison with correct UScaRC method is selected, also compute UScaRC solution
-   ! Store ScaRC solution in MGM%SCARC, UScaRC soltution in MGM%USCARC and difference of both in MGM%DSCARC
-   ! All contain correct external BC's and ghost cells
+   ! If comparison with correct UScaRC method is required, also compute UScaRC solution
+   ! Store  ScaRC solution in MGM%SCARC (this corresponds to the first SIP solution)
+   ! Store UScaRC solution in MGM%USCARC 
+   ! For both correct external BC's and ghost cells are used
+   ! Compute the difference of both and store result in MGM%DSCARC
    IF (COMPARE_USCARC_VS_SCARC) THEN
    
-      CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                   ! store structured solution in HS
+      CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                
       CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)
    
       CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
       CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)
 
-      CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                  ! store unstructured solution in HU
+      CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)              
       CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)
 
-      CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)          ! build difference HD = HU - HS
-   
+      CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)     
 #ifdef WITH_SCARC_DEBUG
       CALL SCARC_MGM_DUMP('HS',0)
       CALL SCARC_MGM_DUMP('HU',0)
       CALL SCARC_MGM_DUMP('HD',0)
-#endif
-
-#ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER COMPARISON, TPI=', TOTAL_PRESSURE_ITERATIONS
       CALL SCARC_DEBUG_METHOD('PART0 in MGM: DIFFERENCE SCARC VS USCARC',5)                 
 #endif
@@ -625,7 +615,6 @@ ELSE
    ! store difference of ScaRC and UScaRC for the definition of the interface BC's in next pressure solution
    IF (NMESHES > 1 .AND. ( (TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
                            (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) ) ) THEN
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
 #endif
@@ -643,7 +632,6 @@ ELSE
           CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)
           CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
        ENDIF
-
 #ifdef WITH_SCARC_DEBUG
       CALL SCARC_MGM_DUMP('UHL',0)
       CALL SCARC_MGM_DUMP('UIP',0)
@@ -652,13 +640,11 @@ ELSE
    ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
    ! Define BC's along mesh interfaces by 'simple mean' or 'true approximate' based on previous Laplace solutions
    ELSE
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
 
       MGM_CORRECTION_LOOP: DO ITE_MGM = 1, SCARC_MGM_ITERATIONS
-      
 #ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,*) '=============> SUSI: STARTING MGM-iteration ', ITE_MGM, TOTAL_PRESSURE_ITERATIONS
 #endif
@@ -678,7 +664,6 @@ ELSE
          CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
 
          CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
-   
 #ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
          CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
@@ -691,7 +676,6 @@ ELSE
          CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
    
          STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
-   
 #ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER VELOCITY-ERROR, TPI=', TOTAL_PRESSURE_ITERATIONS, ITE_MGM, VELOCITY_ERROR_GLOBAL
          CALL SCARC_DEBUG_METHOD('PART4 of MGM: AFTER MERGE ',2)                            
@@ -714,9 +698,9 @@ ELSE
    ENDIF
 ENDIF
 
+! Reset method type (which has been changed during Krylov method) to MGM
 TYPE_METHOD = NSCARC_METHOD_MGM
 CALL SCARC_MGM_STORE (NSCARC_MGM_TERMINATE)
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD FINISHED: TYPE_METHOD, TPI = ', TYPE_METHOD, TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
 CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)                         
@@ -1606,7 +1590,7 @@ SELECT CASE (TYPE_SOLVER)
       CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
       CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
 #ifdef WITH_SCARC_POSTPROCESSING
-      CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
+      IF (SCARC_DUMP) CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
 #endif
    CASE (NSCARC_SOLVER_PRECON)
       CALL SCARC_UPDATE_PRECONDITIONER(NLEVEL_MIN)
@@ -1963,13 +1947,15 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
 
 #ifdef WITH_SCARC_POSTPROCESSING
-               PRES => L%PRESSURE
-               IF (PREDICTOR) THEN
-                  PRES%H_OLD = PRES%H_NEW
-               ELSE
-                  PRES%HS_OLD = PRES%HS_NEW
+               IF (SCARC_DUMP) THEN
+                  PRES => L%PRESSURE
+                  IF (PREDICTOR) THEN
+                     PRES%H_OLD = PRES%H_NEW
+                  ELSE
+                     PRES%HS_OLD = PRES%HS_NEW
+                  ENDIF
+                  PRES%B_OLD = ST%B
                ENDIF
-               PRES%B_OLD = ST%B
 #endif
          
                ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
@@ -2110,7 +2096,7 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
  
 
 #ifdef WITH_SCARC_POSTPROCESSING
-               PRES%B_NEW = ST%B
+               IF (SCARC_DUMP) PRES%B_NEW = ST%B
 #endif
          
             ENDDO MAIN_MESHES_LOOP

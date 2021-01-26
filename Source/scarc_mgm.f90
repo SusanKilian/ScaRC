@@ -141,6 +141,14 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          LM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
          UM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
+         ! First assume dense settings and reduce later once the real sizes are known
+          
+         LM%N_VAL = G%NC**2 / 2
+         LM%N_ROW = G%NC+1
+         
+         UM%N_VAL = G%NC**2 / 2
+         UM%N_ROW = G%NC+1
+
          CALL SCARC_ALLOCATE_CMATRIX (LM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%L', CROUTINE)
          CALL SCARC_ALLOCATE_CMATRIX (UM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%U', CROUTINE)
          
@@ -260,6 +268,7 @@ CALL SCARC_DEALLOCATE_INT2(CNT, 'CNT', CROUTINE)
 
 END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 
+
 ! ---------------------------------------------------------------------------------------------
 !> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
 ! ---------------------------------------------------------------------------------------------
@@ -268,8 +277,10 @@ USE SCARC_POINTERS, ONLY: G, MGM, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: I, J, IC0, IC, JC, KC, ICOL, IP, NMAX_U, NMAX_L
 REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU
-REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL
+REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL, VAL2
 INTEGER:: TYPE_SCOPE_SAVE
+
+CROUTINE = 'SCARC_SETUP_MGM_LU'
 
 TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
 TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
@@ -282,15 +293,6 @@ CALL SCARC_POINT_TO_GRID (NM, NL)
 AAA => MGM%AAA
 LLL => MGM%LLL
 UUU => MGM%UUU
-
-! First assume dense settings and reduce later once the real sizes are known
-!
-LM%N_VAL = G%NC**2 / 2
-LM%N_ROW = G%NC+1
-
-UM%N_VAL = G%NC**2 / 2
-UM%N_ROW = G%NC+1
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
 WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
@@ -308,28 +310,22 @@ WRITE(MSG%LU_DEBUG, *) 'G%NC =', G%NC
 #ifdef WITH_SCARC_DEBUG2
 CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 #endif
- 
 DO IC = 1, G%NC
    !JC = G%PERM_FW(IC)
    JC = IC
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) 'PERMUTATION  --- IC =', IC, '-----------> JC=',JC
 #endif
-
    IF (JC == 0) CYCLE
 
    DO IP = A%ROW(IC), A%ROW(IC+1)-1
       ICOL = A%COL(IP)
-
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG, *) 'PERMUTATION ICOL ', ICOL, A%VAL(IP), ' TO ', IC, ICOL
 #endif
-
       AAA(JC, ICOL) = A%VAL(IP)
    ENDDO
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) '------- MGM%A-Copy (1:24)'
 DO IC = 1, G%NC
@@ -341,10 +337,7 @@ ENDDO
 ! These are stored in AAA, LLL and UUU which will be removed after POC is done
 ! Consider permutation in G%PERM
  
-LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
-UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
-
-! Preset with one-value columns - they just contain the main diagonal element
+! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
 DO JC = 1, G%NC
    !IC = G%PERM_FW(JC)
@@ -366,11 +359,11 @@ WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0
    !IC = G%PERM_FW(IC0)
    IC = IC0
 
-   ! Preset main diagonal element of L with 1.0
+   ! Set main diagonal element of L to 1.0
    VAL = 1.0_EB
    LLL(IC, IC) = VAL
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IC
 WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
 #endif
@@ -385,18 +378,18 @@ WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
          VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
          SCAL2 = SCAL2+VL*VU
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, SCAL, VL, VU, SCAL2
 #endif
       ENDDO
       VAL = AAA(IC, JC) - SCAL
-      UUU(IC, JC) = VAL
+      IF (ABS(VAL) > TWO_EPSILON_EB) UUU(IC, JC) = VAL
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
 #endif
-      !VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
-      CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
+      VAL2 = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
+      IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL2, IC, JC, G%NC, NMAX_U, 'UM')
 
       SCAL = 0.0_EB
       SCAL2 = 0.0_EB
@@ -405,19 +398,18 @@ WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
          VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
          SCAL2 = SCAL2+VL*VU
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL2
 #endif
       ENDDO
       VAL = (AAA(JC, IC) - SCAL)/UUU(IC, IC)
-      LLL(JC, IC) = VAL
+      IF (ABS(VAL) > TWO_EPSILON_EB) LLL(JC, IC) = VAL
 
-
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
 #endif
-      !VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/UUU(IC, IC)
-      CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
+      VAL2 = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/UUU(IC, IC)
+      IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL2, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
    !LM%ROW(IC+1) = IL
@@ -425,18 +417,20 @@ WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(
 
 ENDDO ROW_LOOP
 
-#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_REDUCE_CMATRIX (LM, 'LM', CROUTINE)
+CALL SCARC_REDUCE_CMATRIX (UM, 'UM', CROUTINE)
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '=============================== MGM%A (1:24) '
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.3)') (AAA(I, J), J = 1, 24)
 ENDDO
 WRITE(MSG%LU_DEBUG, *) 'MGM%L'
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.3)') (LLL(I, J), J = 1, 24)
 ENDDO
 WRITE(MSG%LU_DEBUG, *) 'MGM%U'
 DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.3)') (UUU(I, J), J = 1, 24)
 ENDDO
 #endif
 #ifdef WITH_SCARC_DEBUG
@@ -455,7 +449,7 @@ ENDDO
 
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 1000 FORMAT('================= IC : ', I2, ' ===========================')
 1100 FORMAT('LLL(',I2, ',',I2, '):', E14.6)
 1200 FORMAT('LLL(',I2, ',',I2, '),  UUU(',I2, ',',I2, ') --> JC:', I2, ',  SCAL:', E14.6, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
@@ -469,7 +463,7 @@ END SUBROUTINE SCARC_SETUP_MGM_LU
 !> \brief Convergence state of MGM method
 ! ----------------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
-USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: ITE_MGM
 INTEGER:: NM
 
@@ -478,13 +472,13 @@ INTEGER:: NM
 SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_FAILURE
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
 
    SELECT CASE (ITE_MGM)
       CASE (-1)
-#ifdef WITH_SCARC_VERBOSE2
+#ifdef WITH_SCARC_VERBOSE
       IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
          WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL, ' ... success'
@@ -500,13 +494,13 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          MGM%ITE_POISSON = ITE                 
          MGM%CAPPA_POISSON = CAPPA
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, 1100)   ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+   WRITE(MSG%LU_DEBUG, 1100)  ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                               MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-!   WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-!                              MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
-!   WRITE(MSG%LU_VERBOSE, 1101)   TOTAL_PRESSURE_ITERATIONS, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+   WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                               MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+   WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
 #endif
       CASE DEFAULT
          MGM%ITE = ITE_MGM
@@ -515,9 +509,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                               MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-!   WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-!                              MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
-    WRITE(MSG%LU_VERBOSE, 1101)   TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
+   WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                               MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
+    WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
 #endif
          IF (ITE > MGM%ITE_LAPLACE) THEN
             MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)
@@ -530,9 +524,15 @@ ENDDO
 
 #ifdef WITH_SCARC_VERBOSE
 1101 FORMAT(I6, ' , ', E11.3)
+1300 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, &
+            ' , #POISSON: ', I6, &
+            ' , #MGM: ', I6, &
+            ' , #LAPLACE_max: ', I6, &
+            ' , VE: ', E14.6, a14)
+2000 FORMAT('------------------------------------------------------------------------------------')
 #endif
 #ifdef WITH_SCARC_DEBUG
-1100 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, &
+1100 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, 
             ' , #POISSON: ', I6, &
             ' , #MGM: ', I6, &
             ' , #LAPLACE    : ', I6, &
@@ -543,15 +543,6 @@ ENDDO
             ' , #LAPLACE    : ', I6, &
             ' , VE: ', E14.6)
 #endif
-#ifdef WITH_SCARC_VERBOSE2
-1300 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, &
-            ' , #POISSON: ', I6, &
-            ' , #MGM: ', I6, &
-            ' , #LAPLACE_max: ', I6, &
-            ' , VE: ', E14.6, a14)
-2000 FORMAT('------------------------------------------------------------------------------------')
-#endif
-
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 
 
@@ -583,9 +574,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ELSE IF (NTYPE == NSCARC_MGM_USCARC) THEN
             HP => MGM%USCARC
          ELSE
-            WRITE(*,*) 'ERROR IN UMPDATE_GHOSTCELLS'
+            WRITE(*,*) 'ERROR IN MGM_UPDATE_GHOSTCELLS'
          ENDIF
-      
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE:', NTYPE
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
@@ -660,7 +650,6 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
-   
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE: LAPLACE'
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(IXG, 1, IZG), IXG = 0, L%NX+1), IZG = L%NZ+1, 0, -1)
@@ -724,7 +713,6 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%BC(IW), IW = 1, L%N_WALL_CELLS_EXT)
          ENDDO WALL_CELLS_LOOP_LAPLACE
 
    END SELECT
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_GHOST_CELLS:2: HP'
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
@@ -733,7 +721,7 @@ CALL SCARC_DEBUG_PRESSURE (HP, NM, 'H')
 
 ENDDO
 #ifdef WITH_SCARC_DEBUG
-1000 FORMAT('UMPDATE: LAPLACE: INTERNAL: IOR0=', I4, ': IW=', I4, ': I, J, K=', 3I4, ' BC, HPOLD, HP:', 3E14.6)
+1000 FORMAT('MGM_UPDATE: LAPLACE: INTERNAL: IOR0=', I4, ': IW=', I4, ': I, J, K=', 3I4, ' BC, HPOLD, HP:', 3E14.6)
 #endif
 
 END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
@@ -743,7 +731,7 @@ END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
 !> \brief Copy specified vectors in McKeeney-Greengard-Mayo method 
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
-USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
 #ifdef WITH_SCARC_DEBUG
 USE SCARC_POINTERS, ONLY: M
 #endif
@@ -756,7 +744,7 @@ INTEGER:: I, K
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    SELECT CASE(NTYPE)
 
@@ -895,7 +883,7 @@ END SUBROUTINE SCARC_MGM_COPY
 !> \brief Build difference of specified vectors in McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DIFF(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_MGM
 #ifdef WITH_SCARC_DEBUG
 USE SCARC_POINTERS, ONLY: M
 #endif
@@ -907,7 +895,7 @@ INTEGER :: I, K
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
    ST  => L%STAGE(NSCARC_STAGE_ONE)
 
    SELECT CASE(NTYPE)
@@ -987,13 +975,13 @@ END SUBROUTINE SCARC_MGM_DIFF
 !> \brief Store specified type of vector in McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_STORE(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IX, IY, IZ, ICS, ICU, ICE, IOR0, IW
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
    ST  => L%STAGE(NSCARC_STAGE_ONE)
 
    SELECT CASE(NTYPE)
@@ -1292,13 +1280,13 @@ END SUBROUTINE SCARC_MGM_STORE
 !> \brief Setup workspace for McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_WORKSPACE(NL)
-USE SCARC_POINTERS, ONLY: M, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NL
 INTEGER  :: NM
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NL)
+   CALL SCARC_POINT_TO_MGM(NM, NL)
 
    IF (PREDICTOR) THEN
 #ifdef WITH_SCARC_DEBUG
@@ -1337,7 +1325,7 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_INTERFACES(NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, F, MGM, GWC, OL, OG, ST, UHL, OUHL, OUHL_PREV, &
-                          SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_LEVEL
+                          SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: IW, I, J, K, IOR0, IFACE, INBR, NOM, ICG, IC, IWG, ICW, ITYPE
 REAL(EB):: VAL, HB(-3:3) = 0.0_EB
@@ -1345,7 +1333,7 @@ REAL(EB):: VAL, HB(-3:3) = 0.0_EB
 ITYPE = TYPE_MGM_BC
 IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITYPE = NSCARC_MGM_BC_MEAN
 
-CALL SCARC_POINT_TO_LEVEL(NM, NL)
+CALL SCARC_POINT_TO_MGM(NM, NL)
 
 SELECT CASE (ITYPE)
 
@@ -1774,16 +1762,16 @@ END SUBROUTINE SCARC_SETUP_MGM_OBSTRUCTIONS
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_VELOCITY(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, G, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER  :: NM, I, J, K, IW, IOR0
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=======================> START OF UMPDATE_VELOCITY:'
+   WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_UPDATE_VELOCITY:'
    WRITE(MSG%LU_DEBUG, *) 'MGM%U1'
    WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U1(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
    WRITE(MSG%LU_DEBUG, *) 'MGM%W1'
@@ -1798,10 +1786,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%WVEL(I, 1, K), I = 1, M%IBAR), K = M%KBAR, 0, -1)
 #endif
    MGM_PART_SELECT: SELECT CASE (NTYPE)
-
-      !
-      ! ------------- Update velocity with new information after structured inhomogeneous Poisson pass 
-      !
+      
+      ! Update velocity with new information of previous structured inhomogeneous Poisson solution (SIP)
+      
       CASE (NSCARC_MGM_POISSON)
 
 #ifdef WITH_SCARC_DEBUG
@@ -1821,7 +1808,7 @@ WRITE(MSG%LU_DEBUG, *) '================================ UPDATE-VELOCITY-POISSON
          DO K = 1, M%KBAR
             DO J = 1, M%JBAR
                DO I = 0, M%IBAR
-                  MGM%U1(I, J, K) = UU(I, J, K) - DT*( M%FVX(I, J, K) + M%RDXN(I)*(HP(I+1, J, K)-HP(I, J, K) ))
+                  MGM%U1(I, J, K) = UU(I, J, K) - DT*( M%FVX(I, J, K) + M%RDXN(I)*(HP(I+1, J, K)-HP(I, J, K)) )
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO X:P: ',I, J, K, UU(I, J, K), M%FVX(I, J, K), HP(I+1, J, K), HP(I, J, K), &
                                          UU(I, J, K), MGM%U1(I, J, K)
@@ -1833,7 +1820,7 @@ WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO X:P: ',I, J, K, UU(I, J, K), M%FVX
          DO K = 1, M%KBAR
             DO J = 0, M%JBAR
                DO I = 1, M%IBAR
-                  MGM%V1(I, J, K) = VV(I, J, K) - DT*( M%FVY(I, J, K) + M%RDYN(J)*(HP(I, J+1, K)-HP(I, J, K) ))
+                  MGM%V1(I, J, K) = VV(I, J, K) - DT*( M%FVY(I, J, K) + M%RDYN(J)*(HP(I, J+1, K)-HP(I, J, K)) )
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO Y:P: ',I, J, K, VV(I, J, K), M%FVY(I, J, K), HP(I, J+1, K), HP(I, J, K), &
                                          VV(I, J, K), MGM%V1(I, J, K)
@@ -1845,7 +1832,7 @@ WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO Y:P: ',I, J, K, VV(I, J, K), M%FVY
          DO K = 0, M%KBAR
             DO J = 1, M%JBAR
                DO I = 1, M%IBAR
-                  MGM%W1(I, J, K) = WW(I, J, K) - DT*( M%FVZ(I, J, K) + M%RDZN(K)*(HP(I, J, K+1)-HP(I, J, K) ))
+                  MGM%W1(I, J, K) = WW(I, J, K) - DT*( M%FVZ(I, J, K) + M%RDZN(K)*(HP(I, J, K+1)-HP(I, J, K)) )
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO Z:P: ',I, J, K, WW(I, J, K), M%FVZ(I, J, K), HP(I, J, K+1), HP(I, J, K), &
                                          WW(I, J, K), MGM%W1(I, J, K)
@@ -1858,13 +1845,11 @@ WRITE(MSG%LU_DEBUG, '(A, 3i4, 6E14.6)') 'VELO Z:P: ',I, J, K, WW(I, J, K), M%FVZ
          MGM%VVEL = MGM%V1
          MGM%WVEL = MGM%W1 
 
-      !
-      ! ------------- Update velocity with new information after Laplace pass
-      !
+      ! Update velocity with new information of previous unstructured homogeneous Laplace solution (UHL)
+      
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
-            
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '================================ UPDATE-VELOCITY-LAPLACE:P: ', PREDICTOR, M%IBAR, M%JBAR, M%KBAR, DT
    WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
@@ -1976,9 +1961,8 @@ WRITE(MSG%LU_DEBUG, '(A, 4I4, E14.6)') 'VELO Y:L: NOGRAD:',IOR0, I, J, K, MGM%W2
 
    END SELECT MGM_PART_SELECT
 ENDDO
-
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) '=======================> END OF UMPDATE_VELOCITY:'
+WRITE(MSG%LU_DEBUG, *) '=======================> END OF MGM_UPDATE_VELOCITY:'
 WRITE(MSG%LU_DEBUG, *) 'MGM%U1'
 WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%U1(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
 WRITE(MSG%LU_DEBUG, *) 'MGM%W1'
@@ -2003,7 +1987,7 @@ END SUBROUTINE SCARC_MGM_UPDATE_VELOCITY
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN) ::  NTYPE
 INTEGER:: NM, I, J, K, IW, IOR0, IIO1, IIO2, JJO1, JJO2, KKO1, KKO2, IIO, JJO, KKO, ITYPE
 REAL(EB):: UN_NEW_OTHER, UN_NEW, DUDT, DVDT, DWDT
@@ -2019,7 +2003,7 @@ UN_NEW_OTHER = 0.0_EB
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    IF (NTYPE == NSCARC_MGM_POISSON) THEN
       HP  => MGM%SIP

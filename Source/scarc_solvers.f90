@@ -102,13 +102,12 @@ END SELECT SELECT_METHOD
 ! Setup vector structures for requested solver
 
 CALL SCARC_SETUP_VECTORS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
-
-! Perform some error statistics for pressure if requested
  
 #ifdef WITH_SCARC_POSTPROCESSING
-CALL SCARC_SETUP_PRESSURE                             ; IF (STOP_STATUS==SETUP_STOP) RETURN
-#endif
+! Perform some error statistics for pressure if requested
 
+IF (SCARC_DUMP) CALL SCARC_SETUP_PRESSURE             ; IF (STOP_STATUS==SETUP_STOP) RETURN
+#endif
 CPU(MYID)%SETUP   = CPU(MYID)%SETUP   + CURRENT_TIME() - TNOW
 CPU(MYID)%OVERALL = CPU(MYID)%OVERALL + CURRENT_TIME() - TNOW
 
