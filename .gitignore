@@ -14,8 +14,10 @@ Source.bak
 .*.swo
 tt
 *.aux
-*.log
+*.log*
+*.debug*
 *.toc
+*.mem
 *.out
 *.csv
 *sync*

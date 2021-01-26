@@ -16756,7 +16756,7 @@ END SUBROUTINE SCARC_SETUP_MGM_LU
 !> \brief Convergence state of MGM method
 ! ----------------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
-USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: ITE_MGM
 INTEGER:: NM
 
@@ -16765,7 +16765,7 @@ INTEGER:: NM
 SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_FAILURE
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
 
@@ -16955,14 +16955,14 @@ END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
 !> \brief Copy specified vectors in McKeeney-Greengard-Mayo method 
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
-USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM
 INTEGER:: IX, IY, IZ
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    SELECT CASE(NTYPE)
 
@@ -17052,13 +17052,13 @@ END SUBROUTINE SCARC_MGM_COPY
 !> \brief Build difference of specified vectors in McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DIFF(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IX, IY, IZ, IOR0, IW
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
    ST  => L%STAGE(NSCARC_STAGE_ONE)
 
    SELECT CASE(NTYPE)
@@ -17113,13 +17113,13 @@ END SUBROUTINE SCARC_MGM_DIFF
 !> \brief Store specified type of vector in McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_STORE(NTYPE)
-USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IX, IY, IZ, ICS, ICU, ICE, IOR0, IW
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
    ST  => L%STAGE(NSCARC_STAGE_ONE)
 
    SELECT CASE(NTYPE)
@@ -17331,13 +17331,13 @@ END SUBROUTINE SCARC_MGM_STORE
 !> \brief Setup workspace for McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_WORKSPACE(NL)
-USE SCARC_POINTERS, ONLY: M, MGM, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NL
 INTEGER  :: NM
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NL)
+   CALL SCARC_POINT_TO_MGM(NM, NL)
 
    IF (PREDICTOR) THEN
       MGM%U1 = M%U
@@ -17370,7 +17370,7 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_INTERFACES(NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, F, MGM, GWC, OL, OG, ST, UHL, OUHL, OUHL_PREV, &
-                          SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_LEVEL
+                          SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: IW, I, J, K, IOR0, IFACE, INBR, NOM, ICG, IC, IWG, ICW, ITYPE
 REAL(EB):: VAL, HB(-3:3) = 0.0_EB
@@ -17378,7 +17378,7 @@ REAL(EB):: VAL, HB(-3:3) = 0.0_EB
 ITYPE = TYPE_MGM_BC
 IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITYPE = NSCARC_MGM_BC_MEAN
 
-CALL SCARC_POINT_TO_LEVEL(NM, NL)
+CALL SCARC_POINT_TO_MGM(NM, NL)
 
 SELECT CASE (ITYPE)
 
@@ -17633,19 +17633,18 @@ END SUBROUTINE SCARC_SETUP_MGM_OBSTRUCTIONS
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_VELOCITY(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, G, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER  :: NM, I, J, K, IW, IOR0
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    MGM_PART_SELECT: SELECT CASE (NTYPE)
-
-      !
-      ! ------------- Update velocity with new information after structured inhomogeneous Poisson pass 
-      !
+      
+      ! Update velocity with new information of previous structured inhomogeneous Poisson solution (SIP)
+      
       CASE (NSCARC_MGM_POISSON)
 
          HP => MGM%SIP
@@ -17662,7 +17661,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO K = 1, M%KBAR
             DO J = 1, M%JBAR
                DO I = 0, M%IBAR
-                  MGM%U1(I, J, K) = UU(I, J, K) - DT*( M%FVX(I, J, K) + M%RDXN(I)*(HP(I+1, J, K)-HP(I, J, K) ))
+                  MGM%U1(I, J, K) = UU(I, J, K) - DT*( M%FVX(I, J, K) + M%RDXN(I)*(HP(I+1, J, K)-HP(I, J, K)) )
                ENDDO
             ENDDO
          ENDDO
@@ -17670,7 +17669,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO K = 1, M%KBAR
             DO J = 0, M%JBAR
                DO I = 1, M%IBAR
-                  MGM%V1(I, J, K) = VV(I, J, K) - DT*( M%FVY(I, J, K) + M%RDYN(J)*(HP(I, J+1, K)-HP(I, J, K) ))
+                  MGM%V1(I, J, K) = VV(I, J, K) - DT*( M%FVY(I, J, K) + M%RDYN(J)*(HP(I, J+1, K)-HP(I, J, K)) )
                ENDDO
             ENDDO
          ENDDO
@@ -17678,7 +17677,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO K = 0, M%KBAR
             DO J = 1, M%JBAR
                DO I = 1, M%IBAR
-                  MGM%W1(I, J, K) = WW(I, J, K) - DT*( M%FVZ(I, J, K) + M%RDZN(K)*(HP(I, J, K+1)-HP(I, J, K) ))
+                  MGM%W1(I, J, K) = WW(I, J, K) - DT*( M%FVZ(I, J, K) + M%RDZN(K)*(HP(I, J, K+1)-HP(I, J, K)) )
                ENDDO
             ENDDO
          ENDDO
@@ -17687,9 +17686,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          MGM%VVEL = MGM%V1
          MGM%WVEL = MGM%W1 
 
-      !
-      ! ------------- Update velocity with new information after Laplace pass
-      !
+      ! Update velocity with new information of previous unstructured homogeneous Laplace solution (UHL)
+      
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
@@ -17763,7 +17761,7 @@ END SUBROUTINE SCARC_MGM_UPDATE_VELOCITY
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN) ::  NTYPE
 INTEGER:: NM, I, J, K, IW, IOR0, IIO1, IIO2, JJO1, JJO2, KKO1, KKO2, IIO, JJO, KKO, ITYPE
 REAL(EB):: UN_NEW_OTHER, UN_NEW, DUDT, DVDT, DWDT
@@ -17776,7 +17774,7 @@ UN_NEW_OTHER = 0.0_EB
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_LEVEL(NM, NLEVEL_MIN)
+   CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
    IF (NTYPE == NSCARC_MGM_POISSON) THEN
       HP  => MGM%SIP
@@ -18528,7 +18526,6 @@ LOGICAL :: COMPARE_USCARC_VS_SCARC = .TRUE., USE_OVERLAPS = .TRUE.
 
 CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 
-
 ! Pass 1: Solve structured inhomogeneous Poisson solution
 
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
@@ -18541,16 +18538,13 @@ CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)
 CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)
 CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)
 
-
 STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0)
-   
    
 ! If requested accuracy already reached, reset method type (which has been changed during Krylov method) to MGM and leave
 IF (STATE_MGM == NSCARC_MGM_SUCCESS) THEN
    
    TYPE_METHOD = NSCARC_METHOD_MGM                      
    
-
 ! Pass 2: Solve local homogeneous Laplace problems:
 ! Perform iteration based on the solution of local homogeneous Laplace problems
 ! As BC's to neighbors simple mean values of the previous Laplaces solutions along interfaces are used
@@ -18572,8 +18566,6 @@ ELSE
       CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)
 
       CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)          ! build difference HD = HU - HS
-   
-
 
    ENDIF
 
@@ -18581,7 +18573,6 @@ ELSE
    ! store difference of ScaRC and UScaRC for the definition of the interface BC's in next pressure solution
    IF (NMESHES > 1 .AND. ( (TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
                            (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) ) ) THEN
-
 
        CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)   
        CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)   
@@ -18597,14 +18588,11 @@ ELSE
           CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
        ENDIF
 
-
    ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
    ! Define BC's along mesh interfaces by 'simple mean' or 'true approximate' based on previous Laplace solutions
    ELSE
 
-
       MGM_CORRECTION_LOOP: DO ITE_MGM = 1, SCARC_MGM_ITERATIONS
-      
          CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
          CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NSCARC_RHS_HOMOGENEOUS, NLEVEL_MIN)
 
@@ -18622,13 +18610,11 @@ ELSE
 
          CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
    
-   
          CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
          CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
    
          STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
-   
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
 
@@ -18649,7 +18635,6 @@ ENDIF
 
 TYPE_METHOD = NSCARC_METHOD_MGM
 CALL SCARC_MGM_STORE (NSCARC_MGM_TERMINATE)
-
 
 END SUBROUTINE SCARC_METHOD_MGM
 
