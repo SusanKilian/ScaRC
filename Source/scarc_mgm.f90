@@ -486,7 +486,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL, ' ... failed'
       ENDIF
-      WRITE(MSG%LU_VERBOSE, 2000) 
 #endif
       CASE (0)
          MGM%ITE = 0
@@ -541,7 +540,6 @@ ENDDO
             ' , #MGM: ', I6,&
             ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
-2000 FORMAT('------------------------------------------------------------------------------------')
 #endif
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 
