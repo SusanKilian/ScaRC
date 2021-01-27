@@ -543,13 +543,14 @@ END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 
 
 ! ----------------------------------------------------------------------------------------------------------------------
-!> \brief Perform McKeeney-Greengard-Mayo method
+!> \brief Perform McKeeney-Greengard-Mayo (MGM) method
+! Note that the MGM method only works on finest grid level NLEVEL_MIN
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM(NSTACK)
 USE SCARC_MGM
 INTEGER, INTENT(IN) :: NSTACK
 INTEGER :: ITE_MGM, STATE_MGM
-LOGICAL :: COMPARE_USCARC_VS_SCARC = .TRUE., USE_OVERLAPS = .TRUE.
+LOGICAL :: COMPARE_USCARC_VS_SCARC = .TRUE., USE_OVERLAPS = .TRUE., USE_CORRECT_INITIALIZATION
 
 CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 #ifdef WITH_SCARC_DEBUG
@@ -581,14 +582,15 @@ STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0)
    
 ! If requested accuracy already has been reached, leave 
 ! Otherwise start pass 2: Local solution of homogeneous Laplace problems
+
 IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
-   
    
    ! If comparison with correct UScaRC method is required, also compute UScaRC solution
    ! Store  ScaRC solution in MGM%SCARC (this corresponds to the first SIP solution)
    ! Store UScaRC solution in MGM%USCARC 
    ! For both correct external BC's and ghost cells are used
    ! Compute the difference of both and store result in MGM%DSCARC
+
    IF (COMPARE_USCARC_VS_SCARC) THEN
    
       CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                
@@ -611,10 +613,16 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
    ENDIF
 
-   ! If very first pressure solution ever, then use UScaRC solution as final solution and
-   ! store difference of ScaRC and UScaRC for the definition of the interface BC's in next pressure solution
-   IF (NMESHES > 1 .AND. ( (TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
-                           (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) ) ) THEN
+   ! Only if correct initialization is required:
+   ! In the very first pressure iteration, or - in case of extrapolated MGM boundary values - in the two very first iterations 
+   ! use UScaRC solution as solution of this MGM pass and store the difference DScaRC of ScaRC and UScaRC 
+   ! for the definition of the interface BC's in next pressure iteration
+
+   USE_CORRECT_INITIALIZATION = SCARC_MGM_INIT_EXACT .AND. &
+                                (TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
+                                (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) 
+
+   IF (NMESHES > 1 .AND. USE_CORRECT_INITIALIZATION) THEN
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
 #endif
@@ -638,7 +646,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 #endif
 
    ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
-   ! Define BC's along mesh interfaces by 'simple mean' or 'true approximate' based on previous Laplace solutions
+   ! Define BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
+   ! Note that the Laplace problems are unstructured homogeneous
    ELSE
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
