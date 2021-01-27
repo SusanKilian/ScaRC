@@ -524,6 +524,11 @@ ENDDO
 
 #ifdef WITH_SCARC_VERBOSE
 1101 FORMAT(I6, ' , ', E11.3)
+1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POISSON: ', I6,&
+            ' , #MGM: ', I6,&
+            ' , #LAPLACE_max: ', I6,&
+            ' , VE: ', E14.6, a14)
 #endif
 #ifdef WITH_SCARC_DEBUG
 1100 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
@@ -536,11 +541,6 @@ ENDDO
             ' , #MGM: ', I6,&
             ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
-1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
-            ' , #POISSON: ', I6,&
-            ' , #MGM: ', I6,&
-            ' , #LAPLACE_max: ', I6,&
-            ' , VE: ', E14.6, a14)
 2000 FORMAT('------------------------------------------------------------------------------------')
 #endif
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
