@@ -127,7 +127,7 @@ TYPE SCARC_FACE_TYPE
    INTEGER  :: NCW0 = 0, NCW = 0                      !< Number of first wall cell and total number of wall cells
    INTEGER  :: INCRX = 0, INCRY = 0, INCRZ = 0        !< Increments to next internal cell in that face direction
 
-   INTEGER  :: INCRS (-3:3)                           !< Increments within stencil for HB-vector on that face
+   INTEGER  :: INCR_STENCIL (-3:3)                    !< Increments within stencil for HB-vector on that face
 
 END TYPE SCARC_FACE_TYPE
  
@@ -489,11 +489,11 @@ TYPE SCARC_MGM_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SIP                 !< structured inhomogeneous Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP                 !< unstructured Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL                 !< unstructured Laplace MGM solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_PREV            !< unstructured Laplace MGM solution (previous time step)
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL2                !< unstructured Laplace MGM solution II
 
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUIP                !< other unstructured Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL                !< other unstructured Laplace MGM solution 
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL_PREV           !< other unstructured Laplace MGM solution (previous time step)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: OUHL2               !< other unstructured Laplace MGM solution II
 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SCARC               !< structured ScaRC solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: USCARC              !< unstructured ScaRC solution 
@@ -520,12 +520,19 @@ TYPE SCARC_MGM_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U1, V1, W1          !< Velocity vectors predictor
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: U2, V2, W2          !< Velocity vectors predictor
 
-   REAL(EB)::  CAPPA_POISSON = 0.0_EB                              !< Convergence rate of Poisson solution
-   REAL(EB)::  CAPPA_LAPLACE = 0.0_EB                              !< Max convergence rate of Laplace solutions
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BXS                 !< Boundary values at x-min face
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BXF                 !< Boundary values at x-max face
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BYS                 !< Boundary values at y-min face
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BYF                 !< Boundary values at y-max face
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BZS                 !< Boundary values at z-min face
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: BZF                 !< Boundary values at z-max face
 
-   REAL(EB)::  VELOCITY_ERROR = 0.0_EB                             !< Velocity error in single Laplace iteration
-   REAL(EB)::  VELOCITY_ERROR_MAX = 0.0_EB                         !< Maximum achieved velocity error over all Laplace iterations
-   REAL(EB)::  VELOCITY_TOLERANCE = 1.E-4_EB                       !< Requested velocity tolerance for MGM Laplace problems
+   REAL(EB):: CAPPA_POISSON = 0.0_EB                               !< Convergence rate of Poisson solution
+   REAL(EB):: CAPPA_LAPLACE = 0.0_EB                               !< Max convergence rate of Laplace solutions
+
+   REAL(EB):: VELOCITY_ERROR = 0.0_EB                              !< Velocity error in single Laplace iteration
+   REAL(EB):: VELOCITY_ERROR_MAX = 0.0_EB                          !< Maximum achieved velocity error over all Laplace iterations
+   REAL(EB):: VELOCITY_TOLERANCE = 1.E-4_EB                        !< Requested velocity tolerance for MGM Laplace problems
 
    INTEGER, ALLOCATABLE, DIMENSION (:,:) :: BTYPE                  !< Boundary type of an interface cell
 

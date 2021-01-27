@@ -128,6 +128,15 @@ REAL(EB), POINTER, DIMENSION(:):: XMID=>NULL()              !< Pointer to vector
 REAL(EB), POINTER, DIMENSION(:):: YMID=>NULL()              !< Pointer to vector of cell midpoints in y-direction
 REAL(EB), POINTER, DIMENSION(:):: ZMID=>NULL()              !< Pointer to vector of cell midpoints in z-direction
 
+REAL(EB), POINTER, DIMENSION(:,:):: BXS=>NULL()             !< Pointer to boundary values at x-min face
+REAL(EB), POINTER, DIMENSION(:,:):: BXF=>NULL()             !< Pointer to boundary values at x-max face
+REAL(EB), POINTER, DIMENSION(:,:):: BYS=>NULL()             !< Pointer to boundary values at y-min face
+REAL(EB), POINTER, DIMENSION(:,:):: BYF=>NULL()             !< Pointer to boundary values at y-max face
+REAL(EB), POINTER, DIMENSION(:,:):: BZS=>NULL()             !< Pointer to boundary values at z-min face
+REAL(EB), POINTER, DIMENSION(:,:):: BZF=>NULL()             !< Pointer to boundary values at z-max face
+
+REAL(EB), POINTER, DIMENSION(:,:):: BTYPE=>NULL()           !< Boundary type of face cell
+
 REAL(EB), POINTER, DIMENSION(:):: VC=>NULL()                !< Pointer to vector on coarse grid level
 REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()                !< Pointer to vector on fine grid level
 REAL(EB), POINTER, DIMENSION(:):: V1=>NULL()                !< Pointer to first vector
@@ -137,12 +146,12 @@ REAL(EB), POINTER, DIMENSION(:,:,:):: HP=>NULL()            !< Pointer to pressu
 REAL(EB), POINTER, DIMENSION(:,:,:):: SIP=>NULL()           !< Pointer to structured inhomogenous Poisson MGM solution
 REAL(EB), POINTER, DIMENSION(:,:,:):: UIP=>NULL()           !< Pointer to unstructured inhomogenous Poisson MGM solution
 REAL(EB), POINTER, DIMENSION(:,:,:):: UHL=>NULL()           !< Pointer to unstructured homogeneous Laplace MGM solution
-REAL(EB), POINTER, DIMENSION(:,:,:):: UHL_PREV=>NULL()      !< Pointer to previous unstructured homogeneous Laplace MGM solution 
+REAL(EB), POINTER, DIMENSION(:,:,:):: UHL2=>NULL()          !< Pointer to unstructured homogeneous Laplace MGM solution II
 
 REAL(EB), POINTER, DIMENSION(:):: OVEL=>NULL()              !< Pointer to other velocity component
 REAL(EB), POINTER, DIMENSION(:):: OUIP=>NULL()              !< Pointer to other unstructured inhomogenous Poisson solution
 REAL(EB), POINTER, DIMENSION(:):: OUHL=>NULL()              !< Pointer to other unstructured homogenous Laplace solution
-REAL(EB), POINTER, DIMENSION(:):: OUHL_PREV=>NULL()         !< Pointer to other previous unstructured homogenous Laplace solution
+REAL(EB), POINTER, DIMENSION(:):: OUHL2=>NULL()             !< Pointer to other unstructured homogenous Laplace solution II
 
 REAL(EB), POINTER, DIMENSION(:,:,:):: PRHS=>NULL()          !< Pointer to right hand side vector
 
@@ -230,10 +239,13 @@ S   => SCARC(NM)
 L   => S%LEVEL(NL)
 MGM => L%MGM
 
-SIP => MGM%SIP
-UIP => MGM%UIP
-UHL => MGM%UHL
-UHL_PREV => MGM%UHL_PREV
+SIP  => MGM%SIP
+UIP  => MGM%UIP
+UHL  => MGM%UHL
+UHL2 => MGM%UHL2
+
+OUHL  => MGM%OUHL
+OUHL2 => MGM%OUHL2
 
 END SUBROUTINE SCARC_POINT_TO_MGM
 
