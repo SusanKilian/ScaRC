@@ -830,7 +830,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy difference between ScaRC and UScaRC to previous unstructured homogeneous Laplace MGM solution
+      ! Copy difference between ScaRC and UScaRC to previous unstructured homogeneous Laplace solution UHL2
 
       CASE (NSCARC_MGM_DSCARC_TO_UHL2)  
 
@@ -843,9 +843,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL2(I, 1, K), I = 0, M%IBAR+1), K = M%KBAR+1, 0, -1)
 #endif
 
-      ! Copy unstructured homogeneous Laplace MGM solution to previous 
+      ! Copy unstructured homogeneous Laplace MGM solution UHL to previous UHL2
 
-      CASE (NSCARC_MGM_UHL_TO2)  
+      CASE (NSCARC_MGM_UHL_TO_UHL2)  
 
          MGM%UHL2 = MGM%UHL
 #ifdef WITH_SCARC_DEBUG
@@ -858,7 +858,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Copy other unstructured homogeneous Laplace MGM solution to previous 
 
-      CASE (NSCARC_MGM_OUHL_TO_PREV) 
+      CASE (NSCARC_MGM_OUHL_TO_OUHL2) 
 
          MGM%OUHL2 = MGM%OUHL
 #ifdef WITH_SCARC_DEBUG
@@ -1321,10 +1321,11 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_INTERFACES(NL)
-USE SCARC_POINTERS, ONLY: F, MGM, GWC, UHL, OUHL, OUHL2, BXS, BXF, BYS, BYF, BZS, BZF, BTYPE, &
+USE SCARC_POINTERS, ONLY: L, F, G, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, &
+                          BXS, BXF, BYS, BYF, BZS, BZF, BTYPE, &
                           SCARC_POINT_TO_MGM, SCARC_POINT_TO_OTHER_GRID
 INTEGER, INTENT(IN):: NL
-INTEGER:: NM, IW, I, J, K, IOR0, IFACE, INBR, NOM, ICG, ICW, IWG, ITYPE
+INTEGER:: NM, I, J, K, IOR0, IFACE, INBR, NOM, ICG, ICW, IWG, ITYPE
 REAL(EB):: VAL, HB(-3:3) = 0.0_EB
 
 ITYPE = TYPE_MGM_BC
@@ -1365,7 +1366,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       IOR0 = FACE_ORIENTATION(IFACE)
       F => L%FACE(IOR0)
 
-      MGM_TNBR_LOOP: DO INBR = 1, F%N_NEIGHBORS
+      MGM_NBR_LOOP: DO INBR = 1, F%N_NEIGHBORS
          
          NOM = F%NEIGHBORS(INBR)
          CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NL)
@@ -1391,7 +1392,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                ! Boundary setting along interfaces by simple mean values
 
-               CASE (NSCARC_MGM_MEAN)
+               CASE (NSCARC_MGM_BC_MEAN)
 
                   SELECT CASE (IOR0)
                      CASE ( 1)
@@ -1410,7 +1411,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                ! Boundary setting along interfaces by extrapolation
 
-               CASE (NSCARC_MGM_EXPOL)
+               CASE (NSCARC_MGM_BC_EXPOL)
 
                   SELECT CASE (IOR0)
                      CASE ( 1)
@@ -1429,7 +1430,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                ! Boundary setting along interfaces by simple mean values
 
-               CASE (NSCARC_MGM_TRUE)
+               CASE (NSCARC_MGM_BC_TRUE)
 
                   HB = 0.0_EB
                   MGM_TRUE_IOR_SELECT: SELECT CASE (IOR0)

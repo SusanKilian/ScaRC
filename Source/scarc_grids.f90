@@ -1201,9 +1201,9 @@ FACES_OF_MESH_LOOP: DO IOR0 = -3, 3
             F%INCRX = -1
          ENDIF     
          IF (TWO_D) THEN
-            F%INCRS = (/ F%NY, 0, 0, 0, 0,  0, -F%NY /)
+            F%INCR_STENCIL = (/ F%NY, 0, 0, 0, 0,  0, -F%NY /)
          ELSE
-            F%INCRS = (/ F%NY, 1, 0, 0, 0, -1, -F%NY /)
+            F%INCR_STENCIL = (/ F%NY, 1, 0, 0, 0, -1, -F%NY /)
          ENDIF
  
       ! ---------- Faces in y-direction
@@ -1241,9 +1241,9 @@ FACES_OF_MESH_LOOP: DO IOR0 = -3, 3
             ENDIF
          ENDIF
          IF (TWO_D) THEN
-            F%INCRS = (/ 0   , 0, 0, 0,  0, 0, 0     /)             ! special case, not used
+            F%INCR_STENCIL = (/ 0   , 0, 0, 0,  0, 0, 0     /)             ! special case, not used
          ELSE
-            F%INCRS = (/ F%NX, 0, 1, 0, -1, 0, -F%NX /)
+            F%INCR_STENCIL = (/ F%NX, 0, 1, 0, -1, 0, -F%NX /)
          ENDIF
 
       ! ---------- Faces in z-direction
@@ -1277,9 +1277,9 @@ FACES_OF_MESH_LOOP: DO IOR0 = -3, 3
             F%INCRZ = -1
          ENDIF
          IF (TWO_D) THEN
-            F%INCRS = (/ 0, 0   , 1, 0, -1,     0, 0 /)
+            F%INCR_STENCIL = (/ 0, 0   , 1, 0, -1,     0, 0 /)
          ELSE
-            F%INCRS = (/ 0, F%NX, 1, 0, -1, -F%NX, 0 /)
+            F%INCR_STENCIL = (/ 0, F%NX, 1, 0, -1, -F%NX, 0 /)
          ENDIF
 
    END SELECT

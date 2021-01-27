@@ -621,8 +621,8 @@ IF (USE_CORRECT_INITIALIZATION) THEN
    ENDIF
 
    IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
-      CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)       ! store also second last values for UHL
-      CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)      ! store also second last values for other UHL
+      CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)        ! store also second last values for UHL
+      CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)      ! store also second last values for other UHL
    ENDIF
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_MGM_DUMP('UHL',0)
@@ -661,6 +661,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
 
+      CALL SCARC_SETUP_MGM_INTERFACES (NLEVEL_MIN)
+      CALL SCARC_SETUP_MGM_OBSTRUCTIONS (NLEVEL_MIN)
       IF (SCARC_MGM_USE_LU) THEN
          CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
       ELSE
@@ -668,8 +670,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       ENDIF
    
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN         ! store also second last values in case of extrapolated BCs
-         CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)
-         CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
+         CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)
+         CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)
       ENDIF
 
       CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
@@ -1923,7 +1925,8 @@ END SUBROUTINE SCARC_METHOD_PARDISO
 !> \brief Set initial solution corresponding to boundary data in BXS, BXF, ...
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
-USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, BXS, BXF, BYS, BYF, BZS, BZF, &
+USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
+                          BXS, BXF, BYS, BYF, BZS, BZF, &
                           SCARC_POINT_TO_GRID
 #ifdef WITH_SCARC_POSTPROCESSING
 USE SCARC_POINTERS, ONLY: PRES

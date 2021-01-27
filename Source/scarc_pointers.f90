@@ -135,7 +135,7 @@ REAL(EB), POINTER, DIMENSION(:,:):: BYF=>NULL()             !< Pointer to bounda
 REAL(EB), POINTER, DIMENSION(:,:):: BZS=>NULL()             !< Pointer to boundary values at z-min face
 REAL(EB), POINTER, DIMENSION(:,:):: BZF=>NULL()             !< Pointer to boundary values at z-max face
 
-REAL(EB), POINTER, DIMENSION(:,:):: BTYPE=>NULL()           !< Boundary type of face cell
+INTEGER,  POINTER, DIMENSION(:,:):: BTYPE=>NULL()           !< Boundary type of face cell
 
 REAL(EB), POINTER, DIMENSION(:):: VC=>NULL()                !< Pointer to vector on coarse grid level
 REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()                !< Pointer to vector on fine grid level
