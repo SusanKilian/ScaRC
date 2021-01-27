@@ -266,9 +266,9 @@ END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Perform global conjugate gradient method based on global Possion-matrix
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NRHS, NLEVEL)
+SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NLEVEL)
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NRHS, NLEVEL
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 INTEGER :: NSTATE, NS, NP, NL, NG
 REAL (EB) :: ALPHA0, BETA0, SIGMA0, SIGMA1=0.0_EB
 REAL (EB) :: TNOW, TNOWI
@@ -299,7 +299,6 @@ TYPE_GRID = NG             ! TODO: Why? Forgot the reason ...
 WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
 WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
 WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
-WRITE(MSG%LU_DEBUG,*) 'NRHS    =', NRHS
 WRITE(MSG%LU_DEBUG,*) 'NLEVEL  =', NLEVEL
 WRITE(MSG%LU_DEBUG,*) 'TYPE_GRID  =', TYPE_GRID
 WRITE(MSG%LU_DEBUG,*) 'TYPE_MATVEC  =', TYPE_MATVEC
@@ -312,7 +311,7 @@ WRITE(MSG%LU_DEBUG,*) 'IS_LAPLACE = ', IS_LAPLACE
 WRITE(MSG%LU_DEBUG,*) 'IS_POISSON = ', IS_POISSON
 #endif
 
-CALL SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 !CALL SCARC_PRESET_VECTOR(B, NL)
 
@@ -549,7 +548,7 @@ CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 ! ------------- Pass 1: Compute global structured inhomogeneous Poisson solution SIP
 
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
-CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)
+CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
 
 CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this solution as MGM%SIP
 CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
@@ -583,7 +582,7 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
    CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    ! TODO: double?
 
    CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
-   CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)   ! compute UScaRC by CG
+   CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)   ! compute UScaRC by CG
 
    CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)               ! store UScaRC in MGM%USCARC
    CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)   ! update ghostcells correspondingly (global solution)
@@ -666,7 +665,7 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       IF (SCARC_MGM_USE_LU) THEN
          CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
       ELSE
-         CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NSCARC_RHS_HOMOGENEOUS, NLEVEL_MIN)
+         CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NLEVEL_MIN)
       ENDIF
    
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN         ! store also second last values in case of extrapolated BCs
@@ -1445,10 +1444,10 @@ END SUBROUTINE SCARC_SETUP_INTERPOLATION
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Perform geometric multigrid method based on global possion-matrix
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NRHS, NLEVEL)
+SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NLEVEL)
 USE SCARC_UTILITIES, ONLY: SCARC_CYCLING_CONTROL
 USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NRHS, NLEVEL
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 INTEGER :: NS, NP, NL
 INTEGER :: NSTATE, ICYCLE
 REAL (EB) :: TNOW, TNOW_COARSE
@@ -1470,7 +1469,7 @@ NL = NLEVEL
 !   - Initialize solution, right hand side vector
   
 CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
   
 ! ---------- Compute initial defect:  
@@ -1644,7 +1643,7 @@ INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 SELECT CASE (TYPE_COARSE)
 
    CASE (NSCARC_COARSE_ITERATIVE)
-      CALL SCARC_METHOD_KRYLOV (NSTACK, NPARENT, NSCARC_RHS_DEFECT, NLEVEL)
+      CALL SCARC_METHOD_KRYLOV (NSTACK, NPARENT, NLEVEL)
 
    CASE (NSCARC_COARSE_DIRECT)
 #ifdef WITH_MKL
@@ -1765,7 +1764,7 @@ NL = NLEVEL
 TNOW = CURRENT_TIME()
 
 CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL, NSCARC_RHS_INHOMOGENEOUS)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -1848,7 +1847,7 @@ NP = NPARENT
 NL = NLEVEL
 
 CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL, NSCARC_RHS_INHOMOGENEOUS)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -1924,7 +1923,7 @@ END SUBROUTINE SCARC_METHOD_PARDISO
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Set initial solution corresponding to boundary data in BXS, BXF, ...
 ! --------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL, NRHS)
+SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL)
 USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
                           BXS, BXF, BYS, BYF, BZS, BZF, &
                           SCARC_POINT_TO_GRID
@@ -1932,257 +1931,257 @@ USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
 USE SCARC_POINTERS, ONLY: PRES
 #endif
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM_OBSTRUCTIONS, SCARC_SETUP_MGM_INTERFACES
-INTEGER, INTENT(IN) :: NS, NL, NRHS
+INTEGER, INTENT(IN) :: NS, NL
 REAL(EB) :: VAL
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 LOGICAL  :: BFIRST_WORKSPACE = .FALSE.
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'STARTING SETUP_WORKSPACE ', NS, NL, NRHS
+WRITE(MSG%LU_DEBUG,*) 'STARTING SETUP_WORKSPACE ', NS, NL
 #endif
 
 SV  => STACK(NS)%SOLVER
 
 SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
-         ! ---------- If used as main solver use values from pressure-routine as initialization
+   ! ---------- If used as main solver use values from pressure-routine as initialization
  
-         CASE (NSCARC_SOLVER_MAIN)
-         
-            MAIN_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         
-               CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-               ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
-         
-               PRHS => M%PRHS
-               IF (PREDICTOR) THEN
-                  HP => M%H
-               ELSE
-                  HP => M%HS
-               ENDIF
+   CASE (NSCARC_SOLVER_MAIN)
+   
+      MAIN_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+         ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
+   
+         PRHS => M%PRHS
+         IF (PREDICTOR) THEN
+            HP => M%H
+         ELSE
+            HP => M%HS
+         ENDIF
 
 #ifdef WITH_SCARC_POSTPROCESSING
-               IF (SCARC_DUMP) THEN
-                  PRES => L%PRESSURE
-                  IF (PREDICTOR) THEN
-                     PRES%H_OLD = PRES%H_NEW
-                  ELSE
-                     PRES%HS_OLD = PRES%HS_NEW
-                  ENDIF
-                  PRES%B_OLD = ST%B
-               ENDIF
+         IF (SCARC_DUMP) THEN
+            PRES => L%PRESSURE
+            IF (PREDICTOR) THEN
+               PRES%H_OLD = PRES%H_NEW
+            ELSE
+               PRES%HS_OLD = PRES%HS_NEW
+            ENDIF
+            PRES%B_OLD = ST%B
+         ENDIF
 #endif
-         
-               ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
+   
+         ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
 
-               IF (IS_MGM) THEN
-                  BFIRST_WORKSPACE = .TRUE.
-                  BXS => MGM%BXS
-                  BXF => MGM%BXF
-                  BYS => MGM%BYS
-                  BYF => MGM%BYF
-                  BZS => MGM%BZS
-                  BZF => MGM%BZF
-               ELSE
-                  BXS => M%BXS
-                  BXF => M%BXF
-                  BYS => M%BYS
-                  BYF => M%BYF
-                  BZS => M%BZS
-                  BZF => M%BZF
-               ENDIF
+         IF (IS_MGM) THEN
+            BFIRST_WORKSPACE = .TRUE.
+            BXS => MGM%BXS
+            BXF => MGM%BXF
+            BYS => MGM%BYS
+            BYF => MGM%BYF
+            BZS => MGM%BZS
+            BZF => MGM%BZF
+         ELSE
+            BXS => M%BXS
+            BXF => M%BXF
+            BYS => M%BYS
+            BYF => M%BYF
+            BZS => M%BZS
+            BZF => M%BZF
+         ENDIF
 
-               !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-               DO IC = 1, G%NC
-                  ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
-                  ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
-               ENDDO                         
-               !$OMP END PARALLEL DO
-               ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
+         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+         DO IC = 1, G%NC
+            ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
+            ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
+         ENDDO                         
+         !$OMP END PARALLEL DO
+         ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
       
-               !!$OMP PARALLEL 
-               MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
+         !!$OMP PARALLEL 
+         MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
       
-                  IF (IOR0 == 0) CYCLE
-                  F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
-                  
-                  IW1 = F%NCW0
-                  IW2 = F%NCW0 + F%NCW - 1
+            IF (IOR0 == 0) CYCLE
+            F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+            
+            IW1 = F%NCW0
+            IW2 = F%NCW0 + F%NCW - 1
       
-                  !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
-                  FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
+            !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
+            FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
       
-                     GWC => G%WALL(IW)
-         
-                     I = GWC%IXW
-                     J = GWC%IYW
-                     K = GWC%IZW
-         
-                     IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-         
-                     IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-         
-                     IC = G%CELL_NUMBER(I,J,K)
-         
-                     ! ---------- Dirichlet BC's:
-                     ! these are based on the SETTING in BTYPE
-                     ! in the structured case this corresponds to the face-wise SETTING according to the FFT
-                     ! (this allows to use local FFT's as preconditioners)
-                     ! in the unstructured case only open boundary cells lead to Dirichlet BC's
+               GWC => G%WALL(IW)
+   
+               I = GWC%IXW
+               J = GWC%IYW
+               K = GWC%IZW
+   
+               IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+   
+               IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+   
+               IC = G%CELL_NUMBER(I,J,K)
+   
+               ! ---------- Dirichlet BC's:
+               ! these are based on the SETTING in BTYPE
+               ! in the structured case this corresponds to the face-wise SETTING according to the FFT
+               ! (this allows to use local FFT's as preconditioners)
+               ! in the unstructured case only open boundary cells lead to Dirichlet BC's
 
-                     IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
-         
-                        SELECT CASE (IOR0)
-                        CASE (1)
-                           VAL =  BXS(J,K)
-                        CASE (-1)
-                           VAL =  BXF(J,K)
-                        CASE (2)
-                           VAL =  BYS(I,K)
-                        CASE (-2)
-                           VAL =  BYF(I,K)
-                        CASE (3)
-                           VAL =  BZS(I,J)
-                        CASE (-3)
-                           VAL =  BZF(I,J)
-                        END SELECT
-         
-                        ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL
+               IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
+   
+                  SELECT CASE (IOR0)
+                  CASE (1)
+                     VAL =  BXS(J,K)
+                  CASE (-1)
+                     VAL =  BXF(J,K)
+                  CASE (2)
+                     VAL =  BYS(I,K)
+                  CASE (-2)
+                     VAL =  BYF(I,K)
+                  CASE (3)
+                     VAL =  BZS(I,J)
+                  CASE (-3)
+                     VAL =  BZF(I,J)
+                  END SELECT
+   
+                  ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
-                                       IW, I, J, K, IC, VAL, ST%B(IC)
+                                 IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-         
-                     ENDIF IF_DIRICHLET
-         
-                     ! ---------- Neumann BC's:
-                     ! Note for the unstructured case only:
-                     ! Here, the matrix also contains Neumann BC's for those cells which have a
-                     ! PRESSURE_BC_INDEX == DIRICHLET but are NOT open; these cells must be excluded below,
-                     ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
-                     ! excluding them corresponds to a homogeneous Neumann condition for these cells
+   
+               ENDIF IF_DIRICHLET
+   
+               ! ---------- Neumann BC's:
+               ! Note for the unstructured case only:
+               ! Here, the matrix also contains Neumann BC's for those cells which have a
+               ! PRESSURE_BC_INDEX == DIRICHLET but are NOT open; these cells must be excluded below,
+               ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
+               ! excluding them corresponds to a homogeneous Neumann condition for these cells
 
-                     IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
-         
-                        IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
-         
-                        SELECT CASE (IOR0)
-                        CASE (1)
-                           VAL =  BXS(J,K)
-                        CASE (-1)
-                           VAL =  BXF(J,K)
-                        CASE (2)
-                           VAL =  BYS(I,K)
-                        CASE (-2)
-                           VAL =  BYF(I,K)
-                        CASE (3)
-                           VAL =  BZS(I,J)
-                        CASE (-3)
-                           VAL =  BZF(I,J)
-                        END SELECT
-         
-                        ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL
+               IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
+   
+                  IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
+   
+                  SELECT CASE (IOR0)
+                  CASE (1)
+                     VAL =  BXS(J,K)
+                  CASE (-1)
+                     VAL =  BXF(J,K)
+                  CASE (2)
+                     VAL =  BYS(I,K)
+                  CASE (-2)
+                     VAL =  BYF(I,K)
+                  CASE (3)
+                     VAL =  BZS(I,J)
+                  CASE (-3)
+                     VAL =  BZF(I,J)
+                  END SELECT
+   
+                  ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
-                                       IW, I, J, K, IC, VAL, ST%B(IC)
+                                 IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-         
-                     ENDIF IF_NEUMANN
+   
+               ENDIF IF_NEUMANN
       
-                  ENDDO FACE_INHOMOGENEOUS_LOOP
-                  !!$OMP END DO
+            ENDDO FACE_INHOMOGENEOUS_LOOP
+            !!$OMP END DO
 
-               ENDDO MAIN_INHOMOGENEOUS_LOOP
-               !!$OMP END PARALLEL 
+         ENDDO MAIN_INHOMOGENEOUS_LOOP
+         !!$OMP END PARALLEL 
    
 #ifdef WITH_SCARC_POSTPROCESSING
-               IF (SCARC_DUMP) PRES%B_NEW = ST%B
+         IF (SCARC_DUMP) PRES%B_NEW = ST%B
 #endif
-         
-            ENDDO MAIN_MESHES_LOOP
-            
-            ! In case of a Krylov method clear overlapping parts of auxiliary vectors
+   
+      ENDDO MAIN_MESHES_LOOP
+      
+      ! In case of a Krylov method clear overlapping parts of auxiliary vectors
 
-            IF (IS_CG.OR.IS_MGM.OR.HAS_TWO_LEVELS) THEN
-               DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-                  L  => SCARC(NM)%LEVEL(NL)
-                  ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
-                  ST%D(1:G%NCE) = 0.0_EB
-                  ST%R(1:G%NCE) = 0.0_EB
-                  ST%V(1:G%NCE) = 0.0_EB
-                  ST%Y(1:G%NCE) = 0.0_EB
-                  ST%Z(1:G%NCE) = 0.0_EB
-               ENDDO
-            ENDIF
-         
-            ! In case of a multigrid method as main solver clear
-            ! overlapping parts of auxiliary vectors and coarse grid solver vectors
+      IF (IS_CG.OR.IS_MGM.OR.HAS_TWO_LEVELS) THEN
+         DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+            L  => SCARC(NM)%LEVEL(NL)
+            ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
+            ST%D(1:G%NCE) = 0.0_EB
+            ST%R(1:G%NCE) = 0.0_EB
+            ST%V(1:G%NCE) = 0.0_EB
+            ST%Y(1:G%NCE) = 0.0_EB
+            ST%Z(1:G%NCE) = 0.0_EB
+         ENDDO
+      ENDIF
+   
+      ! In case of a multigrid method as main solver clear
+      ! overlapping parts of auxiliary vectors and coarse grid solver vectors
 
-            IF (IS_GMG) THEN
-               DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-                  L  => SCARC(NM)%LEVEL(NL)
-                  ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
-                  ST%V(1:G%NCE) = 0.0_EB
-                  ST%Z(1:G%NCE) = 0.0_EB
-               ENDDO
-            ENDIF
-         
-            ! In case of pure Neumann or periodic BCs, broadcast RHS(end) from last mesh
-            ! to all and store it on all meshes
+      IF (IS_GMG) THEN
+         DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+            L  => SCARC(NM)%LEVEL(NL)
+            ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
+            ST%V(1:G%NCE) = 0.0_EB
+            ST%Z(1:G%NCE) = 0.0_EB
+         ENDDO
+      ENDIF
+   
+      ! In case of pure Neumann or periodic BCs, broadcast RHS(end) from last mesh
+      ! to all and store it on all meshes
 
-            IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
-               IF (UPPER_MESH_INDEX == NMESHES) THEN
-                  L  => SCARC(NMESHES)%LEVEL(NL)
-                  ST => SCARC(NMESHES)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
-                  MESH_REAL = ST%B(G%NC)
-               ELSE
-                  MESH_REAL = 0.0_EB
-               ENDIF
-               IF (N_MPI_PROCESSES > 1) &
-                  CALL MPI_ALLGATHER(MPI_IN_PLACE, 1, MPI_DOUBLE_PRECISION, MESH_REAL, 1, MPI_DOUBLE_PRECISION,&
-                                     MPI_COMM_WORLD, IERROR)
-               DO NM = 1, NMESHES
-                  SCARC(NM)%RHS_END = MESH_REAL(NMESHES)
-               ENDDO
-            ENDIF
-         
+      IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
+         IF (UPPER_MESH_INDEX == NMESHES) THEN
+            L  => SCARC(NMESHES)%LEVEL(NL)
+            ST => SCARC(NMESHES)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
+            MESH_REAL = ST%B(G%NC)
+         ELSE
+            MESH_REAL = 0.0_EB
+         ENDIF
+         IF (N_MPI_PROCESSES > 1) &
+            CALL MPI_ALLGATHER(MPI_IN_PLACE, 1, MPI_DOUBLE_PRECISION, MESH_REAL, 1, MPI_DOUBLE_PRECISION,&
+                               MPI_COMM_WORLD, IERROR)
+         DO NM = 1, NMESHES
+            SCARC(NM)%RHS_END = MESH_REAL(NMESHES)
+         ENDDO
+      ENDIF
+   
  
-         ! ---------- If MG is used as Krylov preconditioner, vector R of main Krylov is the new RHS for MG
+   ! ---------- If MG is used as Krylov preconditioner, vector R of main Krylov is the new RHS for MG
  
-         CASE (NSCARC_SOLVER_PRECON)
-         
-            IF (IS_CG_MG) THEN
-               DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-                  L   => SCARC(NM)%LEVEL(NL)
-                  ST  => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)              ! current stage
-                  STP => SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)           ! parent stage
-                  ST%X(1:G%NCE) = 0.0_EB
-                  ST%B(1:G%NCE) = STP%R(1:G%NCE)                                                
-                  ST%V(1:G%NCE) = 0.0_EB
-                  ST%Z(1:G%NCE) = 0.0_EB
-               ENDDO
-            ENDIF
-         
+   CASE (NSCARC_SOLVER_PRECON)
+   
+      IF (IS_CG_MG) THEN
+         DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+            L   => SCARC(NM)%LEVEL(NL)
+            ST  => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)              ! current stage
+            STP => SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)           ! parent stage
+            ST%X(1:G%NCE) = 0.0_EB
+            ST%B(1:G%NCE) = STP%R(1:G%NCE)                                                
+            ST%V(1:G%NCE) = 0.0_EB
+            ST%Z(1:G%NCE) = 0.0_EB
+         ENDDO
+      ENDIF
+   
  
-         ! ---------- If used as coarse grid solver start with zero initialization
+   ! ---------- If used as coarse grid solver start with zero initialization
  
-         CASE (NSCARC_SOLVER_COARSE)
-         
-            DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-               ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
-               ST%X = 0.0_EB
-               ST%D = 0.0_EB
-               ST%R = 0.0_EB
-               ST%V = 0.0_EB
-               ST%Y = 0.0_EB
-               ST%Z = 0.0_EB
-            ENDDO
+   CASE (NSCARC_SOLVER_COARSE)
+   
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         ST => SCARC(NM)%LEVEL(NL)%STAGE(SV%TYPE_STAGE)
+         ST%X = 0.0_EB
+         ST%D = 0.0_EB
+         ST%R = 0.0_EB
+         ST%V = 0.0_EB
+         ST%Y = 0.0_EB
+         ST%Z = 0.0_EB
+      ENDDO
          
 END SELECT SELECT_SOLVER_TYPE
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'LEAVING SETUP_WORKSPACE ', NS, NL, NRHS
+WRITE(MSG%LU_DEBUG,*) 'LEAVING SETUP_WORKSPACE ', NS, NL
 #endif
 END SUBROUTINE SCARC_SETUP_WORKSPACE
 
@@ -2936,7 +2935,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
    !CASE (NSCARC_RELAX_MULTIGRID)
 
        NP0 = NP               ! Only dummy command until multigrid is used again
-   !   CALL SCARC_METHOD_MULTIGRID (NS, NP, NSCARC_RHS_DEFECT, NLEVEL_MIN)
+   !   CALL SCARC_METHOD_MULTIGRID (NS, NP, NLEVEL_MIN)
 
  
    ! --------- Preconditioning by blockwise FFT based on Crayfishpak

@@ -232,10 +232,6 @@ INTEGER, PARAMETER :: NSCARC_RELAX_MSSOR             = 11        !< Type of prec
 INTEGER, PARAMETER :: NSCARC_RELAX_MULTIGRID         = 12        !< Type of preconditioner: multigrid methods
 INTEGER, PARAMETER :: NSCARC_RELAX_SSOR              = 13        !< Type of preconditioner: SSOR-methods
 
-INTEGER, PARAMETER :: NSCARC_RHS_HOMOGENEOUS         =  1        !< Type of boundary conditions: homogeneous 
-INTEGER, PARAMETER :: NSCARC_RHS_INHOMOGENEOUS       =  2        !< Type of boundary conditions: inhomogeneous
-INTEGER, PARAMETER :: NSCARC_RHS_DEFECT              =  3        !< Type of boundary conditions: set to defect of main iteration
-
 INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL            =  0        !< Scope of defect correction: global
 INTEGER, PARAMETER :: NSCARC_SCOPE_LOCAL             =  1        !< Scope of defect correction: local
 
