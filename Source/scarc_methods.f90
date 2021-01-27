@@ -550,161 +550,175 @@ SUBROUTINE SCARC_METHOD_MGM(NSTACK)
 USE SCARC_MGM
 INTEGER, INTENT(IN) :: NSTACK
 INTEGER :: ITE_MGM, STATE_MGM
-LOGICAL :: COMPARE_USCARC_VS_SCARC = .TRUE., USE_OVERLAPS = .TRUE., USE_CORRECT_INITIALIZATION
+LOGICAL :: USE_CORRECT_INITIALIZATION
 
 CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: START, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
 
-! Pass 1: Solve structured inhomogeneous Poisson solution
+! ------------- Pass 1: Compute global structured inhomogeneous Poisson solution SIP
 
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
 CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)
 
-CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)             
-CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)
+CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this solution as MGM%SIP
+CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
 
-CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)      
-CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)
-CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)
+CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)                 ! Initialize unstructured inhomogeneous Poisson UIP with SIP
+
+CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)         ! update velocity based on SIP
+CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)  ! compute related velocity error
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_MGM_DUMP('SIP',0)
 CALL SCARC_MGM_DUMP('UIP',0)
 #endif
 
-STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0)
+! Determine of correct initialization of interface boundary values is required
+! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
+
+USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_INIT_EXACT .AND. &
+                             ((TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
+                              (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
+
+! The upper computation of the structured inhomogeneous Poisson (SIP) solution corresponds to the usual ScaRC solution
+! (To this end the structured Poisson matrix is assembled during setup)
+! If comparison with exact solution is required, also compute UScaRC solution
+! (To this end the unstructured Poisson matrix will additionally be assembled)
+! For both inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
+! Compute the difference DScaRC of UScaRC and ScaRC 
+
+IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
+
+   CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                ! store SIP as ScaRC solution in MGM%SCARC
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    ! TODO: double?
+
+   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
+   CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)   ! compute UScaRC by CG
+
+   CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)               ! store UScaRC in MGM%USCARC
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)   ! update ghostcells correspondingly (global solution)
+
+   CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)       ! build difference and store it in MGM%DSCARC
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER POISSON ITE, CAPPA, TPI=', ITE, CAPPA, STATE_MGM, &
-                          TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
-   CALL SCARC_DEBUG_METHOD ('PART1 of MGM: AFTER POISSON SOLUTION',2)                     
-#endif
-   
-! If requested accuracy already has been reached, leave 
-! Otherwise start pass 2: Local solution of homogeneous Laplace problems
-
-IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
-   
-   ! If comparison with correct UScaRC method is required, also compute UScaRC solution
-   ! Store  ScaRC solution in MGM%SCARC (this corresponds to the first SIP solution)
-   ! Store UScaRC solution in MGM%USCARC 
-   ! For both correct external BC's and ghost cells are used
-   ! Compute the difference of both and store result in MGM%DSCARC
-
-   IF (COMPARE_USCARC_VS_SCARC) THEN
-   
-      CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                
-      CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)
-   
-      CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
-      CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NSCARC_RHS_INHOMOGENEOUS, NLEVEL_MIN)
-
-      CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)              
-      CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)
-
-      CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)     
-#ifdef WITH_SCARC_DEBUG
-      CALL SCARC_MGM_DUMP('HS',0)
-      CALL SCARC_MGM_DUMP('HU',0)
-      CALL SCARC_MGM_DUMP('HD',0)
-      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER COMPARISON, TPI=', TOTAL_PRESSURE_ITERATIONS
-      CALL SCARC_DEBUG_METHOD('PART0 in MGM: DIFFERENCE SCARC VS USCARC',5)                 
+   CALL SCARC_MGM_DUMP('HS',0)
+   CALL SCARC_MGM_DUMP('HU',0)
+   CALL SCARC_MGM_DUMP('HD',0)
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER COMPARISON, TPI=', TOTAL_PRESSURE_ITERATIONS
+   CALL SCARC_DEBUG_METHOD('PART0 in MGM: DIFFERENCE SCARC VS USCARC',5)                 
 #endif
 
-   ENDIF
+ENDIF
 
-   ! Only if correct initialization is required:
-   ! In the very first pressure iteration, or - in case of extrapolated MGM boundary values - in the two very first iterations 
-   ! use UScaRC solution as solution of this MGM pass and store the difference DScaRC of ScaRC and UScaRC 
-   ! for the definition of the interface BC's in next pressure iteration
+! Only if correct initialization is required:
+! In the very first pressure iteration ever, or - in case of extrapolated MGM BCs - in the two very first pressure iterations 
+!    - use UScaRC solution as unstructured inhomogeneous Poisson UIP solution of this MGM pass 
+!    - use difference DScaRC of UScaRC and ScaRC as unstructured homogeneous Laplace UHL solution of this MGM pass
+! Store them for the definition of the interface BC's in next pressure iteration
+! In this case the requested velocity tolerance has been reached by default here and this MGM call can be left
 
-   USE_CORRECT_INITIALIZATION = SCARC_MGM_INIT_EXACT .AND. &
-                                (TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
-                                (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) 
-
-   IF (NMESHES > 1 .AND. USE_CORRECT_INITIALIZATION) THEN
+IF (USE_CORRECT_INITIALIZATION) THEN
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
 #endif
 
-       CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)   
-       CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)   
+   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)        ! copy UScaRC to UIP
+   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)        ! copy diff(UScaRC-ScaRC) to UHL
 
-       IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
-           CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
-       ELSE 
-           CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
-       ENDIF
+   IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN           ! exchange interface values for later BC settings
+       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
+   ELSE 
+       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+   ENDIF
 
-       IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
-          CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)
-          CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
-       ENDIF
+   IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
+      CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)       ! store also second last values for UHL
+      CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)      ! store also second last values for other UHL
+   ENDIF
 #ifdef WITH_SCARC_DEBUG
-      CALL SCARC_MGM_DUMP('UHL',0)
-      CALL SCARC_MGM_DUMP('UIP',0)
+   CALL SCARC_MGM_DUMP('UHL',0)
+   CALL SCARC_MGM_DUMP('UIP',0)
+#endif
+ 
+   STATE_MGM = NSCARC_MGM_SUCCESS
+
+! Otherwise check if the requested velocity tolerance has already been reached by pass 1
+
+ELSE
+
+   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER POISSON ITE, CAPPA, TPI=', ITE, CAPPA, STATE_MGM, &
+                          TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
+   CALL SCARC_DEBUG_METHOD ('PART1 of MGM: AFTER POISSON SOLUTION', 2)                     
 #endif
 
-   ! Otherwise define BC's along obstructions based on MGM-logic and compute correction by Laplace solution
-   ! Define BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
-   ! Note that the Laplace problems are unstructured homogeneous
-   ELSE
+ENDIF
+
+! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
+! This is only necessary if the requested accuracy has not already been achieved by pass 1
+! Define BC's along obstructions according to MGM-algorithm 
+! Define BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
+
+IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
 
-      MGM_CORRECTION_LOOP: DO ITE_MGM = 1, SCARC_MGM_ITERATIONS
+   MGM_CORRECTION_LOOP: DO ITE_MGM = 1, SCARC_MGM_ITERATIONS
 #ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) '=============> SUSI: STARTING MGM-iteration ', ITE_MGM, TOTAL_PRESSURE_ITERATIONS
+      WRITE(MSG%LU_DEBUG,*) '=============> SUSI: STARTING MGM-iteration ', ITE_MGM, TOTAL_PRESSURE_ITERATIONS
 #endif
-         CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
+
+      CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
+
+      IF (SCARC_MGM_USE_LU) THEN
+         CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
+      ELSE
          CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NSCARC_RHS_HOMOGENEOUS, NLEVEL_MIN)
+      ENDIF
+   
+      IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN         ! store also second last values in case of extrapolated BCs
+         CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)
+         CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
+      ENDIF
 
-         IF (SCARC_MGM_USE_LU) CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
-      
-         IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
-            CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_PREV)
-            CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_PREV)
-         ENDIF
+      CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
 
-         CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)
+      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+      CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
 
-         IF (USE_OVERLAPS) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
-         CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
-
-         CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
+      CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
 #ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
-         CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
-         CALL SCARC_MGM_DUMP('UIP',ITE_MGM)
-         CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
+      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
+      CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
+      CALL SCARC_MGM_DUMP('UIP',ITE_MGM)
+      CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
 #endif
    
-         CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
-         CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
-   
-         STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER VELOCITY-ERROR, TPI=', TOTAL_PRESSURE_ITERATIONS, ITE_MGM, VELOCITY_ERROR_GLOBAL
-         CALL SCARC_DEBUG_METHOD('PART4 of MGM: AFTER MERGE ',2)                            
-#endif
-         CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
-         CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
+      CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
+      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
+      CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
 
-         IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
-   
-         IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
-            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
-         ELSE 
-            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
-         ENDIF
-   
-      ENDDO MGM_CORRECTION_LOOP
+      STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER VELOCITY-ERROR, TPI=', TOTAL_PRESSURE_ITERATIONS, ITE_MGM, VELOCITY_ERROR_GLOBAL
+      CALL SCARC_DEBUG_METHOD('PART4 of MGM: AFTER MERGE ',2)                            
+#endif
+      CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
+      CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
+
+      IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
+      IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
+      ELSE 
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+      ENDIF
+
+   ENDDO MGM_CORRECTION_LOOP
       
-      STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(-1)
+   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(-1)
    
-   ENDIF
 ENDIF
 
 ! Reset method type (which has been changed during Krylov method) to MGM
