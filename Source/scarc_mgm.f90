@@ -498,9 +498,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
-         WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+         !WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+         !                            MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+         !WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
 #endif
       CASE DEFAULT
          MGM%ITE = ITE_MGM
@@ -509,8 +509,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                     MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                     MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
+         !WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+         !                            MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
          WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
 #endif
          IF (ITE > MGM%ITE_LAPLACE) THEN
@@ -524,24 +524,24 @@ ENDDO
 
 #ifdef WITH_SCARC_VERBOSE
 1101 FORMAT(I6, ' , ', E11.3)
-1300 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, &
-            ' , #POISSON: ', I6, &
-            ' , #MGM: ', I6, &
-            ' , #LAPLACE_max: ', I6, &
-            ' , VE: ', E14.6, a14)
-2000 FORMAT('------------------------------------------------------------------------------------')
 #endif
 #ifdef WITH_SCARC_DEBUG
-1100 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, 
-            ' , #POISSON: ', I6, &
-            ' , #MGM: ', I6, &
-            ' , #LAPLACE    : ', I6, &
+1100 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POISSON: ', I6,&
+            ' , #MGM: ', I6,&
+            ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
-1200 FORMAT('TS ',I6, ', #PI: ', I6, ', #TPI: ', I6, &
-            ' , #POISSON: ', I6, &
-            ' , #MGM: ', I6, &
-            ' , #LAPLACE    : ', I6, &
+1200 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POISSON: ', I6,&
+            ' , #MGM: ', I6,&
+            ' , #LAPLACE    : ', I6,&
             ' , VE: ', E14.6)
+1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POISSON: ', I6,&
+            ' , #MGM: ', I6,&
+            ' , #LAPLACE_max: ', I6,&
+            ' , VE: ', E14.6, a14)
+2000 FORMAT('------------------------------------------------------------------------------------')
 #endif
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 
