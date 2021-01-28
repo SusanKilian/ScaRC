@@ -1401,7 +1401,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                      CASE ( 1)
                         BXS(J,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE (-1)
-                        BYS(J,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        BXF(J,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE ( 2)
                         BYS(I,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE (-2)
