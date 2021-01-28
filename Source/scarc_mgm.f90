@@ -459,7 +459,7 @@ ENDDO
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
-1000 FORMAT('================= IC : ', I2, ' ===========================')
+1000 FORMAT('================= IC : ', I3, ' ===========================')
 1100 FORMAT('LLL(',I3, ',',I3, '):', E14.6)
 1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL, SCAL2:',2E14.6)
 1300 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6)
@@ -1377,6 +1377,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          MGM_CELL_LOOP: DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
 
             IWG = OG%ICG_TO_IWG(ICG)
+            ICW = OG%ICG_TO_ICW(ICG, 1)
 
             I = G%ICX(ICW) 
             J = G%ICY(ICW) 

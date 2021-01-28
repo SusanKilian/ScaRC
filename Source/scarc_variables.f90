@@ -64,7 +64,7 @@ CHARACTER(40) :: SCARC_MGM_BC              = 'MEAN'              !< Type of inte
 CHARACTER(40) :: SCARC_MGM_INTERPOL        = 'LINEAR'            !< Type of interpolation for Lapalce BC settings
 INTEGER       :: SCARC_MGM_ITERATIONS      = 50                  !< Maximum allowed number of Laplace iterations 
 LOGICAL       :: SCARC_MGM_CHECK_LAPLACE   = .FALSE.             !< Requested check of Laplace solutions against ScaRC-UScaRC diff
-LOGICAL       :: SCARC_MGM_INIT_EXACT      = .TRUE.              !< Use exact Laplace solution for initialization of interface BCs
+LOGICAL       :: SCARC_MGM_INIT_EXACT= .TRUE.              !< Use exact Laplace solution for initialization of interface BCs
 LOGICAL       :: SCARC_MGM_USE_LU          = .TRUE.              !< Use permuted LU for Laplace solutions (otherwise UScaRC)
 
 ! ---------- Parameters for smoothing method (used in multigrids-methods)
