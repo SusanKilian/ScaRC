@@ -662,6 +662,7 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       CALL SCARC_MGM_SET_INTERFACES (NLEVEL_MIN)
       CALL SCARC_MGM_SET_OBSTRUCTIONS (NLEVEL_MIN)
+
       IF (SCARC_MGM_USE_LU) THEN
          CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
       ELSE
@@ -1934,7 +1935,6 @@ USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL
 REAL(EB) :: VAL
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
-LOGICAL  :: BFIRST_WORKSPACE = .FALSE.
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'STARTING SETUP_WORKSPACE ', NS, NL
@@ -1974,30 +1974,35 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
    
          ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
 
-         IF (IS_MGM) THEN
-            BFIRST_WORKSPACE = .TRUE.
-            BXS => MGM%BXS
-            BXF => MGM%BXF
-            BYS => MGM%BYS
-            BYF => MGM%BYF
-            BZS => MGM%BZS
-            BZF => MGM%BZF
-         ELSE
-            BXS => M%BXS
-            BXF => M%BXF
-            BYS => M%BYS
-            BYF => M%BYF
-            BZS => M%BZS
-            BZF => M%BZF
-         ENDIF
+         IF (IS_MGM .AND. NS /= NSCARC_STACK_ROOT) THEN
 
-         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-         DO IC = 1, G%NC
-            ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
-            ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
-         ENDDO                         
-         !$OMP END PARALLEL DO
-         ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
+            BXS => MGM%BXS ;  BXF => MGM%BXF
+            BYS => MGM%BYS ;  BYF => MGM%BYF
+            BZS => MGM%BZS ;  BZF => MGM%BZF
+
+            ST%B = 0.0_EB                                    ! set RHS to zero
+            ST%X = 0.0_EB                                    ! use zero as initial vector
+            ST%V = 0.0_EB
+            ST%D = 0.0_EB
+            ST%R = 0.0_EB
+            ST%Y = 0.0_EB
+            ST%Z = 0.0_EB
+
+         ELSE
+
+            BXS => M%BXS   ;  BXF => M%BXF
+            BYS => M%BYS   ;  BYF => M%BYF
+            BZS => M%BZS   ;  BZF => M%BZF
+
+            !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+            DO IC = 1, G%NC
+               ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
+               ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
+            ENDDO                         
+            !$OMP END PARALLEL DO
+            ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
+
+         ENDIF
       
          !!$OMP PARALLEL 
          MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 

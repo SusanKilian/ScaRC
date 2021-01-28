@@ -1357,7 +1357,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    BTYPE => MGM%BTYPE
 
    BXS => MGM%BXS ;  BXS = 0.0_EB
-   BXF => MGM%BXS ;  BXF = 0.0_EB
+   BXF => MGM%BXF ;  BXF = 0.0_EB
    BYS => MGM%BYS ;  BYS = 0.0_EB
    BYF => MGM%BYF ;  BYF = 0.0_EB
    BZS => MGM%BZS ;  BZS = 0.0_EB
@@ -1545,7 +1545,7 @@ WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGH
                      CASE ( 1)
                         BXS(J,K) = VAL
                      CASE (-1)
-                        BYS(J,K) = VAL
+                        BXF(J,K) = VAL
                      CASE ( 2)
                         BYS(I,K) = VAL
                      CASE (-2)
