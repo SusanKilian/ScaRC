@@ -36,9 +36,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup structures needed for the use of the algebraic multigrid method
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_AMG_ENVIRONMENT
 INTEGER:: NL
 LOGICAL:: FURTHER_COARSENING_REQUIRED
@@ -98,9 +98,9 @@ ENDDO COARSENING_LOOP
 END SUBROUTINE SCARC_SETUP_AMG_ENVIRONMENT
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief  Setup order in which aggregation is performed over mesh decomposition
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_AGGREGATION_ORDER
 USE SCARC_POINTERS, ONLY: SUB, S
 LOGICAL, ALLOCATABLE, DIMENSION(:):: NOT_AGGREGATED
@@ -136,10 +136,10 @@ CALL SCARC_DEALLOCATE_LOG1 (NOT_AGGREGATED, 'NOT_AGGREGATED', CROUTINE)
 END SUBROUTINE SCARC_SETUP_AGGREGATION_ORDER
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief  Invert matrix diagonal which is already stored in DIAG-vector (reuse workspace)
 ! Scale each matrix element with inverse of diagonal and approximate spectral radius (currently disabled) 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_INVERT_MATRIX_DIAGONAL(NL)
 USE SCARC_POINTERS, ONLY: G, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NL
@@ -155,7 +155,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_INVERT_MATRIX_DIAGONAL
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief  Compute a strength of connection matrix based on symmetric smoothed aggregation heuristic. 
 ! A nonzero connection A[i, j] is considered strong if:
 
@@ -163,7 +163,7 @@ END SUBROUTINE SCARC_INVERT_MATRIX_DIAGONAL
 
 ! The strength matrix S corresponds to the set of nonzero entries of A that are strong connections
 ! based on a strength of connection tolerance theta
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_CONNECTION(NL)
 USE SCARC_POINTERS, ONLY: G, A, S, C, OG, OA, OC, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
@@ -279,9 +279,9 @@ ENDIF
 END SUBROUTINE SCARC_SETUP_CONNECTION
  
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Setup aggregation zones for Smoothed Aggregation Algebraic Multigrid Method
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_AGGREGATION_ZONES(NL)
 USE SCARC_POINTERS, ONLY: SUB, C, CF, G, LF, LC, GF, GC, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_MULTIGRID
@@ -494,9 +494,9 @@ END SUBROUTINE SCARC_SETUP_AGGREGATION_ZONES
 
 
 
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Extract overlapping zone information (including second layers)
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_EXTRACT_ZONE_OVERLAPS(NL)
 USE SCARC_POINTERS, ONLY: GC, GF, OLF, OGF, F, &
                           SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_OTHER_MULTIGRID
@@ -590,9 +590,9 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_EXTRACT_ZONE_OVERLAPS
 
 
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Setup pointers for overlapping zones for a pair of grid levels
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_EXTRACT_ZONE_POINTERS(NL)
 USE SCARC_POINTERS, ONLY : F, GF, GC, OLF, OLC, OGF, OGC, &
                            SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_OTHER_MULTIGRID
@@ -778,9 +778,9 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_EXTRACT_ZONE_POINTERS
 
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Identify cells on second layer
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_IDENTIFY_LAYER2(NL)
 USE SCARC_POINTERS, ONLY : S, A, G, OL, OG, &
                            SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_CMATRIX
@@ -830,9 +830,9 @@ END SUBROUTINE SCARC_IDENTIFY_LAYER2
 
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief  Standard aggregation prodecure based on strength of connection matrix
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSENING_AGGREGATION(G, C)
 TYPE (SCARC_CMATRIX_TYPE), POINTER, INTENT(IN):: C
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN):: G
@@ -957,9 +957,9 @@ CALL SCARC_DEBUG_ZONES(G, -1, 1, 'AFTER ACTIVE PASS3')
 END SUBROUTINE SCARC_SETUP_COARSENING_AGGREGATION
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Selfdefined geometric motivated aggregation procedure using cubic zones
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSENING_CUBIC(LF, LC, GF, GC)
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN):: LF, LC
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN):: GF, GC
@@ -1171,9 +1171,9 @@ CALL SCARC_DEBUG_ZONES(GF, -1, 1, 'AFTER ACTIVE PASS3')
 
 END SUBROUTINE SCARC_SETUP_COARSENING_CUBIC
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Selfdefined geometric motivated aggregation procedure using cubic zones
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSENING_GMG(LF, LC, GF, GC)
 TYPE (SCARC_LEVEL_TYPE), POINTER, INTENT(IN):: LF, LC
 TYPE (SCARC_GRID_TYPE),  POINTER, INTENT(IN):: GF, GC
@@ -1323,9 +1323,9 @@ CALL SCARC_DEBUG_ZONES(GF, -1, 1, 'AFTER ACTIVE PASS3')
 
 END SUBROUTINE SCARC_SETUP_COARSENING_GMG
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Remove workspace on specified grid level which will no longer be needed after matrix setup
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_CLEAN_WORKSPACE_SYSTEM(NL)
 USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NL
@@ -1339,9 +1339,9 @@ ENDDO
 END SUBROUTINE SCARC_CLEAN_WORKSPACE_SYSTEM
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Remove workspace on specified grid level which will no longer be needed in SAMG method
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_CLEAN_WORKSPACE_AMG(NL)
 USE SCARC_POINTERS, ONLY: G, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NL
@@ -1361,12 +1361,12 @@ ENDDO
 END SUBROUTINE SCARC_CLEAN_WORKSPACE_AMG
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Perform relaxation of nullspac
 ! Perform AMG Jacobi :.. x = x-omega D^{-1} (Ax-b)
 ! Near-null space vector is given in vector G%NULLSPACE--> corresponds to x
 ! vector b is zero
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RELAX_NULLSPACE(NL)
 USE SCARC_POINTERS, ONLY: L, G, A, MG, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NL
@@ -1529,11 +1529,11 @@ IF (NMESHES > 1) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_NULLSPACE, NSCARC_NONE, NL
 END SUBROUTINE SCARC_RELAX_NULLSPACE
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Setup basic structure of Prolongation matrix
 ! This concerns the setting of the number of rows and the column pointers
 ! The values are still missing and are set in a later step
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_ZONE_OPERATOR(NL)
 USE SCARC_POINTERS, ONLY: GF, GC, AF, ZF, SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NL
@@ -1626,12 +1626,12 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_ZONE_OPERATOR
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Determine tentative prolongator for current level by computing QR-decomposition of smoothed 
 ! nullspace vector and set nullspace for next level
 ! Compute the tentative prolongator, T, which is a tentative interpolation
 ! matrix from the coarse-grid to the fine-grid.  T exactly interpolates  B_fine = T B_coarse.
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PROLONGATION_AMG(NL)
 USE SCARC_POINTERS, ONLY: S, L, G, OG, A, OA, P, OP, GF, OGF, GC, PF, OPF, Z, MG, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MULTIGRID, &
@@ -1923,9 +1923,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_PROLONGATION_AMG
 
 
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Setup restriction and prolongation matrices in case of GMG-like coarsening
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_TRANSFER_GMG(NL)
 USE SCARC_POINTERS, ONLY: S, LC, LF, GF, GC, AF, RF, ZF, PF, OPF, OGF, &
                           SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MULTIGRID, &
@@ -2259,9 +2259,9 @@ ICC = (IZC-1) * LC%NX*LC%NY + (IYC-1) * LC%NX+IXC
 RETURN
 END FUNCTION
 
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Determine on which overlapping global coarse cells are given mesh depends (also considering diagonal connections)
-! -------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_GET_CELL_DEPENDENCIES_GALERKIN(GC, GF, PF, NLEN)
 TYPE (SCARC_GRID_TYPE), POINTER, INTENT(IN):: GC, GF
 TYPE (SCARC_CMATRIX_TYPE), POINTER, INTENT(IN):: PF
@@ -2304,9 +2304,9 @@ WRITE(MSG%LU_DEBUG, '(8I6)') GC%CELLS_GLOBAL(1:NLEN)
 END SUBROUTINE SCARC_GET_CELL_DEPENDENCIES_GALERKIN
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Define nullspace for next coarser level, if coarsest level isn't reached yet
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_NULLSPACE_COARSE(NL)
 USE SCARC_POINTERS, ONLY: GC, GF, ZF, SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NL
@@ -2347,9 +2347,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_NULLSPACE_COARSE
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Determine which columns of system matrix are involved in multiplication with tentative prolongator
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_MATCH_MATRIX_COLUMN(A, IC, JC)
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: A
 INTEGER, INTENT(IN):: IC, JC
@@ -2364,10 +2364,10 @@ ENDDO
 END FUNCTION SCARC_MATCH_MATRIX_COLUMN
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Setup Restriction matrix: Build transpose of Prolongation matrix
 ! Compute the Restriction matrix, R, which interpolates from the fine-grid to the coarse-grid.
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_RESTRICTION(NL)
 USE SCARC_POINTERS, ONLY: GC, GF, RF, PF, SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NL
@@ -2439,9 +2439,9 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_RESTRICTION
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Find matching column index during matrix-matrix multiplication of compact matrices
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_FIND_MATCHING_COLUMN(P, JC, ICCG)
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: P
 INTEGER, INTENT(IN):: JC, ICCG
@@ -2459,9 +2459,9 @@ ENDDO
 END FUNCTION SCARC_FIND_MATCHING_COLUMN
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Find matching components to multiply row of Poisson matrix with column of Prolongation matrix
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MULTIPLY_POISSON_PROL(A, P, PP, ICC, ICC0, IP, IC)
 TYPE (SCARC_CMATRIX_TYPE), POINTER, INTENT(IN):: A, P, PP
 INTEGER, INTENT(IN):: ICC, IC
@@ -2498,9 +2498,9 @@ ENDIF
 END SUBROUTINE SCARC_MULTIPLY_POISSON_PROL
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Perform matrix multiplication between fine Poisson matrix and Prolongation matrix 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON_PROL(NL)
 USE SCARC_POINTERS, ONLY: GC, GF, AF, PF, PPF, OA, OPP, OGF, &
                           SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_MULTIGRID, &
@@ -2621,9 +2621,9 @@ ENDDO
 END SUBROUTINE SCARC_SETUP_POISSON_PROL
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Find matching components to multiply row of Restriction matrix with column of Poisson-Prol matrix
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MULTIPLY_GALERKIN(PPF, RF, AC, ICCL, JCCL, JCCG, JCCG0, IP)
 USE SCARC_POINTERS, ONLY: GF
 TYPE (SCARC_CMATRIX_TYPE), POINTER, INTENT(IN):: PPF, RF, AC
@@ -2653,10 +2653,10 @@ ENDIF
 END SUBROUTINE SCARC_MULTIPLY_GALERKIN
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Setup Galerkin matrix on coarser grid level (AMG only)
 ! Note: Matrix POISPROL corresponds to POISSON x PROLONGATION  ~ AP
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_GALERKIN(NL)
 USE SCARC_POINTERS, ONLY: GF, GC, PPF, RF, AC, OAC, OGC, &
                           SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_OTHER_MULTIGRID, &
@@ -2802,12 +2802,12 @@ ENDIF
 END SUBROUTINE SCARC_SETUP_GALERKIN
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Compute entry of Poisson times Prolongation matrix at specified position
 ! This consists of a summation over the entries:    P(:,ICC)*A(IC, :) 
 ! Thus, it must be checked, if-for a given entry of A in row IC-the Prolongation matrix
 ! has a corresponding non-zero value
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 DOUBLE PRECISION FUNCTION SCARC_VALUE_RAP(IC, ICC)
 USE SCARC_POINTERS, ONLY : GC, AF, PF
 INTEGER, INTENT(IN):: IC, ICC
@@ -2835,9 +2835,9 @@ WRITE(MSG%LU_DEBUG, *) 'VALUE_AP: RETURN DSUM=', DSUM
 END FUNCTION SCARC_VALUE_RAP
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Resort matrix entries such that diagonal entry comes first (compact storage technique only)
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RESORT_MATRIX_ROWS(NL)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NL

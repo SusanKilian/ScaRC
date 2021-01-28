@@ -23,9 +23,9 @@ IMPLICIT NONE
 CONTAINS
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate vectors and define variables needed for McKeeney-Greengard-Mayo method
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: L, G, MGM, LM, UM, SCARC_POINT_TO_MGM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NLMIN, NLMAX
@@ -145,7 +145,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       IF (SCARC_MGM_USE_LU) THEN
 
          CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-         CALL SCARC_POINT_TO_GRID(NM, NL)
+         CALL SCARC_POINT_TO_MGM(NM, NL)
+         G => L%UNSTRUCTURED
 
          LM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
          UM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
@@ -179,9 +180,9 @@ ENDDO
 
 END SUBROUTINE SCARC_SETUP_MGM
 
-! ---------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Setup structures for the true approximate boundary setting in MGM
-! ---------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE 
 USE SCARC_POINTERS, ONLY: L, G, GWC, MGM
 INTEGER:: IW, I, J, K, IOR0, IC 
@@ -278,9 +279,9 @@ CALL SCARC_DEALLOCATE_INT2(CNT, 'CNT', CROUTINE)
 END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 
 
-! ---------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
-! ---------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_LU(NM, NL)
 USE SCARC_POINTERS, ONLY: G, MGM, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NM, NL
@@ -468,9 +469,9 @@ TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 END SUBROUTINE SCARC_SETUP_MGM_LU
 
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Convergence state of MGM method
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
 USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: ITE_MGM
@@ -553,9 +554,9 @@ ENDDO
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set correct boundary values at external and internal boundaries
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS(NTYPE)
 USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, MGM, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NTYPE
@@ -734,9 +735,9 @@ ENDDO
 END SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Copy specified vectors in McKeeney-Greengard-Mayo method 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COPY(NTYPE)
 USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
 #ifdef WITH_SCARC_DEBUG
@@ -886,9 +887,9 @@ ENDDO
 END SUBROUTINE SCARC_MGM_COPY
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Build difference of specified vectors in McKeeney-Greengard-Mayo method
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_DIFF(NTYPE)
 USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, SCARC_POINT_TO_MGM
 #ifdef WITH_SCARC_DEBUG
@@ -978,9 +979,9 @@ ENDDO
 END SUBROUTINE SCARC_MGM_DIFF
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store specified type of vector in McKeeney-Greengard-Mayo method
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_STORE(NTYPE)
 USE SCARC_POINTERS, ONLY: L, G, ST, MGM, GWC, M, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
@@ -1283,9 +1284,9 @@ ENDDO
 END SUBROUTINE SCARC_MGM_STORE
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Setup workspace for McKeeney-Greengard-Mayo method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_WORKSPACE(NL)
 USE SCARC_POINTERS, ONLY: M, MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NL
@@ -1326,10 +1327,10 @@ ENDDO
 
 END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
-! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_INTERFACES(NL)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MGM_SET_INTERFACES(NL)
 USE SCARC_POINTERS, ONLY: L, F, G, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, &
                           BXS, BXF, BYS, BYF, BZS, BZF, BTYPE, &
                           SCARC_POINT_TO_MGM, SCARC_POINT_TO_OTHER_GRID
@@ -1343,9 +1344,10 @@ IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITY
 MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NL)
+   G => L%UNSTRUCTURED
 
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START TRUE SETTING:', TOTAL_PRESSURE_ITERATIONS
+   WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START SET INTERFACES:', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
    WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
    WRITE(MSG%LU_DEBUG, MSG%CFORM1) ((MGM%UHL(I, 1, K), I = 1, L%NX), K = L%NZ, 1, -1)
    WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
@@ -1449,14 +1451,14 @@ WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, 1,  J,   K, 2  ,  J,  K, UHL(1, J, K), UHL(
                               HB( 2) = 0.5_EB * (UHL(1, J-1, K) + OUHL(IWG+F%INCR_STENCIL(2)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(2), -1, -1, UHL(1, J-1, K), &
-                             OUHL(IWG+F%INCR_STENCIL(2)), 3, HB(2)
+                          OUHL(IWG+F%INCR_STENCIL(2)), 3, HB(2)
 #endif
                            ENDIF
                            IF (BTYPE(IWG, -2) == INTERNAL) THEN
                               HB(-2) = 0.5_EB * (UHL(1, J+1, K) + OUHL(IWG+F%INCR_STENCIL(-2)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(-2), -1, -1, UHL(1, J-1, K), &
-                             OUHL(IWG+F%INCR_STENCIL(-2)), 3, HB(2)
+                          OUHL(IWG+F%INCR_STENCIL(-2)), 3, HB(2)
 #endif
                            ENDIF
                         ENDIF
@@ -1464,14 +1466,14 @@ WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(-2), -1, -1, 
                            HB( 3) = 0.5_EB * (UHL(1, J, K-1) + OUHL(IWG+F%INCR_STENCIL(3)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCR_STENCIL(3), -1, -1, UHL(1, J, K-1), &
-                             OUHL(IWG+F%INCR_STENCIL(3)), 3, HB(3)
+                          OUHL(IWG+F%INCR_STENCIL(3)), 3, HB(3)
 #endif
                         ENDIF
                         IF (BTYPE(IWG, -3) == INTERNAL) THEN
                            HB(-3) = 0.5_EB *(UHL(1, J, K+1) + OUHL(IWG+F%INCR_STENCIL(-3)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J,  K+1, IWG+F%INCR_STENCIL(-3), 1, -1, UHL(1, J, K+1), &
-                             OUHL(IWG+F%INCR_STENCIL(-3)), -3, HB(-3)
+                          OUHL(IWG+F%INCR_STENCIL(-3)), -3, HB(-3)
 #endif
                         ENDIF
 
@@ -1489,14 +1491,14 @@ WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, IWG, -1,  -1, IWG, -1, -1, OUHL(IWG), OUHL2
                               HB( 2) = 0.5_EB * (UHL(I, J-1, K) + OUHL(IWG+F%INCR_STENCIL(2)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(2), UHL(I, J-1, K), &
-                             OUHL(IWG+F%INCR_STENCIL(2)), 3, HB(2)
+                          OUHL(IWG+F%INCR_STENCIL(2)), 3, HB(2)
 #endif
                            ENDIF
                            IF (BTYPE(IWG, -2) == INTERNAL) THEN
                               HB(-2) = 0.5_EB * (UHL(I, J+1, K) + OUHL(IWG+F%INCR_STENCIL(-2)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(-2), UHL(I, J-1, K), &
-                             OUHL(IWG+F%INCR_STENCIL(-2)), 3, HB(2)
+                          OUHL(IWG+F%INCR_STENCIL(-2)), 3, HB(2)
 #endif
                            ENDIF
                         ENDIF
@@ -1504,14 +1506,14 @@ WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J-1, K, IWG+F%INCR_STENCIL(-2), UHL(I, J
                            HB( 3) = 0.5_EB * (UHL(I, J, K-1) + OUHL(IWG+F%INCR_STENCIL(3)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K-1, IWG+F%INCR_STENCIL(3), -1, -1, UHL(I, J, K-1), &
-                             OUHL(IWG+F%INCR_STENCIL(3)),  3, HB(3)
+                          OUHL(IWG+F%INCR_STENCIL(3)),  3, HB(3)
 #endif
                         ENDIF
                         IF (BTYPE(IWG, -3) == INTERNAL) THEN  
                            HB(-3) = 0.5_EB * (UHL(I, J, K+1) + OUHL(IWG+F%INCR_STENCIL(-3)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, 1000) IOR0, IWG, I, J, K+1, IWG+F%INCR_STENCIL(-3), -1, -1, UHL(I, J, K+1), &
-                             OUHL(IWG+F%INCR_STENCIL(-3)), -3, HB(-3)
+                          OUHL(IWG+F%INCR_STENCIL(-3)), -3, HB(-3)
 #endif
                         ENDIF
 
@@ -1533,18 +1535,46 @@ WRITE(MSG%LU_DEBUG, *) '-3: Not yet done'
                      VAL = (L%DXI2*(HB(1)+HB(-1)) + L%DZI2*(HB(3)+HB(-3))) * MGM%WEIGHT(IWG)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGHT BC:',&
-           IWG, HB(1), HB(-1), HB(3), HB(-3), MGM%WEIGHT(IWG)
+                                        IWG, HB(1), HB(-1), HB(3), HB(-3), MGM%WEIGHT(IWG)
 #endif
                   ELSE
                      VAL = (L%DXI2*(HB(1)+HB(-1)) + L%DYI2*(HB(2)+HB(-2)) + L%DZI2*(HB(3)+HB(-3))) * MGM%WEIGHT(IWG)
                   ENDIF
 
-                  MGM%BC(IWG) = VAL
+                  SELECT CASE (IOR0)
+                     CASE ( 1)
+                        BXS(J,K) = VAL
+                     CASE (-1)
+                        BYS(J,K) = VAL
+                     CASE ( 2)
+                        BYS(I,K) = VAL
+                     CASE (-2)
+                        BYF(I,K) = VAL
+                     CASE ( 3)
+                        BZS(I,J) = VAL
+                     CASE (-3)
+                        BZF(I,J) = VAL
+                  END SELECT
+
             END SELECT
 
          ENDDO MGM_CELL_LOOP
       ENDDO MGM_NBR_LOOP
    ENDDO MGM_FACE_LOOP
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BXS:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXS(J,K),J=1,L%NY+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,*) 'BXF:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXF(J,K),J=1,L%NY+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,*) 'BYS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYS(I,K),I=1,L%NX+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,*) 'BYF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYF(I,K),I=1,L%NX+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,*) 'BZS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZS(I,J),I=1,L%NX+1),J=1,L%NY+1)
+WRITE(MSG%LU_DEBUG,*) 'BZF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(I,J),I=1,L%NX+1),J=1,L%NY+1)
+#endif
 ENDDO MGM_MESH_LOOP
 
 #ifdef WITH_SCARC_DEBUG
@@ -1554,13 +1584,13 @@ ENDDO MGM_MESH_LOOP
             ' : HB(',i3, ')=', E14.6, ': W: ',E14.6)
 3100 FORMAT('MGM-BC: TRUE: IOR = ',I4, ' : IW =', I4, ' : I, J, K =', 3I4, ': H, OUHL, OUHL2, BC, SCAL*BC = ', 5E14.6)
 #endif
-END SUBROUTINE SCARC_SETUP_MGM_INTERFACES
+END SUBROUTINE SCARC_MGM_SET_INTERFACES
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set BC's along internal obstructions for MGM method
-! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_OBSTRUCTIONS(NL)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS(NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, ST, UU, VV, WW, GWC, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN) :: NL
 INTEGER:: NM, IW, I, J, K, IOR0, IC
@@ -1569,6 +1599,7 @@ REAL(EB):: VAL
 MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NL)
+   G => L%UNSTRUCTURED
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% MGM-BC: OBSTRUCTION:', TOTAL_PRESSURE_ITERATIONS
@@ -1649,14 +1680,14 @@ WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR = -3: IW, I, J
 
 ENDDO MGM_MESH_LOOP
 
-END SUBROUTINE SCARC_SETUP_MGM_OBSTRUCTIONS
+END SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS
 
 
-! ----------------------------------------------------------------------------------------------------------------------
-!> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Update velocities after either the first or second pass of the MGM method
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_VELOCITY(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_MGM
+USE SCARC_POINTERS, ONLY: M, L, GWC, MGM, UU, VV, WW, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: NTYPE
 INTEGER  :: NM, I, J, K, IW, IOR0
 
@@ -1806,7 +1837,7 @@ WRITE(MSG%LU_DEBUG, *) '--------------------------------------------------------
          ! Recompute velocities on obstruction cells, such that correct normal derivative of Laplace solution is used 
          DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
 
-            GWC => G%WALL(IW)
+            GWC => L%UNSTRUCTURED%WALL(IW)
             IF (GWC%BOUNDARY_TYPE /= SOLID_BOUNDARY) CYCLE
 
             IOR0 = GWC%IOR
@@ -1877,11 +1908,11 @@ WRITE(MSG%LU_DEBUG, *) '--------------------------------------------------------
 END SUBROUTINE SCARC_MGM_UPDATE_VELOCITY
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set internal boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, MGM, GWC, EWC, HP, SCARC_POINT_TO_MGM
+USE SCARC_POINTERS, ONLY: M, L, MGM, GWC, EWC, HP, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN) ::  NTYPE
 INTEGER:: NM, I, J, K, IW, IOR0, IIO1, IIO2, JJO1, JJO2, KKO1, KKO2, IIO, JJO, KKO, ITYPE
 REAL(EB):: UN_NEW_OTHER, UN_NEW, DUDT, DVDT, DWDT
@@ -1906,11 +1937,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDIF
 
    MGM%VELOCITY_ERROR = 0.0_EB
-
-   !UU => MGM%UU
-   !VV => MGM%VV
-   !WW => MGM%WW
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> XXXX:MGM_VELOCITY_ERROR', NTYPE, DT
    WRITE(MSG%LU_DEBUG, *) 'HP'
@@ -1938,7 +1964,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          WALLCELLS_POISSON_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
 
-            GWC => G%WALL(IW)
+            GWC => L%STRUCTURED%WALL(IW)                        ! point to structured grid
 
             IF (GWC%BOUNDARY_TYPE /= SOLID_BOUNDARY         .AND. &
                 GWC%BOUNDARY_TYPE /= INTERPOLATED_BOUNDARY) CYCLE
@@ -1983,7 +2009,7 @@ WRITE(MSG%LU_DEBUG, '(A25, 4i4, 5E14.6)') 'ERR-P 3: UN_NEW: ',IW, I, J, K, UN_NE
                                            HP(I, J, K+1), HP(I, J, K)
 #endif
                CASE(-3)
-               UN_NEW = M%W(I, J, K-1) - DT*(M%FVZ(I, J, K-1) + M%RDZN(K-1)*(HP(I, J, K)-HP(I, J, K-1)))
+                  UN_NEW = M%W(I, J, K-1) - DT*(M%FVZ(I, J, K-1) + M%RDZN(K-1)*(HP(I, J, K)-HP(I, J, K-1)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, '(A25, 4i4, 5E14.6)') 'ERR-P-3: UN_NEW: ',IW, I, J, K, UN_NEW, MGM%W1(I, J, K-1), M%FVZ(I, J, K-1), &
                                            HP(I, J, K), HP(I, J, K-1)
@@ -2107,7 +2133,7 @@ WRITE(MSG%LU_DEBUG, '(A, 4I4, 3E14.6)') '---------------------------------------
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'GWC%BOUNDARY_TYPE:'
-WRITE(MSG%LU_DEBUG, '(5I5)') (G%WALL(IW)%BOUNDARY_TYPE, IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT)
+WRITE(MSG%LU_DEBUG, '(5I5)') (L%UNSTRUCTURED%WALL(IW)%BOUNDARY_TYPE, IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT)
 WRITE(MSG%LU_DEBUG, *) 'MGM%UVEL'
 WRITE(MSG%LU_DEBUG, MSG%CFORM2) ((MGM%UVEL(I, 1, K), I = 0, M%IBAR), K = M%KBAR, 1, -1)
 WRITE(MSG%LU_DEBUG, *) 'MGM%WVEL'
@@ -2120,7 +2146,7 @@ WRITE(MSG%LU_DEBUG, *) 'MGM%VELOCITY_ERROR:', MGM%VELOCITY_ERROR
 #endif
          WALLCELLS_LAPLACE_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
 
-            GWC => G%WALL(IW)
+            GWC => L%UNSTRUCTURED%WALL(IW)                     ! point to unstructured grid
 
             ITYPE = GWC%BOUNDARY_TYPE
             IF (.NOT. ((IW > L%N_WALL_CELLS_EXT .AND. ITYPE == SOLID_BOUNDARY) .OR. ITYPE == INTERPOLATED_BOUNDARY)) CYCLE
@@ -2230,11 +2256,11 @@ ENDDO
 END SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR
 
 
-! ---------------------------------------------------------------------------------------------
-!> \brief Perform LU-decompositions for local Laplace matrices 
-! ---------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
+!> \brief Perform LU-decompositions for local unstructured Laplace matrices 
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NS, NL
 INTEGER:: J, K, N, NM
 REAL(EB):: VAL
@@ -2245,7 +2271,8 @@ INTEGER:: I
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NL)   
+   CALL SCARC_POINT_TO_MGM (NM, NL)   
+   G => L%UNSTRUCTURED
 
    A   => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
    LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)

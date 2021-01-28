@@ -21,11 +21,11 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform restriction from finer to coarser grid level
 !    - 'VF' corresponds to vector on fine   grid
 !    - 'VC' corresponds to vector on coarse grid
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RESTRICTION (NVB, NVC, NLF, NLC)
 USE SCARC_POINTERS, ONLY: LC, GF, GC, VF, VC, R, &
                           SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_CMATRIX
@@ -277,11 +277,11 @@ CALL SCARC_DEBUG_LEVEL (NVC, 'RESTRICTION EXIT: NVC', NLC)
 END SUBROUTINE SCARC_RESTRICTION
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform prolongation from coarser to finer grid level
 !    - 'VC' corresponds to coarser grid
 !    - 'VF' corresponds to finer   grid
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PROLONGATION (NVC, NVB, NLC, NLF)
 USE SCARC_POINTERS, ONLY: LC, GF, GC, VF, VC, P, &
                           SCARC_POINT_TO_MULTIGRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_CMATRIX

@@ -39,9 +39,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief  Setup environment for Krylov methods
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 INTEGER :: NSTACK
@@ -263,9 +263,9 @@ N_STACK_TOTAL = NSTACK
 END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global conjugate gradient method based on global Possion-matrix
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NLEVEL)
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
@@ -457,9 +457,9 @@ CALL SCARC_RELEASE_SOLVER(NS, NP)
 END SUBROUTINE SCARC_METHOD_KRYLOV
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
@@ -530,10 +530,10 @@ N_STACK_TOTAL = NSTACK
 END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform McKeeney-Greengard-Mayo (MGM) method
 ! Note that the MGM method only works on finest grid level NLEVEL_MIN
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM(NSTACK)
 USE SCARC_MGM
 INTEGER, INTENT(IN) :: NSTACK
@@ -660,8 +660,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
 
-      CALL SCARC_SETUP_MGM_INTERFACES (NLEVEL_MIN)
-      CALL SCARC_SETUP_MGM_OBSTRUCTIONS (NLEVEL_MIN)
+      CALL SCARC_MGM_SET_INTERFACES (NLEVEL_MIN)
+      CALL SCARC_MGM_SET_OBSTRUCTIONS (NLEVEL_MIN)
       IF (SCARC_MGM_USE_LU) THEN
          CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
       ELSE
@@ -722,9 +722,9 @@ CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)
 END SUBROUTINE SCARC_METHOD_MGM
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Setup environment for multigrid method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 INTEGER :: NSTACK
@@ -827,13 +827,13 @@ N_STACK_TOTAL = NSTACK
 END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store Jacobi preconditioner in matrix form
 ! Based on the following splitting of A = D - E - F
 ! where :   D is the diagonal part
 ! the MJAC-preconditioner in matrix form is defined
 !           M_MJAC = D 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MJAC(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -867,7 +867,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_MJAC
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store GS preconditioner in matrix form
 ! Based on the following splitting of A = D - E - F
 ! where :   D is the diagonal part
@@ -875,7 +875,7 @@ END SUBROUTINE SCARC_SETUP_MJAC
 !          -F is the strictly upper part
 ! the SGS-preconditioner in matrix form is defined
 !           M_MGS = (D - E) = (I - E D^{-1}) D
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGS(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 USE SCARC_UTILITIES, ONLY: SCARC_GET_MATRIX_TYPE
@@ -922,7 +922,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_MGS
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store symmetric Gauss-Seidel preconditioner in matrix form
 ! Based on the following splitting of A = D - E - F
 ! where :   D is the diagonal part
@@ -930,7 +930,7 @@ END SUBROUTINE SCARC_SETUP_MGS
 !          -F is the strictly upper part
 ! the SGS-preconditioner in matrix form is defined
 !           M_MSGS = (D - E) D^{-1} (D - F)  =  (I - E D^{-1}) (D - F)
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MSGS(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -983,7 +983,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_MSGS
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store SOR preconditioner in matrix form
 ! Based on the following splitting of A = D - E - F
 ! where :   D is the diagonal part
@@ -991,7 +991,7 @@ END SUBROUTINE SCARC_SETUP_MSGS
 !          -F is the strictly upper part
 ! the SOR-preconditioner in matrix form is defined
 !           M_MSOR = (D−ωE) = (I−ωE D^{-1}) D
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MSOR(NLMIN, NLMAX, NSTACK)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX, NSTACK
@@ -1052,7 +1052,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_MSOR
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store SSOR preconditioner in matrix form
 ! Based on the following splitting of A = D - E - F
 ! where :   D is the diagonal part
@@ -1068,7 +1068,7 @@ END SUBROUTINE SCARC_SETUP_MSOR
 ! Both matrices can be stored as a single matrix that occupies the same amount of storage as A
 ! where the same row and column pointers can be used as for A (identical pattern)
 ! Note that the diagonal elements of L are 1 (and are omitted, only the diagonal of U is stored there)
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MSSOR(NLMIN, NLMAX, NSTACK)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX, NSTACK
@@ -1154,7 +1154,7 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_MSSOR
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize ILU(0) decomposition of Poisson matrix
 ! L- and U-parts are stored in the same array, diagonal elements of L are supposed to be 1
 ! Based on Saad-algorithm 10.4 from 'Iterative Methods for Sparse Linear Systems':
@@ -1166,7 +1166,7 @@ END SUBROUTINE SCARC_SETUP_MSSOR
 !         enddo
 !      enddo
 !   enddo
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LU(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -1232,7 +1232,7 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_LU
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize LU decomposition of Poisson matrix
 ! L- and U-parts are stored in the same array, diagonal elements of L are supposed to be 1
 !   for i = 2 , ... , n do
@@ -1243,7 +1243,7 @@ END SUBROUTINE SCARC_SETUP_LU
 !         enddo
 !      enddo
 !   enddo
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_ILU(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, A, AB, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
@@ -1352,9 +1352,9 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_ILU
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for MKL-methods
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_COARSE_SOLVER(NSTAGE, NSCOPE, NSTACK, NLMIN, NLMAX)
 INTEGER, INTENT(IN)    :: NSCOPE, NSTAGE, NLMIN, NLMAX
 INTEGER, INTENT(INOUT) :: NSTACK
@@ -1412,10 +1412,10 @@ END SELECT SELECT_COARSE
 END SUBROUTINE SCARC_SETUP_COARSE_SOLVER
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for additive or multiplicative coarse grid
 ! (corresponding to Schwarz domain decomposition method)
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_INTERPOLATION(NSTAGE, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: G, ST, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NSTAGE, NLMIN, NLMAX
@@ -1441,9 +1441,9 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_INTERPOLATION
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform geometric multigrid method based on global possion-matrix
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NLEVEL)
 USE SCARC_UTILITIES, ONLY: SCARC_CYCLING_CONTROL
 USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
@@ -1614,9 +1614,9 @@ CALL SCARC_RELEASE_SOLVER(NS, NP)
 END SUBROUTINE SCARC_METHOD_MULTIGRID
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform requested MKL solver (global/local)
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MKL(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 
@@ -1634,9 +1634,9 @@ WRITE(*,*) 'MKL not defined on stack position ', NSTACK, ' for parent ', NPARENT
 END SUBROUTINE SCARC_METHOD_MKL
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform requested coarse grid solver (iterative/direct)
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_COARSE(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
 
@@ -1661,9 +1661,9 @@ END SELECT
 
 END SUBROUTINE SCARC_METHOD_COARSE
 
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 !> \brief Perform preceding FFT method to improve start solution for ScaRC
-! ----------------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_FFT
 USE MESH_POINTERS
 USE POIS, ONLY: H2CZSS, H3CZSS
@@ -1746,9 +1746,9 @@ END SUBROUTINE SCARC_METHOD_FFT
 
 
 #ifdef WITH_MKL
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_CLUSTER(NSTACK, NPARENT, NLEVEL)
 USE SCARC_POINTERS, ONLY: L, G, MKL, V1, V2, AS, V1_FB, V2_FB, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
@@ -1829,9 +1829,9 @@ END SUBROUTINE SCARC_METHOD_CLUSTER
 
 
 #ifdef WITH_MKL
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_PARDISO(NSTACK, NPARENT, NLEVEL)
 USE SCARC_POINTERS, ONLY: L, G, MKL, AS, V1, V2, V1_FB, V2_FB, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
@@ -1920,9 +1920,9 @@ END SUBROUTINE SCARC_METHOD_PARDISO
 
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Set initial solution corresponding to boundary data in BXS, BXF, ...
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL)
 USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
                           BXS, BXF, BYS, BYF, BZS, BZF, &
@@ -1930,7 +1930,7 @@ USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
 #ifdef WITH_SCARC_POSTPROCESSING
 USE SCARC_POINTERS, ONLY: PRES
 #endif
-USE SCARC_MGM, ONLY: SCARC_SETUP_MGM_OBSTRUCTIONS, SCARC_SETUP_MGM_INTERFACES
+USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL
 REAL(EB) :: VAL
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
@@ -2186,9 +2186,9 @@ WRITE(MSG%LU_DEBUG,*) 'LEAVING SETUP_WORKSPACE ', NS, NL
 END SUBROUTINE SCARC_SETUP_WORKSPACE
 
 
-! ------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Copy final solution from GMG (as preconditioner) to corresponding vector of CG (as main solver)
-! ------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UPDATE_PRECONDITIONER(NL)
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM
@@ -2198,9 +2198,9 @@ ENDDO
 END SUBROUTINE SCARC_UPDATE_PRECONDITIONER
 
 
-! ------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Finalize data for pressure vector (predictor/corrector) when local ScaRC solver has finished
-! ------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UPDATE_MAINCELLS(NL)
 USE SCARC_POINTERS, ONLY: M, G, L, ST, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
@@ -2250,9 +2250,9 @@ ENDDO
 END SUBROUTINE SCARC_UPDATE_MAINCELLS
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set correct boundary values at external and internal boundaries
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UPDATE_GHOSTCELLS(NL)
 USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
@@ -2368,7 +2368,7 @@ ENDDO
    
 END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
    
-! -----------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 !> \brief Preconditioning method which is based on the following input and output convention:
 !  - the residual which has to be preconditioned is passed in via vector R
 !  - the result of preconditioning is passed out via vector V
@@ -2376,7 +2376,7 @@ END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
 !  - in the comments: call is based on current grid level l (mostly the finest one)
 !  -                  l=1 denotes the finest  grid level NLEVEL_MIN
 !  -                  l=L denotes the coarset grid level NLEVEL_MAX
-! -----------------------------------------------------------------------------------------------
+! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PRECONDITIONER(NS, NP, NL)
 USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
 INTEGER, INTENT(IN) :: NS, NP, NL     
@@ -2469,9 +2469,9 @@ END SELECT SELECT_PRECON_TYPE
 
 END SUBROUTINE SCARC_PRECONDITIONER
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform smoothing based on specified relaxation method
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SMOOTHER(NTYPE, NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NTYPE, NSTACK, NPARENT, NLEVEL
 INTEGER :: NSTATE=0, NS, NP, NL
@@ -2574,9 +2574,9 @@ CPU(MYID)%SMOOTHER = CPU(MYID)%SMOOTHER + CURRENT_TIME() - TNOW
 END SUBROUTINE SCARC_SMOOTHER
 
 
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform preconditioning based on requested local solvers
-! ----------------------------------------------------------------------------------------------------------------------
+! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_RELAXATION (NV1, NV2, NS, NP, NL)
 USE SCARC_POINTERS, ONLY: L, G, A, AB, FFT, V1, V2, &
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &

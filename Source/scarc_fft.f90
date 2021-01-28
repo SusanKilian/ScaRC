@@ -25,10 +25,10 @@ IMPLICIT NONE
 
 CONTAINS
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup data structures for the use of blockwise FFT methods as preconditioners
 ! New here: Perform own initialization of FFT based on H2CZIS/H3CZIS and use own SAVE and WORK arrays
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FFT(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: M, S, L, FFT, SCARC_POINT_TO_GRID
 USE POIS, ONLY: H2CZIS, H3CZIS
@@ -139,10 +139,10 @@ ENDDO MESHES_LOOP
 END SUBROUTINE SCARC_SETUP_FFT
 
 
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for blockwise FFT methods with overlap
 ! New here: Perform own initialization of FFT based on H2CZIS/H3CZIS and use own SAVE and WORK arrays
-! --------------------------------------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FFTO(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: M, S, L, FFT, SCARC_POINT_TO_GRID
 USE POIS, ONLY: H2CZIS, H3CZIS
