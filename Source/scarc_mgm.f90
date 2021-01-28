@@ -388,7 +388,7 @@ WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
          SCAL2 = SCAL2+VL*VU
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, SCAL, VL, VU, SCAL2
+WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL, SCAL2
 #endif
       ENDDO
       VAL = AAA(IC, JC) - SCAL
@@ -460,10 +460,10 @@ TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
 1000 FORMAT('================= IC : ', I2, ' ===========================')
-1100 FORMAT('LLL(',I2, ',',I2, '):', E14.6)
-1200 FORMAT('LLL(',I2, ',',I2, '),  UUU(',I2, ',',I2, ') --> JC:', I2, ',  SCAL:', E14.6, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
-1300 FORMAT('AAA(',I2, ',',I2, '):',E14.6, ',  UUU(',I2, ',',I2, '):', E14.6)
-1400 FORMAT('AAA(',I2, ',',I2, '):',E14.6, ',  UUU(',I2, ',',I2, '):', E14.6, ',  LLL(',I2, ',',I2, '):', E14.6)
+1100 FORMAT('LLL(',I3, ',',I3, '):', E14.6)
+1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL, SCAL2:',2E14.6)
+1300 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6)
+1400 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6, ',  LLL(',I3, ',',I3, '):', E14.6)
 #endif
 END SUBROUTINE SCARC_SETUP_MGM_LU
 

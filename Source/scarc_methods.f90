@@ -572,14 +572,14 @@ USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_INIT_EXACT .AND. &
 ! The upper computation of the structured inhomogeneous Poisson (SIP) solution corresponds to the usual ScaRC solution
 ! (To this end the structured Poisson matrix is assembled during setup)
 ! If comparison with exact solution is required, also compute UScaRC solution
-! (To this end the unstructured Poisson matrix will additionally be assembled)
+! (To this end the unstructured Poisson matrix will additionally be assembled during setup)
 ! For both inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
 ! Compute the difference DScaRC of UScaRC and ScaRC 
 
 IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
 
    CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                ! store SIP as ScaRC solution in MGM%SCARC
-   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    ! TODO: double?
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    
 
    CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
    CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)   ! compute UScaRC by CG
@@ -610,10 +610,10 @@ IF (USE_CORRECT_INITIALIZATION) THEN
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
 #endif
 
-   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)        ! copy UScaRC to UIP
-   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)        ! copy diff(UScaRC-ScaRC) to UHL
+   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)         ! copy UScaRC to UIP
+   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)         ! copy diff(UScaRC-ScaRC) to UHL
 
-   IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN           ! exchange interface values for later BC settings
+   IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN            ! exchange interface values for later BC settings
        CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
    ELSE 
        CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
