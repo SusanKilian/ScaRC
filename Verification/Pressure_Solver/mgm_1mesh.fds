@@ -1,4 +1,4 @@
-&HEAD CHID='mgm1',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
+&HEAD CHID='mgm_1mesh',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
 
 &MESH IJK=16,1,8  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
