@@ -1,17 +1,19 @@
-&HEAD CHID='mgm_1mesh',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
+&HEAD CHID='mgm_lu_2mesh',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
 
-&MESH IJK=16,1,8  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
+&MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
+&MESH IJK=8,1,8  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
 &PRES SOLVER ='SCARC' 
-      SCARC_MATRIX             = 'COMPACT'
-      SCARC_METHOD             = 'MGM'
-      SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'LU'  /
+      SCARC_MATRIX                = 'COMPACT'
+      SCARC_METHOD                = 'MGM'
+      SCARC_MGM_ACCURACY          = 1E-4
+      SCARC_MGM_EXACT_INITIAL     = .TRUE.
+      SCARC_MGM_LAPLACE_SOLVER    = 'LUPERM' /
 
-&TIME T_END=0.05, DT=0.002 /
+&TIME T_END=0.01, DT=0.002 /
 
 &SURF ID='INFLOW2',VEL=-2.0, RAMP_V='IN2' /
 
