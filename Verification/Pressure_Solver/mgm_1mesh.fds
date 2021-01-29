@@ -6,11 +6,11 @@
       DNS   = .TRUE./
 
 &PRES SOLVER ='SCARC' 
-      SCARC_MATRIX = 'COMPACT'
-      SCARC_METHOD = 'MGM'
-      SCARC_MGM_USE_LU = .TRUE.
-      SCARC_MGM_INIT_EXACT = .TRUE.
-      SCARC_ERROR_FILE = .TRUE. /
+      SCARC_MATRIX                = 'COMPACT'
+      SCARC_METHOD                = 'MGM'
+      SCARC_MGM_USE_EXACT_INITIAL = .TRUE.
+      SCARC_MGM_USE_LU            = .FALSE.
+      SCARC_MGM_USE_PERMUTATION   = .FALSE. /
 
 &TIME T_END=0.05, DT=0.002 /
 

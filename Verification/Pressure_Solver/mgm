@@ -1,0 +1,6 @@
+&PRES SOLVER ='SCARC' 
+      SCARC_MATRIX                = 'COMPACT'
+      SCARC_METHOD                = 'MGM'
+      SCARC_MGM_USE_EXACT_INITIAL = .TRUE.
+      SCARC_MGM_USE_LU            = .FALSE.
+      SCARC_MGM_USE_PERMUTATION   = .FALSE. /
