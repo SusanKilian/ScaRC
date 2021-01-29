@@ -565,7 +565,7 @@ CALL SCARC_MGM_DUMP('UIP',0)
 ! Determine of correct initialization of interface boundary values is required
 ! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
 
-USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_INIT_EXACT .AND. &
+USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_USE_EXACT_INITIAL .AND. &
                              ((TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
                               (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
 
@@ -614,9 +614,9 @@ IF (USE_CORRECT_INITIALIZATION) THEN
    CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)         ! copy diff(UScaRC-ScaRC) to UHL
 
    IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN            ! exchange interface values for later BC settings
-       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
+       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
    ELSE 
-       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
    ENDIF
 
    IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
@@ -645,8 +645,6 @@ ENDIF
 
 ! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
 ! This is only necessary if the requested accuracy has not already been achieved by pass 1
-! Define BC's along obstructions according to MGM-algorithm 
-! Define BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
 
 IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 #ifdef WITH_SCARC_DEBUG
@@ -660,8 +658,9 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
 
-      CALL SCARC_MGM_SET_INTERFACES (NLEVEL_MIN)
-      CALL SCARC_MGM_SET_OBSTRUCTIONS (NLEVEL_MIN)
+      ! Either compute local Laplace problems by LU- or CG-method. In both cases the following is done within the solver:
+      ! - definition of  BC's along obstructions according to MGM-algorithm 
+      ! - definition of  BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
 
       IF (SCARC_MGM_USE_LU) THEN
          CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
@@ -669,16 +668,21 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
          CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NLEVEL_MIN)
       ENDIF
    
-      IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN         ! store also second last values in case of extrapolated BCs
-         CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)
-         CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)
-      ENDIF
-
       CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
 
-      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+      ! Exchange interface data between neighboring meshes according to chosen boundary method
+       
+      SELECT CASE (TYPE_MGM_BC)
+         CASE (NSCARC_MGM_BC_MEAN)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+         CASE (NSCARC_MGM_BC_TRUE)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
+         CASE (NSCARC_MGM_BC_EXPOL)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+            CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)
+            CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)
+      END SELECT
       CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
-
       CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
@@ -687,6 +691,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
 #endif
    
+      ! Get new velocities based on local Laplace solutions and compute corresponding velocity error
+
       CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
       CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
@@ -701,9 +707,9 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_TRUE, NSCARC_NONE, NLEVEL_MIN)
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
       ELSE 
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_MEAN, NSCARC_NONE, NLEVEL_MIN)
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
       ENDIF
 
    ENDDO MGM_CORRECTION_LOOP
@@ -1940,7 +1946,7 @@ INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 WRITE(MSG%LU_DEBUG,*) 'STARTING SETUP_WORKSPACE ', NS, NL
 #endif
 
-SV  => STACK(NS)%SOLVER
+SV => STACK(NS)%SOLVER
 
 SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
@@ -1982,11 +1988,14 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
             ST%B = 0.0_EB                                    ! set RHS to zero
             ST%X = 0.0_EB                                    ! use zero as initial vector
-            ST%V = 0.0_EB
-            ST%D = 0.0_EB
-            ST%R = 0.0_EB
-            ST%Y = 0.0_EB
-            ST%Z = 0.0_EB
+            !ST%V = 0.0_EB
+            !ST%D = 0.0_EB
+            !ST%R = 0.0_EB
+            !ST%Y = 0.0_EB
+            !ST%Z = 0.0_EB
+
+            CALL SCARC_MGM_SET_INTERFACES (NL)
+            CALL SCARC_MGM_SET_OBSTRUCTIONS (NL)
 
          ELSE
 

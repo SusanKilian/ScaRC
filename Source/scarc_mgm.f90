@@ -74,12 +74,12 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! BXS, BXF, BYS, BYF, BZS, BZF: boundary value vectors for the different faces
 
-      CALL SCARC_ALLOCATE_REAL2(MGM%BXS, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%BXS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BXF, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%BXF', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BYS, 1, L%NX+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%BYS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BYF, 1, L%NX+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%BYF', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BZS, 1, L%NX+1, 1, L%NY+1, NSCARC_INIT_ZERO, 'MGM%BZS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BZF, 1, L%NX+1, 1, L%NY+1, NSCARC_INIT_ZERO, 'MGM%BZF', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BXS, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXS', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BXF, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXF', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BYS, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYS', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BYF, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYF', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BZS, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZS', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL2(MGM%BZF, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZF', CROUTINE)
 
       ! UVEL,   VVEL,  WVEL : u-, v- and w-velocity components 
       ! OUVEL, OVVEL, OWVEL : u-, v- and w-velocity components of other mesh
@@ -321,8 +321,7 @@ WRITE(MSG%LU_DEBUG, *) 'G%NC =', G%NC
 CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 #endif
 DO IC = 1, G%NC
-   !JC = G%PERM_FW(IC)
-   JC = IC
+   JC = G%PERM_FW(IC)
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) 'PERMUTATION  --- IC =', IC, '-----------> JC=',JC
 #endif
@@ -350,8 +349,7 @@ ENDDO
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
 DO JC = 1, G%NC
-   !IC = G%PERM_FW(JC)
-   IC = JC
+   IC = G%PERM_FW(JC)
    UM%ROW(IC) = IC ;  UM%COL(IC) = IC
    LM%ROW(IC) = IC ;  LM%COL(IC) = IC
 ENDDO
@@ -366,8 +364,7 @@ ROW_LOOP: DO IC0 = 1, G%NC
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0
 #endif
-   !IC = G%PERM_FW(IC0)
-   IC = IC0
+   IC = G%PERM_FW(IC0)
 
    ! Set main diagonal element of L to 1.0
    VAL = 1.0_EB
@@ -1130,11 +1127,15 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ)) 
+                     IF (SCARC_MGM_USE_LU) THEN
+                        ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ)) 
+                     ELSE
+                        ICU = G%CELL_NUMBER(IX, IY, IZ)
+                     ENDIF
                      MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
 #ifdef WITH_SCARC_DEBUG 
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, UL:',&
-                                                                     IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(G%PERM_BW(ICU))
+                                                      IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
 #endif
                   ENDDO
                ENDDO
@@ -1331,7 +1332,7 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_SET_INTERFACES(NL)
-USE SCARC_POINTERS, ONLY: L, F, G, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, &
+USE SCARC_POINTERS, ONLY: L, F, G, ST, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, &
                           BXS, BXF, BYS, BYF, BZS, BZF, BTYPE, &
                           SCARC_POINT_TO_MGM, SCARC_POINT_TO_OTHER_GRID
 INTEGER, INTENT(IN):: NL
@@ -1344,7 +1345,8 @@ IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITY
 MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NL)
-   G => L%UNSTRUCTURED
+   G  => L%UNSTRUCTURED
+   ST => L%STAGE(NSCARC_STAGE_ONE)
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START SET INTERFACES:', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
@@ -1399,17 +1401,17 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                   SELECT CASE (IOR0)
                      CASE ( 1)
-                        BXS(J,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE (-1)
-                        BXF(J,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE ( 2)
-                        BYS(I,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE (-2)
-                        BYF(I,K) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE ( 3)
-                        BZS(I,J) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                      CASE (-3)
-                        BZF(I,J) = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
+                        VAL = 0.5_EB * (UHL(I, J, K) + OUHL(IWG)) 
                   END SELECT
 
                ! Boundary setting along interfaces by extrapolation
@@ -1418,17 +1420,17 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                   SELECT CASE (IOR0)
                      CASE ( 1)
-                        BXS(J,K) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                      CASE (-1)
-                        BXF(J,K) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                      CASE ( 2)
-                        BYS(I,K) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                      CASE (-2)
-                        BYF(I,K) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                      CASE ( 3)
-                        BZS(I,J) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                      CASE (-3)
-                        BZF(I,J) = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
+                        VAL = UHL(I, J, K) + OUHL(IWG) - 0.5_EB*(UHL2(I, J, K) + OUHL2(IWG))  
                   END SELECT
 
                ! Boundary setting along interfaces by simple mean values
@@ -1541,39 +1543,42 @@ WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGH
                      VAL = (L%DXI2*(HB(1)+HB(-1)) + L%DYI2*(HB(2)+HB(-2)) + L%DZI2*(HB(3)+HB(-3))) * MGM%WEIGHT(IWG)
                   ENDIF
 
-                  SELECT CASE (IOR0)
-                     CASE ( 1)
-                        BXS(J,K) = VAL
-                     CASE (-1)
-                        BXF(J,K) = VAL
-                     CASE ( 2)
-                        BYS(I,K) = VAL
-                     CASE (-2)
-                        BYF(I,K) = VAL
-                     CASE ( 3)
-                        BZS(I,J) = VAL
-                     CASE (-3)
-                        BZF(I,J) = VAL
-                  END SELECT
 
             END SELECT
+
+            SELECT CASE (IOR0)
+               CASE ( 1)
+                  BXS(J,K) = VAL
+               CASE (-1)
+                  BXF(J,K) = VAL
+               CASE ( 2)
+                  BYS(I,K) = VAL
+               CASE (-2)
+                  BYF(I,K) = VAL
+               CASE ( 3)
+                  BZS(I,J) = VAL
+               CASE (-3)
+                  BZF(I,J) = VAL
+            END SELECT
+
+            ST%B(ICW) = ST%B(ICW) + F%SCAL_DIRICHLET * VAL    
 
          ENDDO MGM_CELL_LOOP
       ENDDO MGM_NBR_LOOP
    ENDDO MGM_FACE_LOOP
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'BXS:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXS(J,K),J=1,L%NY+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXS(J,K),J=1,L%NY),K=1,L%NZ)
 WRITE(MSG%LU_DEBUG,*) 'BXF:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXF(J,K),J=1,L%NY+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXF(J,K),J=1,L%NY),K=1,L%NZ)
 WRITE(MSG%LU_DEBUG,*) 'BYS:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYS(I,K),I=1,L%NX+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYS(I,K),I=1,L%NX),K=1,L%NZ)
 WRITE(MSG%LU_DEBUG,*) 'BYF:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYF(I,K),I=1,L%NX+1),K=1,L%NZ+1)
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYF(I,K),I=1,L%NX),K=1,L%NZ)
 WRITE(MSG%LU_DEBUG,*) 'BZS:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZS(I,J),I=1,L%NX+1),J=1,L%NY+1)
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZS(I,J),I=1,L%NX),J=1,L%NY)
 WRITE(MSG%LU_DEBUG,*) 'BZF:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(I,J),I=1,L%NX+1),J=1,L%NY+1)
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(I,J),I=1,L%NX),J=1,L%NY)
 #endif
 ENDDO MGM_MESH_LOOP
 
@@ -1638,7 +1643,7 @@ WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR =  1: IW, I, J
          CASE(-1)
             VAL = -L%DXI*DTI*UU(I, J, K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR = -1: IW, I, J, K, IC, UU(I, J, K),  B(IC):', &
+WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR = -1: IW, I, J, K, IC, UU(I  , J, K),  B(IC):', &
                                          IW, I, J, K, IC, UU(I, J, K), VAL
 #endif
          CASE(2)
