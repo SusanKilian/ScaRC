@@ -689,7 +689,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
       
             IOR0 = GWC%IOR
       
-            SELECT CASE (ABS(IOR0))
+            SELECT CASE (IOR0)
                CASE ( 1)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
