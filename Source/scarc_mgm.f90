@@ -117,10 +117,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
       CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
 
-      ! BC: Store boundary values along interfaces (will still be transformed to overlap structures)
-
-      CALL SCARC_ALLOCATE_REAL1(MGM%BC, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%BC ', CROUTINE)
-
 
       ! Configure boundary cell counters and weights for 'True Approximate' boundary setting
 
@@ -555,7 +551,7 @@ END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 !> \brief Set correct boundary values at external and internal boundaries
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS(NTYPE)
-USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, MGM, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, MGM, BXS, BXF, BYS, BYF, BZS, BZF, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IW, IOR0, IXG, IYG, IZG, IXW, IYW, IZW 
 #ifdef WITH_SCARC_DEBUG
@@ -581,6 +577,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ELSE
             WRITE(*,*) 'ERROR IN MGM_UPDATE_GHOSTCELLS'
          ENDIF
+         BXS => M%BXS ; BXF => M%BXF
+         BYS => M%BYS ; BYF => M%BYF
+         BZS => M%BZS ; BZF => M%BZF
+
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE:', NTYPE
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
@@ -605,39 +605,39 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
             SELECT CASE (IOR0)
                CASE ( 1)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BXS(IYW, IZW)
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*M%BXS(IYW, IZW)
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*BXS(IYW, IZW)
                   ENDIF
                CASE (-1)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BXF(IYW, IZW)
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*M%BXF(IYW, IZW)
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*BXF(IYW, IZW)
                   ENDIF
                CASE ( 2)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BYS(IXW, IZW)
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*M%BYS(IXW, IZW)
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*BYS(IXW, IZW)
                   ENDIF
                CASE (-2)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BYF(IXW, IZW)
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*M%BYF(IXW, IZW)
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*BYF(IXW, IZW)
                   ENDIF
                CASE ( 3)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BZS(IXW, IYW)
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*M%BZS(IXW, IYW)
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*BZS(IXW, IYW)
                   ENDIF
                CASE (-3)
                   IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*M%BZF(IXW, IYW)
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*M%BZF(IXW, IYW)
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
                   ENDIF
             END SELECT
 #ifdef WITH_SCARC_DEBUG
@@ -650,16 +650,29 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
       ! 
       ! Update ghostcells for local Laplace problems
       ! Along external boundaries use zero Dirichlet or Neumann BC's
-      ! Along mesh interfaces use Dirichlet BC's corresponding to interface settings stored in MGM%BC
+      ! Along mesh interfaces use Dirichlet BC's corresponding to MGM interface settings 
       ! 
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
+         BXS => MGM%BXS ; BXF => MGM%BXF
+         BYS => MGM%BYS ; BYF => MGM%BYF
+         BZS => MGM%BZS ; BZF => MGM%BZF
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE: LAPLACE'
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(IXG, 1, IZG), IXG = 0, L%NX+1), IZG = L%NZ+1, 0, -1)
-WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: BC: NTYPE: LAPLACE'
-WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%BC(IW), IW = 1, L%N_WALL_CELLS_EXT)
+WRITE(MSG%LU_DEBUG,*) 'BXS:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXS(IYW,IZW),IYW=1,L%NY),IZW=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'BXF:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXF(IYW,IZW),IYW=1,L%NY),IZW=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'BYS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYS(IXW,IZW),IXW=1,L%NX),IZW=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'BYF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYF(IXW,IZW),IXW=1,L%NX),IZW=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'BZS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZS(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
+WRITE(MSG%LU_DEBUG,*) 'BZF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
 #endif
     
          WALL_CELLS_LOOP_LAPLACE: DO IW = 1, L%N_WALL_CELLS_EXT
@@ -677,36 +690,66 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%BC(IW), IW = 1, L%N_WALL_CELLS_EXT)
             IOR0 = GWC%IOR
       
             SELECT CASE (ABS(IOR0))
-
-               CASE (1)
+               CASE ( 1)
                   IF (GWC%BTYPE == INTERNAL) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*MGM%BC(IW)
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXG, IYW, IZW, MGM%BC(IW), HP(IXW, IYW, IZW), HP(IXG, IYW, IZW)
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXG, IYW, IZW, BXS(IYW, IZW), HP(IXW, IYW, IZW), HP(IXG, IYW, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
                      HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) 
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
                      HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) 
                   ENDIF
-
-               CASE (2)
+               CASE (-1)
                   IF (GWC%BTYPE == INTERNAL) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*MGM%BC(IW)
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYG, IZW, MGM%BC(IW), HP(IXW, IYW, IZW), HP(IXW, IYG, IZW)
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXG, IYW, IZW, BXF(IYW, IZW), HP(IXW, IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+                  ELSE IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) 
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) 
+                  ENDIF
+               CASE ( 2)
+                  IF (GWC%BTYPE == INTERNAL) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYG, IZW, BYS(IXW, IZW), HP(IXW, IYW, IZW), HP(IXW, IYG, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
                      HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) 
                   ELSE IF (GWC%BTYPE == NEUMANN) THEN
                      HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) 
                   ENDIF
-
-               CASE (3)
+               CASE (-2)
                   IF (GWC%BTYPE == INTERNAL) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*MGM%BC(IW)
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYW, IZG, MGM%BC(IW), HP(IXW, IYW, IZW), HP(IXW, IYW, IZG)
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYG, IZW, BYF(IXW, IZW), HP(IXW, IYW, IZW), HP(IXW, IYG, IZW)
+#endif
+                  ELSE IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) 
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) 
+                  ENDIF
+               CASE ( 3)
+                  IF (GWC%BTYPE == INTERNAL) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYW, IZG, BZS(IXW, IYW), HP(IXW, IYW, IZW), HP(IXW, IYW, IZG)
+#endif
+                  ELSE IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) 
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) 
+                  ENDIF
+               CASE (-3)
+                  IF (GWC%BTYPE == INTERNAL) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYW, IZG, BZF(IXW, IYW), HP(IXW, IYW, IZW), HP(IXW, IYW, IZG)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
                      HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) 

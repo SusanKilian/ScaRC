@@ -462,11 +462,11 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_FULL, 'POISSON VALS')
 
          CASE (NSCARC_EXCHANGE_MGM_DOUBLE)
-            CALL SCARC_PACK_MGM_TRUE(NM)
+            CALL SCARC_PACK_MGM_DOUBLE(NM)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'MGM_TRUE')
 
          CASE (NSCARC_EXCHANGE_MGM_SINGLE)
-            CALL SCARC_PACK_MGM_MEAN(NM)
+            CALL SCARC_PACK_MGM_SINGLE(NM)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'MGM_MEAN')
 
          CASE (NSCARC_EXCHANGE_MGM_VELO)
@@ -570,10 +570,10 @@ SEND_UNPACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             CALL SCARC_UNPACK_MATRIX_VALS (NM, NOM, NL, NPARAM)
 
          CASE (NSCARC_EXCHANGE_MGM_SINGLE)
-            CALL SCARC_UNPACK_MGM_MEAN (NM, NOM)
+            CALL SCARC_UNPACK_MGM_SINGLE (NM, NOM)
 
          CASE (NSCARC_EXCHANGE_MGM_DOUBLE)
-            CALL SCARC_UNPACK_MGM_TRUE (NM, NOM)
+            CALL SCARC_UNPACK_MGM_DOUBLE (NM, NOM)
 
          CASE (NSCARC_EXCHANGE_MGM_VELO)
             CALL SCARC_UNPACK_MGM_VELO (NM, NOM)
@@ -948,112 +948,9 @@ ENDDO
 END SUBROUTINE SCARC_UNPACK_PRESSURE
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
+!> \brief Pack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MGM_TRUE(NM)
-USE SCARC_POINTERS, ONLY: G, OL, OG, OS
-INTEGER, INTENT(IN) :: NM
-REAL(EB), DIMENSION(:,:,:), POINTER :: UL
-INTEGER :: IOR0, ICG, ICW, IWG, IXW, IYW, IZW, LL
-
-UL => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%UHL
-OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
-
-LL = 1
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-      ICW = OG%ICG_TO_ICW(ICG, 1)
-      IF (ICW < 0) CYCLE                                  ! skip solid cells
-      IWG = OG%ICG_TO_IWG(ICG)
-      IXW=G%WALL(IWG)%IXW
-      IYW=G%WALL(IWG)%IYW
-      IZW=G%WALL(IWG)%IZW
-      OS%SEND_BUFFER_REAL(LL) = UL(IXW, IYW, IZW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW, IYW, IZW, OS%SEND_BUFFER_REAL(LL)
-#endif
-      SELECT CASE (IOR0)
-         CASE (1)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW+1, IYW, IZW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW+1, IYW, IZW, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-         CASE (-1)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW-1, IYW, IZW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW-1, IYW, IZW, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-         CASE ( 2)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW+1, IZW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW, IYW+1, IZW, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-         CASE (-2)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW-1, IZW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW, IYW-1, IZW, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-         CASE ( 3)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW, IZW+1)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW, IYW, IZW+1, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-         CASE (-3)
-            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW, IZW-1)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
-                       IOR0, ICG, ICW, IXW, IYW, IZW-1, OS%SEND_BUFFER_REAL(LL+1)
-#endif
-      END SELECT
-      LL = LL + 2
-   ENDDO
-ENDDO
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_REAL), SIZE(UL)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
-#endif
-
-END SUBROUTINE SCARC_PACK_MGM_TRUE
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MGM_TRUE(NM, NOM)
-USE SCARC_POINTERS, ONLY: 
-USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_REAL, OUHL, OUHL2, SCARC_POINT_TO_BUFFER_REAL
-INTEGER, INTENT(IN) :: NM, NOM
-INTEGER :: LL, IOR0, ICG, IWG
-
-RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
-OUHL  => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL
-OUHL2 => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL2
-LL = 1
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   UNPACK_MGM_TRUE: DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      IWG = OG%ICG_TO_IWG(ICG)
-      OUHL(IWG)  = RECV_BUFFER_REAL(LL)
-      OUHL2(IWG) = RECV_BUFFER_REAL(LL+1)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_TRUE: NM, NOM, ICG, IWG, OUHL, OUHL2:', &
-                                                         NM, NOM, ICG, IWG, OUHL(IWG), OUHL2(IWG)
-#endif
-      LL = LL + 2
-   ENDDO UNPACK_MGM_TRUE
-ENDDO
-END SUBROUTINE SCARC_UNPACK_MGM_TRUE
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MGM_MEAN(NM)
+SUBROUTINE SCARC_PACK_MGM_SINGLE(NM)
 USE SCARC_POINTERS, ONLY: G, OL, OG, OS, UHL
 INTEGER, INTENT(IN) :: NM
 INTEGER :: IOR0, ICG, ICW, IWG, IXW, IYW, IZW
@@ -1063,7 +960,7 @@ OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
 
 DO IOR0 = -3, 3
    IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+   PACK_MGM_SINGLE: DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
       ICW = OG%ICG_TO_ICW(ICG, 1)
       IF (ICW < 0) CYCLE                                  ! skip solid cells
       IWG = OG%ICG_TO_IWG(ICG)
@@ -1072,10 +969,10 @@ DO IOR0 = -3, 3
       IZW=G%WALL(IWG)%IZW
       OS%SEND_BUFFER_REAL(ICG) = UHL(IXW, IYW, IZW)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_MEAN: IOR0, ICG, ICW, IXW, IYW, IZW, UHL: ', &
-                                      IOR0, ICG, ICW, IXW, IYW, IZW, UHL(IXW, IYW, IZW)
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_SINGLE: IOR0, ICG, ICW, IXW, IYW, IZW, UHL: ', &
+                                        IOR0, ICG, ICW, IXW, IYW, IZW, UHL(IXW, IYW, IZW)
 #endif
-   ENDDO
+   ENDDO PACK_MGM_SINGLE
 ENDDO
 
 #ifdef WITH_SCARC_DEBUG
@@ -1083,12 +980,12 @@ WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_R
 WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 #endif
 
-END SUBROUTINE SCARC_PACK_MGM_MEAN
+END SUBROUTINE SCARC_PACK_MGM_SINGLE
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
+!> \brief Unpack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MGM_MEAN(NM, NOM)
+SUBROUTINE SCARC_UNPACK_MGM_SINGLE(NM, NOM)
 USE SCARC_POINTERS, ONLY: OL, OG, OUHL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM
 INTEGER :: IOR0, ICG, IWG, LL
@@ -1104,17 +1001,120 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK: MGM2=', NM, NOM
 LL = 1
 DO IOR0 = -3, 3
    IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   UNPACK_MGM_MEAN: DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+   UNPACK_MGM_SINGLE: DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
       IWG = OG%ICG_TO_IWG(ICG)
       OUHL(IWG) = RECV_BUFFER_REAL(LL)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 4I4, E14.6)') 'UNPACK_MGM_MEAN: NM, NOM, ICG, IWG, OUHL:', NM, NOM, ICG, IWG, OUHL(IWG)
+WRITE(MSG%LU_DEBUG,'(A, 4I4, E14.6)') 'UNPACK_MGM_SINGLE: NM, NOM, ICG, IWG, OUHL:', NM, NOM, ICG, IWG, OUHL(IWG)
 #endif
       LL = LL + 1
-   ENDDO UNPACK_MGM_MEAN
+   ENDDO UNPACK_MGM_SINGLE
 ENDDO
 
-END SUBROUTINE SCARC_UNPACK_MGM_MEAN
+END SUBROUTINE SCARC_UNPACK_MGM_SINGLE
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack double layer of interface boundary cells for MGM true approximate boundary settings
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MGM_DOUBLE(NM)
+USE SCARC_POINTERS, ONLY: G, OL, OG, OS
+INTEGER, INTENT(IN) :: NM
+REAL(EB), DIMENSION(:,:,:), POINTER :: UL
+INTEGER :: IOR0, ICG, ICW, IWG, IXW, IYW, IZW, LL
+
+UL => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%UHL
+OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
+
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   PACK_MGM_DOUBLE: DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      ICW = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW < 0) CYCLE                                  ! skip solid cells
+      IWG = OG%ICG_TO_IWG(ICG)
+      IXW=G%WALL(IWG)%IXW
+      IYW=G%WALL(IWG)%IYW
+      IZW=G%WALL(IWG)%IZW
+      OS%SEND_BUFFER_REAL(LL) = UL(IXW, IYW, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW, IYW, IZW, OS%SEND_BUFFER_REAL(LL)
+#endif
+      SELECT CASE (IOR0)
+         CASE (1)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW+1, IYW, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW+1, IYW, IZW, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+         CASE (-1)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW-1, IYW, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW-1, IYW, IZW, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+         CASE ( 2)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW+1, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW, IYW+1, IZW, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+         CASE (-2)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW-1, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW, IYW-1, IZW, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+         CASE ( 3)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW, IZW+1)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW, IYW, IZW+1, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+         CASE (-3)
+            OS%SEND_BUFFER_REAL(LL+1) = UL(IXW, IYW, IZW-1)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_DOUBLE: IOR0, ICG, ICW, IXW, IYW, IZW, REAL(ICG): ', &
+                       IOR0, ICG, ICW, IXW, IYW, IZW-1, OS%SEND_BUFFER_REAL(LL+1)
+#endif
+      END SELECT
+      LL = LL + 2
+   ENDDO PACK_MGM_DOUBLE
+ENDDO
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_REAL), SIZE(UL)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
+#endif
+
+END SUBROUTINE SCARC_PACK_MGM_DOUBLE
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack double layer of interface boundary cells for MGM true approximate boundary setting
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MGM_DOUBLE(NM, NOM)
+USE SCARC_POINTERS, ONLY: 
+USE SCARC_POINTERS, ONLY: OL, OG, RECV_BUFFER_REAL, OUHL, OUHL2, SCARC_POINT_TO_BUFFER_REAL
+INTEGER, INTENT(IN) :: NM, NOM
+INTEGER :: LL, IOR0, ICG, IWG
+
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
+OUHL  => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL
+OUHL2 => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL2
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   UNPACK_MGM_DOUBLE: DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      IWG = OG%ICG_TO_IWG(ICG)
+      OUHL(IWG)  = RECV_BUFFER_REAL(LL)
+      OUHL2(IWG) = RECV_BUFFER_REAL(LL+1)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_DOUBLE: NM, NOM, ICG, IWG, OUHL, OUHL2:', &
+                                                         NM, NOM, ICG, IWG, OUHL(IWG), OUHL2(IWG)
+#endif
+      LL = LL + 2
+   ENDDO UNPACK_MGM_DOUBLE
+ENDDO
+END SUBROUTINE SCARC_UNPACK_MGM_DOUBLE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
