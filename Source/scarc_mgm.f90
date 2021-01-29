@@ -1145,11 +1145,6 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ,
 
          G => L%UNSTRUCTURED
 
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_STORE_SOLUTION: LAPLACE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
-#endif
          IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
             DO IZ = 0, L%NZ+1
                DO IY = 0, L%NY+1
@@ -1179,7 +1174,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
                      ENDIF
                      MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
 #ifdef WITH_SCARC_DEBUG 
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, UL:',&
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ, ICU, UL:',&
                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
 #endif
                   ENDDO
@@ -1193,8 +1188,8 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
                      ICU = G%CELL_NUMBER(IX, IY, IZ)           
                      MGM%UHL(IX, IY, IZ) = ST%X(ICU)
 #ifdef WITH_SCARC_DEBUG 
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ, ICU, UL:',&
-                                                                     IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ, ICU, UL:',&
+                                                                      IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
 #endif
                   ENDDO
                ENDDO
@@ -1213,8 +1208,8 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_STORE_SOLUTION: MGM_MERGE'
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
+   WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
    WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
@@ -1222,11 +1217,10 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:A: IX, IY, IZ,
          DO IZ = 0, L%NZ+1
             DO IY = 0, L%NY+1
                DO IX = 0, L%NX+1
-                  !MGM%UIP(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) + MGM%UHL(IX, IY, IZ)              ! Variant A
                   MGM%UIP(IX, IY, IZ) = MGM%SIP(IX, IY, IZ) + MGM%UHL(IX, IY, IZ)              ! Variant A
 #ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL, UP:',  IX, IY, IZ, &
-                                                    MGM%SIP(IX, IY, IZ), MGM%UHL(IX, IY, IZ), MGM%UIP(IX, IY, IZ)
+                                                      MGM%SIP(IX, IY, IZ), MGM%UHL(IX, IY, IZ), MGM%UIP(IX, IY, IZ)
 #endif
                ENDDO
             ENDDO
@@ -1237,8 +1231,6 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL,
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: MGM_MERGE'
    WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
-   WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
 
 #ifdef WITH_SCARC_VERBOSE2
