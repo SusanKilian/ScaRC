@@ -62,11 +62,10 @@ REAL (EB)     :: SCARC_MULTIGRID_THETA       = 0.10E+0_EB        !< Threshold fo
 REAL(EB)      :: SCARC_MGM_ACCURACY         = 1.E-2_EB           !< Requested accuracy for interface velocity error 
 CHARACTER(40) :: SCARC_MGM_BC               = 'MEAN'             !< Type of interface boundary condition for local Laplace problems
 CHARACTER(40) :: SCARC_MGM_INTERPOL         = 'LINEAR'           !< Type of interpolation for Lapalce BC settings
+CHARACTER(40) :: SCARC_MGM_LAPLACE_SOLVER   = 'LUPERM'           !< Type of solver for local Laplace problems
 INTEGER       :: SCARC_MGM_ITERATIONS       = 50                 !< Maximum allowed number of Laplace iterations 
 LOGICAL       :: SCARC_MGM_CHECK_LAPLACE    = .FALSE.            !< Requested check of Laplace solutions against ScaRC-UScaRC diff
-LOGICAL       :: SCARC_MGM_USE_EXACT_INITIAL= .TRUE.             !< Use exact Laplace solution for initialization of interface BCs
-LOGICAL       :: SCARC_MGM_USE_LU           = .TRUE.             !< Use LU for Laplace solutions (otherwise UScaRC)
-LOGICAL       :: SCARC_MGM_USE_PERMUTATION  = .FALSE.            !< Use MGM based grid permutation for LU solver
+LOGICAL       :: SCARC_MGM_EXACT_INITIAL    = .TRUE.             !< Use exact solutions for initialization of interface BCs
 
 ! ---------- Parameters for smoothing method (used in multigrids-methods)
  
@@ -86,9 +85,9 @@ CHARACTER(40) :: SCARC_PRECON_SCOPE       = 'LOCAL'              !< Scope of act
 
 ! ---------- Parameter for MKL solver
  
-CHARACTER(40) :: SCARC_MKL_SCOPE       = 'GLOBAL'                !< Scope of MKL solver (LOCAL/GLOBAL)
-CHARACTER(40) :: SCARC_MKL_MTYPE       = 'SYMMETRIC'             !< Type of MKL matrix (SYMMETRIC/UNSYMMETRIC)
-CHARACTER(6)  :: SCARC_MKL_PRECISION   = 'DOUBLE'                !< Single/double precision for MKL solver
+CHARACTER(40) :: SCARC_MKL_SCOPE          = 'GLOBAL'             !< Scope of MKL solver (LOCAL/GLOBAL)
+CHARACTER(40) :: SCARC_MKL_MTYPE          = 'SYMMETRIC'          !< Type of MKL matrix (SYMMETRIC/UNSYMMETRIC)
+CHARACTER(6)  :: SCARC_MKL_PRECISION      = 'DOUBLE'             !< Single/double precision for MKL solver
 
 ! ---------- Dump out of error information and error handling
  
@@ -147,6 +146,7 @@ INTEGER :: TYPE_MATRIX              = NSCARC_MATRIX_COMPACT      !< Type of stor
 INTEGER :: TYPE_MATVEC              = NSCARC_MATVEC_GLOBAL       !< Type of matrix-vector multiplication
 INTEGER :: TYPE_METHOD              = NSCARC_METHOD_KRYLOV       !< Type of ScaRC method
 INTEGER :: TYPE_MGM_BC              = NSCARC_MGM_BC_MEAN         !< Type of internal MGM boundary conditions
+INTEGER :: TYPE_MGM_LAPLACE         = NSCARC_MGM_LAPLACE_LUPERM  !< Type of solver for local Laplace problems
 INTEGER :: TYPE_MGM_INTERPOL        = NSCARC_MGM_INTERPOL_LINEAR !< Type of internal MGM boundary conditions
 INTEGER :: TYPE_MKL(0:10)           = NSCARC_MKL_NONE            !< Type of use of MKL solvers
 INTEGER :: TYPE_MKL_PRECISION       = NSCARC_PRECISION_DOUBLE    !< Type of double precision MKL solver
@@ -226,9 +226,7 @@ PUBLIC :: SCARC_MGM_ACCURACY              !< Requested accuracy for velocity err
 PUBLIC :: SCARC_MGM_INTERPOL              !< Interpolation type for BC definition
 PUBLIC :: SCARC_MGM_ITERATIONS            !< Maximum number of allowed Laplace iterations for MGM method
 PUBLIC :: SCARC_MGM_CHECK_LAPLACE         !< Requested check of Laplace solutions against ScaRC-UScaRC difference 
-PUBLIC :: SCARC_MGM_USE_EXACT_INITIAL     !< Use exact Laplace solution for initialization of interface BC's
-PUBLIC :: SCARC_MGM_USE_LU                !< Use LU for solution of Laplace problems (instead of CG-method)
-PUBLIC :: SCARC_MGM_USE_PERMUTATION       !< Use MGM based grid permutation for LU solutions
+PUBLIC :: SCARC_MGM_EXACT_INITIAL         !< Use exact Laplace solution for initialization of interface BC's
 
 PUBLIC :: SCARC_PRECON                    !< Selection parameter for preconditioner
 PUBLIC :: SCARC_PRECON_ACCURACY           !< Requested accuracy for preconditioner 

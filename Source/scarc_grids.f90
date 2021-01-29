@@ -553,7 +553,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
 
-      IF (IS_MGM .AND. SCARC_MGM_USE_LU) CALL SCARC_SETUP_GRID_PERMUTATION
+      IF (IS_MGM) CALL SCARC_SETUP_GRID_PERMUTATION
  
    ! If only one specified type of discretization must be admistrated:
    ! allocate and preset cell numbers and state arrays for requested type of discretization
@@ -632,9 +632,7 @@ CALL SCARC_ALLOCATE_INT1 (G%PERM_BW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_BW', CR
    
 ! Obstruction cells are numbered last such that they appear at the end of a vector
 
-G%PERM_FW = 0
-
-IF (SCARC_MGM_USE_PERMUTATION) THEN
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
 
    JC = G%NC
    DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
@@ -708,15 +706,18 @@ WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
    G%NONZERO = KC
 
 ELSE
+
    DO IC = 1, G%NC
       G%PERM_BW(IC) = IC
       G%PERM_FW(IC) = IC
    ENDDO
+
    G%NONZERO = G%NC
+
 ENDIF
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:', KC, JC
+WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
 WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_BW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW

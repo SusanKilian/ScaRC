@@ -136,9 +136,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ENDIF
 
       ! The following code is purely experimental and addresses the solution of the LU method with fully stored matrices
-      ! Note that SCARC_MGM_USE_LU is set to FALSE by default
 
-      IF (SCARC_MGM_USE_LU) THEN
+      IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
 
          CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
          CALL SCARC_POINT_TO_MGM(NM, NL)
@@ -515,7 +514,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !                            MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
          WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
 #endif
-         IF (ITE > MGM%ITE_LAPLACE) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
+            MGM%ITE_LAPLACE = 1
+            MGM%CAPPA_LAPLACE = 0
+         ELSE IF (ITE > MGM%ITE_LAPLACE) THEN
             MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)
             MGM%CAPPA_LAPLACE = CAPPA
          ENDIF
@@ -1165,12 +1167,12 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
          ENDIF
 
          MGM%UHL = 0.0_EB
-         IF (SCARC_MGM_USE_LU) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
             DO IZ = 1, L%NZ
                DO IY = 1, L%NY
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     IF (SCARC_MGM_USE_LU) THEN
+                     IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
                         ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ)) 
                      ELSE
                         ICU = G%CELL_NUMBER(IX, IY, IZ)

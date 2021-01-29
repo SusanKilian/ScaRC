@@ -565,7 +565,7 @@ CALL SCARC_MGM_DUMP('UIP',0)
 ! Determine of correct initialization of interface boundary values is required
 ! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
 
-USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_USE_EXACT_INITIAL .AND. &
+USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
                              ((TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
                               (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
 
@@ -602,7 +602,7 @@ ENDIF
 ! In the very first pressure iteration ever, or - in case of extrapolated MGM BCs - in the two very first pressure iterations 
 !    - use UScaRC solution as unstructured inhomogeneous Poisson UIP solution of this MGM pass 
 !    - use difference DScaRC of UScaRC and ScaRC as unstructured homogeneous Laplace UHL solution of this MGM pass
-! Store them for the definition of the interface BC's in next pressure iteration
+! Exchange the interface values of the local Laplace problems for the later BC setting in the next MGM call
 ! In this case the requested velocity tolerance has been reached by default here and this MGM call can be left
 
 IF (USE_CORRECT_INITIALIZATION) THEN
@@ -610,19 +610,21 @@ IF (USE_CORRECT_INITIALIZATION) THEN
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
 #endif
 
-   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)         ! copy UScaRC to UIP
-   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)         ! copy diff(UScaRC-ScaRC) to UHL
+   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)        
+   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)        
 
-   IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN            ! exchange interface values for later BC settings
-       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
-   ELSE 
-       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
-   ENDIF
-
-   IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS == 1) THEN
-      CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)        ! store also second last values for UHL
-      CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)      ! store also second last values for other UHL
-   ENDIF
+   SELECT CASE (TYPE_MGM_BC)
+      CASE (NSCARC_MGM_BC_MEAN)
+          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+      CASE (NSCARC_MGM_BC_EXPOL)
+          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+          IF (TOTAL_PRESSURE_ITERATIONS == 1) THEN
+             CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)        ! store also second last values for UHL
+             CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)      ! store also second last values for other UHL
+          ENDIF
+      CASE (NSCARC_MGM_BC_TRUE)
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
+   END SELECT
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_MGM_DUMP('UHL',0)
    CALL SCARC_MGM_DUMP('UIP',0)
@@ -662,11 +664,16 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       ! - definition of  BC's along obstructions according to MGM-algorithm 
       ! - definition of  BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
 
-      IF (SCARC_MGM_USE_LU) THEN
-         CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
-      ELSE
-         CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NLEVEL_MIN)
-      ENDIF
+      SELECT CASE (TYPE_MGM_LAPLACE)
+         CASE (NSCARC_MGM_LAPLACE_KRYLOV)
+            CALL SCARC_METHOD_KRYLOV (NSTACK+2, NSCARC_STACK_ZERO, NLEVEL_MIN)
+         CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
+            CALL SCARC_METHOD_MGM_LU(NSTACK+2, NLEVEL_MIN)
+         CASE (NSCARC_MGM_LAPLACE_PARDISO)
+            WRITE(*,*) 'LAPLACE PARDISO SOLVER NOT YET IMPLEMENTED'
+         CASE (NSCARC_MGM_LAPLACE_FFT)
+            WRITE(*,*) 'LAPLACE FFT SOLVER NOT YET IMPLEMENTED'
+      END SELECT
    
       CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
 
