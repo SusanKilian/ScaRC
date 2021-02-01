@@ -697,7 +697,7 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
       CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
       CALL SCARC_MGM_DUMP('UIP',ITE_MGM)
-      !CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
+      CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
 #endif
    
       ! Get new velocities based on local Laplace solutions and compute corresponding velocity error
@@ -788,15 +788,15 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #endif
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
-   WRITE(MSG%LU_DEBUG, '(164)') (G%PERM_FW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
-   WRITE(MSG%LU_DEBUG, '(164)') (G%PERM_BW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (ST%B(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (ST%B(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(I), I = 1, G%NC)
-   CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
-   CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(I), I = 1, G%NC)
+   !CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
+   !CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
 #endif
 
 
@@ -806,7 +806,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
          MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
          !MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
                         MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
 #endif
@@ -818,21 +818,21 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       DO K = J+1, N
          VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
          MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
                         MGM%X(J), MGM%X(K), AAA(J, K), VAL
 #endif
       ENDDO
       VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
       MGM%X(J) = MGM%X(J)/VAL
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
 #endif
    ENDDO
 
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
+   !WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
+   !WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
    WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(I), I = 1, G%NC)
 #endif
