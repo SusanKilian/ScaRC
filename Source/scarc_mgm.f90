@@ -135,7 +135,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ENDIF
 
-      ! The following code is purely experimental and addresses the solution of the LU method with fully stored matrices
+      ! The following code is still experimental and addresses the solution of the LU method with fully stored matrices
 
       IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
 
@@ -146,7 +146,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          LM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
          UM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
-         ! First assume dense settings and reduce later once the real sizes are known
+         ! First assume dense settings and reduce later once the real sizes are known, TODO
           
          LM%N_VAL = G%NC**2 / 2
          LM%N_ROW = G%NC+1
@@ -304,6 +304,8 @@ WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
 WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
 WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
 WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'G%PERM_FW:'
+WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(IC), IC=1,G%NC)
 #endif
 
 A  => G%LAPLACE
@@ -330,7 +332,7 @@ DO IC = 1, G%NC
       AAA(JC, ICOL) = A%VAL(IP)
    ENDDO
 ENDDO
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '------- MGM%A-Copy (1:24)'
 DO IC = 1, G%NC
    WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(IC, JC), JC = 1, 24)
@@ -449,6 +451,16 @@ DO I = 1, G%NC
    ENDDO
 ENDDO
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) '------- MGM%LLL (1:24)'
+DO IC = 1, G%NC
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(IC, JC), JC = 1, 24)
+ENDDO
+WRITE(MSG%LU_DEBUG, *) '------- MGM%UUU (1:24)'
+DO IC = 1, G%NC
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(IC, JC), JC = 1, 24)
+ENDDO
+#endif
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
@@ -479,40 +491,52 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
 
    SELECT CASE (ITE_MGM)
-      CASE (-1)
-#ifdef WITH_SCARC_VERBOSE
-      IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
-         WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL, ' ... success'
-      ELSE
-         WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                     MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL, ' ... failed'
-      ENDIF
-#endif
+
+      ! Initialization - after first structured inhomogeneous Poisson solution
+
       CASE (0)
          MGM%ITE = 0
          MGM%ITE_LAPLACE = 0
          MGM%ITE_POISSON = ITE                 
          MGM%CAPPA_POISSON = CAPPA
 #ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG, 1100)  ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                    MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+         WRITE(MSG%LU_DEBUG, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                   MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                   MGM%ITE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         !WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-         !                            MGM%ITE_POISSON, MGM%ITE, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
-         !WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, MGM%ITE_LAPLACE, VELOCITY_ERROR_GLOBAL
+         WRITE(MSG%LU_DEBUG, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                   MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                   MGM%ITE, VELOCITY_ERROR_GLOBAL
 #endif
+
+      ! MGM iteration - after each unstructured homogeneous Laplace solution
+
       CASE DEFAULT
          MGM%ITE = ITE_MGM
 #ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG, 1200)   ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                     MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_DEBUG, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      ITE, CAPPA, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL
+         ELSE
+            WRITE(MSG%LU_DEBUG, 1201) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL
+         ENDIF
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         !WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-         !                            MGM%ITE_POISSON, MGM%ITE, ITE, VELOCITY_ERROR_GLOBAL
-         WRITE(MSG%LU_VERBOSE, 1101) TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        ITE, CAPPA, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL
+         ELSE
+            WRITE(MSG%LU_VERBOSE, 1201) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL
+         ENDIF
 #endif
          IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
             MGM%ITE_LAPLACE = 1
@@ -521,30 +545,85 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)
             MGM%CAPPA_LAPLACE = CAPPA
          ENDIF
+
+      ! termination - after whole MGM solution
+
+      CASE (-1)
+#ifdef WITH_SCARC_DEBUG
+      IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_DEBUG, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
+         ELSE
+            WRITE(MSG%LU_DEBUG, 1301) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
+         ENDIF
+      ELSE
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_DEBUG, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... failure'
+         ELSE
+            WRITE(MSG%LU_DEBUG, 1301) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                      MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                      MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... failure'
+         ENDIF
+      ENDIF
+#endif
+#ifdef WITH_SCARC_VERBOSE
+      IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
+         ELSE
+            WRITE(MSG%LU_VERBOSE, 1301) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
+         ENDIF
+      ELSE
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+            WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... failure'
+         ELSE
+            WRITE(MSG%LU_VERBOSE, 1301) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                        MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                        MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... failure'
+         ENDIF
+      ENDIF
+#endif
    END SELECT
    IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_SUCCESS
 
 ENDDO
 
+         WRITE(MSG%LU_DEBUG, 1100)  ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                    MGM%ITE_POISSON, MGM%CAPPA_POISSON, MGM%ITE, VELOCITY_ERROR_GLOBAL
 #ifdef WITH_SCARC_VERBOSE
-1101 FORMAT(I6, ' , ', E11.3)
-1300 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
-            ' , #POISSON: ', I6,&
-            ' , #MGM: ', I6,&
-            ' , #LAPLACE_max: ', I6,&
-            ' , VE: ', E14.6, a14)
-#endif
-#ifdef WITH_SCARC_DEBUG
-1100 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
-            ' , #POISSON: ', I6,&
-            ' , #MGM: ', I6,&
-            ' , #LAPLACE    : ', I6,&
-            ' , VE: ', E14.6)
-1200 FORMAT('TS ',I6, ', #PI: ', I6,', #TPI: ', I6, &
-            ' , #POISSON: ', I6,&
-            ' , #MGM: ', I6,&
-            ' , #LAPLACE    : ', I6,&
-            ' , VE: ', E14.6)
+1100 FORMAT('ICYC ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POIS: ',    I5, ' , RATE: ',    F6.2, &
+            ' , #MGM: ',     I5, ' , VEL_ERR: ', E10.2, a14)
+1200 FORMAT('ICYC ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POIS: ',    I5, ' , RATE: ',    F6.2, &
+            ' , #LAPL:    ',    I5, ' , RATE:    ',    F6.2, &
+            ' , #MGM: ',     I5, ' , VEL_ERR: ', E10.2, a14)
+1201 FORMAT('ICYC ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POIS: ',    I5, ' , RATE: ',    F6.2, &
+            ' , #MGM: ',     I5, ' , VEL_ERR: ', E10.2, a14)
+1300 FORMAT('ICYC ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POIS: ',    I5, ' , RATE: ',    F6.2, &
+            ' , #LAPLmax: ', I5, ' , RATEmax: ', F6.2, &
+            ' , #MGM: ',     I5, ' , VEL_ERR: ', E10.2, a14)
+1301 FORMAT('ICYC ',I6, ', #PI: ', I6,', #TPI: ', I6, &
+            ' , #POIS: ',    I5, ' , RATE: ',    F6.2, &
+            ' , #MGM: ',     I5, ' , VEL_ERR: ', E10.2, a14)
 #endif
 END FUNCTION SCARC_MGM_CONVERGENCE_STATE
 
@@ -2299,113 +2378,6 @@ ENDDO
 4000 FORMAT('VE:LAPLACE:',83X, '---> FINAL: ', E14.6)
 #endif
 END SUBROUTINE SCARC_MGM_COMPUTE_VELOCITY_ERROR
-
-
-! -------------------------------------------------------------------------------------------------------------
-!> \brief Perform LU-decompositions for local unstructured Laplace matrices 
-! -------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN):: NS, NL
-INTEGER:: J, K, N, NM
-REAL(EB):: VAL
-REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
-#ifdef WITH_SCARC_DEBUG
-INTEGER:: I
-#endif
-
-DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_MGM (NM, NL)   
-   G => L%UNSTRUCTURED
-
-   A   => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
-   LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
-   UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
-
-   AAA => MGM%AAA             ! only temporarily - just for better readability
-   LLL => MGM%LLL
-   UUU => MGM%UUU
-
-   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
-
-   N = G%NC
-
-   DO J = 1, N
-      MGM%B(J) = ST%B(G%PERM_BW(J))
-   ENDDO
-#ifdef WITH_SCARC_DEBUG2
-   WRITE(MSG%LU_DEBUG, *) '=============================== A'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
-   ENDDO
-   WRITE(MSG%LU_DEBUG, *) '=============================== L'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
-   ENDDO
-   WRITE(MSG%LU_DEBUG, *) '=============================== U'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
-   ENDDO
-#endif
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
-   WRITE(MSG%LU_DEBUG, '(I5)') (G%PERM_FW(I), I = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
-   WRITE(MSG%LU_DEBUG, '(I5)') (G%PERM_BW(I), I = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (ST%B(I), I = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(I), I = 1, G%NC)
-   CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
-   CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
-#endif
-
-
-   DO J = G%NONZERO, N
-      MGM%Y(J) = MGM%B(J)
-      DO K = 1, J-1
-         VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
-         MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
-         !MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
-                        MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
-#endif
-      ENDDO
-   ENDDO
-
-   DO J = N, 1, -1
-      MGM%X(J) = MGM%Y(J)
-      DO K = J+1, N
-         VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
-         MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
-                        MGM%X(J), MGM%X(K), AAA(J, K), VAL
-#endif
-      ENDDO
-      VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
-      MGM%X(J) = MGM%X(J)/VAL
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
-#endif
-   ENDDO
-
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== Y'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== X'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(I), I = 1, G%NC)
-#endif
-
-ENDDO
-
-END SUBROUTINE SCARC_METHOD_MGM_LU
-
-! =====================================================================================================================
-! End MGM routines
-! =====================================================================================================================
 
 END MODULE SCARC_MGM
 

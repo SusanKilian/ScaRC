@@ -344,7 +344,7 @@ CALL SCARC_VECTOR_SUM     (B, R, -1.0_EB, 1.0_EB, NL)        !  r^0 := r^0 - b  
 RES    = SCARC_L2NORM (R, NL)                                !  res   := ||r^0||
 RESIN  = RES                                                 !  resin := res
 NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                 !  res < tolerance ?
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SUSI: KRYLOV: NSTACK:', NSTACK, ': TYPE_MATVEC=', TYPE_MATVEC
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
@@ -355,14 +355,14 @@ CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
 IF (NSTATE /= NSCARC_STATE_CONV_INITIAL) THEN                !  if no convergence yet, call intial preconditioner
    CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^0 := Precon(r^0)
    SIGMA1 = SCARC_SCALAR_PRODUCT(R, V, NL)                   !  SIGMA1 := (r^0,v^0)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
 WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
 #endif
    CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
 ENDIF
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'RESIN, RES, ITE, SIGMA1:', RESIN, RES, ITE, SIGMA1
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 #endif
@@ -371,7 +371,7 @@ CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 
 CG_LOOP: DO ITE = 1, NIT
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
 #endif
    TNOWI = CURRENT_TIME()
@@ -381,7 +381,7 @@ WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
    CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                      !  y^k := A*d^k
 
    ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                   !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 #endif
@@ -390,7 +390,7 @@ CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 
    CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)           !  x^{k+1} := x^k + ALPHA0 * d^k
    CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)           !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
@@ -407,7 +407,7 @@ WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
    SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                  !  SIGMA0 := (r^{k+1},v^{k+1})
    BETA0  = SIGMA0/SIGMA1                                     !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
    SIGMA1 = SIGMA0                                            !  save last SIGMA0
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
@@ -448,7 +448,7 @@ IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
 #endif
 ENDIF
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_METHOD('END OF KRYLOV METHOD ',6)                     
 #endif
 
@@ -660,7 +660,8 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
 
       CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
 
-      ! Either compute local Laplace problems by LU- or CG-method. In both cases the following is done within the solver:
+      ! Compute local Laplace problems either by (permuted) LU- or CG-method
+      ! In both cases the following is done within the solver:
       ! - definition of  BC's along obstructions according to MGM-algorithm 
       ! - definition of  BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
 
@@ -735,6 +736,110 @@ CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)
 #endif
 
 END SUBROUTINE SCARC_METHOD_MGM
+
+! -------------------------------------------------------------------------------------------------------------
+!> \brief Perform LU-decompositions for local unstructured Laplace matrices 
+! -------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
+USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN):: NS, NL
+INTEGER:: J, K, N, NM
+REAL(EB):: VAL
+REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
+#ifdef WITH_SCARC_DEBUG
+INTEGER:: I
+#endif
+
+CALL SCARC_SETUP_WORKSPACE(NL, NL)
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_MGM (NM, NL)   
+   G => L%UNSTRUCTURED
+
+   A   => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
+   LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
+   UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
+
+   AAA => MGM%AAA             ! only temporarily - just for better readability
+   LLL => MGM%LLL
+   UUU => MGM%UUU
+
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
+
+   N = G%NC
+
+   DO J = 1, N
+      MGM%B(J) = ST%B(G%PERM_BW(J))
+   ENDDO
+#ifdef WITH_SCARC_DEBUG2
+   WRITE(MSG%LU_DEBUG, *) '=============================== A'
+   DO I = 1, N
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
+   ENDDO
+   WRITE(MSG%LU_DEBUG, *) '=============================== L'
+   DO I = 1, N
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
+   ENDDO
+   WRITE(MSG%LU_DEBUG, *) '=============================== U'
+   DO I = 1, N
+      WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
+   ENDDO
+#endif
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
+   WRITE(MSG%LU_DEBUG, '(164)') (G%PERM_FW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
+   WRITE(MSG%LU_DEBUG, '(164)') (G%PERM_BW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (ST%B(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(I), I = 1, G%NC)
+   CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
+   CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
+#endif
+
+
+   DO J = G%NONZERO, N
+      MGM%Y(J) = MGM%B(J)
+      DO K = 1, J-1
+         VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
+         MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
+         !MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
+                        MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
+#endif
+      ENDDO
+   ENDDO
+
+   DO J = N, 1, -1
+      MGM%X(J) = MGM%Y(J)
+      DO K = J+1, N
+         VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
+         MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
+                        MGM%X(J), MGM%X(K), AAA(J, K), VAL
+#endif
+      ENDDO
+      VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
+      MGM%X(J) = MGM%X(J)/VAL
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
+#endif
+   ENDDO
+
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(I), I = 1, G%NC)
+#endif
+
+ENDDO
+
+END SUBROUTINE SCARC_METHOD_MGM_LU
 
 
 ! --------------------------------------------------------------------------------------------------------------
