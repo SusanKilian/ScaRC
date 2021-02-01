@@ -761,19 +761,131 @@ END SUBROUTINE SCARC_SETUP_LAPLACE
 ! forward substitution process Ly=b only must start from the nonzero entries on
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_LAPLACE_PERM (NM, NL)
-USE SCARC_POINTERS, ONLY: G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, A, GWC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
-INTEGER :: IX, IY, IZ, IC, IP, KKC(-3:3), JJC(-3:3)
+INTEGER :: IX, IY, IZ, IC, JC, KC, IOR0, IW, IP, KKC(-3:3), JJC(-3:3)
 INTEGER :: TYPE_SCOPE_SAVE
 
 CROUTINE = 'SCARC_SETUP_LAPLACE'
 TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
 TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
  
-! Allocate main matrix on non-overlapping part of mesh
+! Point to unstructured grid
 
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)              
+
+! Allocate permutation vectors 
+
+CALL SCARC_ALLOCATE_INT1 (G%PERM_FW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_FW', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (G%PERM_BW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_BW', CROUTINE)
+   
+! Obstruction cells are numbered last such that they appear at the end of a vector
+
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
+
+   JC = G%NC
+   DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
+      
+      GWC => G%WALL(IW)
+      
+      IX = GWC%IXW ;  IY = GWC%IYW ;  IZ = GWC%IZW
+      
+      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+      
+      IOR0 = GWC%IOR
+      IC   = G%CELL_NUMBER(IX, IY, IZ)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'IW, IX, IY, IZ, IOR0, IC:', IW, IX, IY, IZ, IOR0, IC
+      WRITE(MSG%LU_DEBUG,*) 'OBSTRUCTION: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
+#endif
+      G%PERM_FW(IC) = JC
+      G%PERM_BW(JC) = IC
+      JC = JC - 1
+
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_FW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_BW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+#endif
+
+   ! Interface cells are numbered second last
+
+   DO IW = 1, L%N_WALL_CELLS_EXT
+      
+      GWC => G%WALL(IW)
+      IF (GWC%BTYPE /= INTERNAL) CYCLE
+      
+      IX = GWC%IXW ;  IY = GWC%IYW ;  IZ = GWC%IZW
+      
+      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+      
+      IOR0 = GWC%IOR
+      IC   = G%CELL_NUMBER(IX,IY,IZ)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'IW, IX, IY, IZ, IOR0, IC:', IW, IX, IY, IZ, IOR0, IC
+      WRITE(MSG%LU_DEBUG,*) 'INTERFACE: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
+#endif
+      G%PERM_FW(IC) = JC
+      G%PERM_BW(JC) = IC
+      JC = JC - 1
+
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_FW:'
+   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_BW:'
+   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+#endif
+
+   ! The rest is used from beginning to first interface cell
+
+   KC = 1
+   DO IC = 1, G%NC
+      IF (G%PERM_FW(IC) /= 0) CYCLE
+      G%PERM_BW(KC) = IC
+      G%PERM_FW(IC) = KC
+      KC = KC + 1
+   ENDDO
+   IF (KC /= JC + 1) CALL SCARC_ERROR(NSCARC_ERROR_MGM_PERMUTATION, SCARC_NONE, NSCARC_NONE)
+
+   G%NONZERO = KC
+
+ELSE
+
+   DO IC = 1, G%NC
+      G%PERM_BW(IC) = IC
+      G%PERM_FW(IC) = IC
+   ENDDO
+
+   G%NONZERO = G%NC
+
+ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_BW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+WRITE(MSG%LU_DEBUG,*) 'G%ICX'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICX
+WRITE(MSG%LU_DEBUG,*) 'G%ICY'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICY
+WRITE(MSG%LU_DEBUG,*) 'G%ICZ'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICZ
+DO IZ = 1, L%NZ
+   DO IY = 1, L%NY
+      WRITE(MSG%LU_DEBUG,*) (L%IS_SOLID(IX, IY, IZ), IX=1, L%NX)
+   ENDDO
+ENDDO
+#endif
+
+! Allocate main matrix on non-overlapping part of mesh
+
 A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
 CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
 
