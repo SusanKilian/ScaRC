@@ -553,7 +553,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
 
-      IF (IS_MGM) CALL SCARC_SETUP_GRID_PERMUTATION
+      IF (IS_MGM .AND. TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) CALL SCARC_SETUP_GRID_PERMUTATION
  
    ! If only one specified type of discretization must be admistrated:
    ! allocate and preset cell numbers and state arrays for requested type of discretization
@@ -654,7 +654,7 @@ IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
       G%PERM_BW(JC) = IC
       JC = JC - 1
 
-ENDDO
+   ENDDO
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_FW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
