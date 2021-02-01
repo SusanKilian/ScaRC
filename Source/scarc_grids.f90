@@ -553,8 +553,6 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
 
-      IF (IS_MGM .AND. TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) CALL SCARC_SETUP_GRID_PERMUTATION
- 
    ! If only one specified type of discretization must be admistrated:
    ! allocate and preset cell numbers and state arrays for requested type of discretization
  
@@ -617,124 +615,6 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: ', TYPE_GRID,' : NC, NCE, NCE2:', G%NC, G%NC
 ENDDO MESHES_LOOP2
 
 END SUBROUTINE SCARC_SETUP_GRIDS
-
-! --------------------------------------------------------------------------------------------------------------------------
-!> \brief Setup permutation of grid cells (MGM only)
-! --------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_GRID_PERMUTATION()
-USE SCARC_POINTERS, ONLY: L, G, GWC
-INTEGER :: IW, I, J, K, IOR0, IC, JC, KC
-
-! Allocate permutation vectors 
-
-CALL SCARC_ALLOCATE_INT1 (G%PERM_FW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_FW', CROUTINE)
-CALL SCARC_ALLOCATE_INT1 (G%PERM_BW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_BW', CROUTINE)
-   
-! Obstruction cells are numbered last such that they appear at the end of a vector
-
-IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
-
-   JC = G%NC
-   DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
-      
-      GWC => G%WALL(IW)
-      
-      I = GWC%IXW ;  J = GWC%IYW ;  K = GWC%IZW
-      
-      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-      
-      IOR0 = GWC%IOR
-      IC   = G%CELL_NUMBER(I,J,K)
-
-#ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG,*) 'IW, I, J, K, IOR0, IC:', IW, I, J, K, IOR0, IC
-      WRITE(MSG%LU_DEBUG,*) 'OBSTRUCTION: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
-#endif
-      G%PERM_FW(IC) = JC
-      G%PERM_BW(JC) = IC
-      JC = JC - 1
-
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_FW:'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
-WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_BW:'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
-#endif
-
-   ! Interface cells are numbered second last
-
-   DO IW = 1, L%N_WALL_CELLS_EXT
-      
-      GWC => G%WALL(IW)
-      IF (GWC%BTYPE /= INTERNAL) CYCLE
-      
-      I = GWC%IXW ;  J = GWC%IYW ;  K = GWC%IZW
-      
-      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-      
-      IOR0 = GWC%IOR
-      IC   = G%CELL_NUMBER(I,J,K)
-
-#ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG,*) 'IW, I, J, K, IOR0, IC:', IW, I, J, K, IOR0, IC
-      WRITE(MSG%LU_DEBUG,*) 'INTERFACE: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
-#endif
-      G%PERM_FW(IC) = JC
-      G%PERM_BW(JC) = IC
-      JC = JC - 1
-
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_FW:'
-   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
-   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_BW:'
-   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
-#endif
-
-   ! The rest is used from beginning to first interface cell
-
-   KC = 1
-   DO IC = 1, G%NC
-      IF (G%PERM_FW(IC) /= 0) CYCLE
-      G%PERM_BW(KC) = IC
-      G%PERM_FW(IC) = KC
-      KC = KC + 1
-   ENDDO
-   IF (KC /= JC + 1) CALL SCARC_ERROR(NSCARC_ERROR_MGM_PERMUTATION, SCARC_NONE, NSCARC_NONE)
-
-   G%NONZERO = KC
-
-ELSE
-
-   DO IC = 1, G%NC
-      G%PERM_BW(IC) = IC
-      G%PERM_FW(IC) = IC
-   ENDDO
-
-   G%NONZERO = G%NC
-
-ENDIF
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
-WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_BW:'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
-WRITE(MSG%LU_DEBUG,*) 'G%ICX'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%ICX
-WRITE(MSG%LU_DEBUG,*) 'G%ICY'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%ICY
-WRITE(MSG%LU_DEBUG,*) 'G%ICZ'
-WRITE(MSG%LU_DEBUG,'(8I4)') G%ICZ
-DO K = 1, L%NZ
-   DO J = 1, L%NY
-      WRITE(MSG%LU_DEBUG,*) (L%IS_SOLID(I, J, K), I=1, L%NX)
-   ENDDO
-ENDDO
-#endif
-
-END SUBROUTINE SCARC_SETUP_GRID_PERMUTATION
 
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Setup discretization information on coarser levels
