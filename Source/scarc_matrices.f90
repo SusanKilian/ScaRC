@@ -191,11 +191,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDIF
 
          TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
-            CALL SCARC_SETUP_LAPLACE_PERM (NM, NLEVEL_MIN)
-         ELSE
-            CALL SCARC_SETUP_LAPLACE (NM, NLEVEL_MIN)
-         ENDIF
+         CALL SCARC_SETUP_LAPLACE (NM, NLEVEL_MIN)
          CALL SCARC_SETUP_BOUNDARY_WITH_INTERFACES(NM, NLEVEL_MIN) 
 
 #ifdef WITH_MKL
@@ -689,66 +685,6 @@ END SELECT SELECT_STORAGE_TYPE
 END SUBROUTINE SCARC_SETUP_POISSON
 
 
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Setup local Laplace matrices 
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_LAPLACE (NM, NL)
-USE SCARC_POINTERS, ONLY: L, G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NM, NL
-INTEGER :: IX, IY, IZ, IC, IP
-
-CROUTINE = 'SCARC_SETUP_LAPLACE'
- 
-! Allocate main matrix on non-overlapping part of mesh
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'SETUP_POISSON: TYPE_SCOPE:', TYPE_SCOPE(0)
-#endif
-CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
-CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'SETUP_POISSON:B: TYPE_SCOPE:', TYPE_SCOPE(0)
-#endif
-IP = 1
-DO IZ = 1, L%NZ
-   DO IY = 1, L%NY
-      DO IX = 1, L%NX
-
-         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
-         IC = G%CELL_NUMBER(IX, IY, IZ)
-
-         ! Main diagonal 
-
-         CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
-
-         ! Lower subdiagonals
-
-         IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ-1, IP,  3)
-         IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY-1, IZ  , IP,  2)
-         IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX-1, IY  , IZ  , IP,  1)
-
-         ! Upper subdiagonals
-
-         IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX+1, IY  , IZ  , IP, -1)
-         IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY+1, IZ  , IP, -2)
-         IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ+1, IP, -3)
-
-      ENDDO
-   ENDDO
-ENDDO
-   
-A%ROW(G%NC+1) = IP
-A%N_VAL = IP
-   
-CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE: NO BDRY')
-#endif
- 
-END SUBROUTINE SCARC_SETUP_LAPLACE
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -760,7 +696,7 @@ END SUBROUTINE SCARC_SETUP_LAPLACE
 ! All other entries of the RHS are zero for the local Laplace problems, such that the
 ! forward substitution process Ly=b only must start from the nonzero entries on
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_LAPLACE_PERM (NM, NL)
+SUBROUTINE SCARC_SETUP_LAPLACE (NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, A, GWC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: IX, IY, IZ, IC, JC, KC, IOR0, IW, IP, KKC(-3:3), JJC(-3:3)
@@ -770,6 +706,10 @@ CROUTINE = 'SCARC_SETUP_LAPLACE'
 TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
 TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
  
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SETUP_LAPLACE:B: TYPE_SCOPE:', TYPE_SCOPE(0)
+#endif
+
 ! Point to unstructured grid
 
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
@@ -884,69 +824,104 @@ DO IZ = 1, L%NZ
 ENDDO
 #endif
 
-! Allocate main matrix on non-overlapping part of mesh
+! Allocate Laplace matrix on non-overlapping part of mesh
 
 A => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
-CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%LAPLACE', CROUTINE)
 
-! Assemble permuted Laplace matrix which will be stored in LAPLACE,
-! determine the permuted cells that belong to the matrix stencil in a given cell
+! Assemble Laplace matrix with grid permutation based on MGM-method 
 
 IP = 1
-DO IC = 1, G%NC
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
 
-   JJC = -1
-   KKC = -1
+   DO IC = 1, G%NC
 
-   JJC(0) = G%PERM_BW(IC);  KKC(0) = G%PERM_FW(JJC(0))
-   
-   IX = G%ICX(JJC(0)); IY = G%ICY(JJC(0)); IZ = G%ICZ(JJC(0))
+      JJC = -1
+      KKC = -1
 
-   JJC(-3) = G%CELL_NUMBER(IX  , IY, IZ+1)     ; KKC(-3) = GET_PERM(JJC(-3))  
-   JJC(-1) = G%CELL_NUMBER(IX+1, IY, IZ  )     ; KKC(-1) = GET_PERM(JJC(-1))   
-   JJC( 1) = G%CELL_NUMBER(IX-1, IY, IZ  )     ; KKC( 1) = GET_PERM(JJC( 1))    
-   JJC( 3) = G%CELL_NUMBER(IX  , IY, IZ-1)     ; KKC( 3) = GET_PERM(JJC( 3))     
-   IF (.NOT.TWO_D) THEN
-     JJC(-2) = G%CELL_NUMBER(IX, IY+1, IZ)     ; KKC(-2) = GET_PERM(JJC(-2))     
-     JJC( 2) = G%CELL_NUMBER(IX, IY-1, IZ)     ; KKC( 2) = GET_PERM(JJC( 2))     
-   ENDIF
+      JJC(0) = G%PERM_BW(IC);  KKC(0) = G%PERM_FW(JJC(0))
+      
+      IX = G%ICX(JJC(0)); IY = G%ICY(JJC(0)); IZ = G%ICZ(JJC(0))
 
-   ! Main diagonal 
-   CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
+      JJC(-3) = G%CELL_NUMBER(IX  , IY, IZ+1)     ; KKC(-3) = GET_PERM(JJC(-3))  
+      JJC(-1) = G%CELL_NUMBER(IX+1, IY, IZ  )     ; KKC(-1) = GET_PERM(JJC(-1))   
+      JJC( 1) = G%CELL_NUMBER(IX-1, IY, IZ  )     ; KKC( 1) = GET_PERM(JJC( 1))    
+      JJC( 3) = G%CELL_NUMBER(IX  , IY, IZ-1)     ; KKC( 3) = GET_PERM(JJC( 3))     
+      IF (.NOT.TWO_D) THEN
+        JJC(-2) = G%CELL_NUMBER(IX, IY+1, IZ)     ; KKC(-2) = GET_PERM(JJC(-2))     
+        JJC( 2) = G%CELL_NUMBER(IX, IY-1, IZ)     ; KKC( 2) = GET_PERM(JJC( 2))     
+      ENDIF
+
+      ! Main diagonal 
+      CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG,*) '======================================='
-      WRITE(MSG%LU_DEBUG,*) 'JJC = ', JJC
-      WRITE(MSG%LU_DEBUG,*) 'KKC = ', KKC
-      WRITE(MSG%LU_DEBUG,*) 'IX, IY, IZ=', IX, IY, IZ
+         WRITE(MSG%LU_DEBUG,*) '======================================='
+         WRITE(MSG%LU_DEBUG,*) 'JJC = ', JJC
+         WRITE(MSG%LU_DEBUG,*) 'KKC = ', KKC
+         WRITE(MSG%LU_DEBUG,*) 'IX, IY, IZ=', IX, IY, IZ
 #endif
 
+         
+      ! Lower subdiagonals
+
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ-1, KKC( 3), IP,  3)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY-1, IZ  , KKC( 2), IP,  2)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX-1, IY  , IZ  , KKC( 1), IP,  1)
+
+      ! Upper subdiagonals
+
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX+1, IY  , IZ  , KKC(-1), IP, -1)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY+1, IZ  , KKC(-2), IP, -2)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ+1, KKC(-3), IP, -3)
+
+   ENDDO
       
-   ! Lower subdiagonals
 
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ-1, KKC( 3), IP,  3)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY-1, IZ  , KKC( 2), IP,  2)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX-1, IY  , IZ  , KKC( 1), IP,  1)
+! Assemble Laplace matrix without grid permutation 
 
-   ! Upper subdiagonals
+ELSE
 
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX+1, IY  , IZ  , KKC(-1), IP, -1)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY+1, IZ  , KKC(-2), IP, -2)
-   IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ+1, KKC(-3), IP, -3)
+   DO IZ = 1, L%NZ
+      DO IY = 1, L%NY
+         DO IX = 1, L%NX
 
-ENDDO
-   
+            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+            IC = G%CELL_NUMBER(IX, IY, IZ)
+
+            ! Main diagonal 
+
+            CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
+
+            ! Lower subdiagonals
+
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ-1, IP,  3)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY-1, IZ  , IP,  2)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX-1, IY  , IZ  , IP,  1)
+
+            ! Upper subdiagonals
+
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX+1, IY  , IZ  , IP, -1)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY+1, IZ  , IP, -2)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ+1, IP, -3)
+
+         ENDDO
+      ENDDO
+   ENDDO
+      
+ENDIF
+
 A%ROW(G%NC+1) = IP
 A%N_VAL = IP
-   
+      
 CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
 
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE_PERM: NO BDRY')
+CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE: NO BDRY')
 #endif
  
-END SUBROUTINE SCARC_SETUP_LAPLACE_PERM
+END SUBROUTINE SCARC_SETUP_LAPLACE
 
 
 ! --------------------------------------------------------------------------------------------------------------
