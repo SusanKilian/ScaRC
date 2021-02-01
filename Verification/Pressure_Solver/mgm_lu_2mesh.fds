@@ -6,14 +6,18 @@
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER ='SCARC' 
-      SCARC_MATRIX                = 'COMPACT'
-      SCARC_METHOD                = 'MGM'
-      SCARC_MGM_ACCURACY          = 1E-4
-      SCARC_MGM_EXACT_INITIAL     = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER    = 'LUPERM' /
+&PRES SOLVER                   ='USCARC' 
+      SCARC_MATRIX             = 'COMPACT'
+      SCARC_METHOD             = 'MGM'
+      SCARC_PRECON             = 'SSOR'
+      SCARC_KRYLOV_ACCURACY    = 1E-16
+      SCARC_MGM_BC             = 'MEAN'
+      SCARC_MGM_ITERATIONS     = 20
+      SCARC_MGM_ACCURACY       = 1E-8
+      SCARC_MGM_EXACT_INITIAL  = .TRUE.
+      SCARC_MGM_LAPLACE_SOLVER = 'LU'  /
 
-&TIME T_END=0.01, DT=0.002 /
+&TIME T_END=0.05, DT=0.002 /
 
 &SURF ID='INFLOW2',VEL=-2.0, RAMP_V='IN2' /
 

@@ -5,7 +5,7 @@
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER ='SCARC' 
+&PRES SOLVER                   ='USCARC' 
       SCARC_MATRIX             = 'COMPACT'
       SCARC_METHOD             = 'MGM'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
