@@ -505,9 +505,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                    MGM%ITE, VELOCITY_ERROR_GLOBAL
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         WRITE(MSG%LU_DEBUG, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
-                                   MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
-                                   MGM%ITE, VELOCITY_ERROR_GLOBAL
+         WRITE(MSG%LU_VERBOSE, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
+                                     MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
+                                     MGM%ITE, VELOCITY_ERROR_GLOBAL
 #endif
 
       ! MGM iteration - after each unstructured homogeneous Laplace solution
