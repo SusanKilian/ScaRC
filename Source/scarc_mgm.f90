@@ -282,7 +282,7 @@ USE SCARC_POINTERS, ONLY: G, MGM, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: I, J, IC0, IC, JC, KC, ICOL, IP, NMAX_U, NMAX_L
 REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU
-REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL, VAL2
+REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL, VAL2, DIFF1, DIFF2
 INTEGER:: TYPE_SCOPE_SAVE
 
 CROUTINE = 'SCARC_SETUP_MGM_LU'
@@ -365,7 +365,7 @@ WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0
    VAL = 1.0_EB
    LLL(IC, IC) = VAL
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1000) IC
 WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
 #endif
@@ -380,18 +380,20 @@ WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
          VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
          SCAL2 = SCAL2+VL*VU
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL, SCAL2
 #endif
       ENDDO
       VAL = AAA(IC, JC) - SCAL
       IF (ABS(VAL) > TWO_EPSILON_EB) UUU(IC, JC) = VAL
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
 #endif
       VAL2 = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
       IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL2, IC, JC, G%NC, NMAX_U, 'UM')
+
+      DIFF1 = VAL-VAL2
 
       SCAL = 0.0_EB
       SCAL2 = 0.0_EB
@@ -400,18 +402,24 @@ WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
          VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
          SCAL2 = SCAL2+VL*VU
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL2
 #endif
       ENDDO
       VAL = (AAA(JC, IC) - SCAL)/UUU(IC, IC)
       IF (ABS(VAL) > TWO_EPSILON_EB) LLL(JC, IC) = VAL
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
 #endif
       VAL2 = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/UUU(IC, IC)
       IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL2, JC, IC, G%NC, NMAX_L, 'LM')
+
+      DIFF2 = VAL-VAL2
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) 'DIFF1 = ', DIFF1, ': DIFF2 =', DIFF2
+#endif
+IF (ABS(DIFF1) > TWO_EPSILON_EB .OR. ABS(DIFF2) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM: ', JC, DIFF1, DIFF2
 
    ENDDO COL_LOOP
    !LM%ROW(IC+1) = IL
@@ -449,11 +457,11 @@ ENDDO
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) '------- MGM%LLL (1:24)'
-DO IC = 1, G%NC
+DO IC = 1, 24
    WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(IC, JC), JC = 1, 24)
 ENDDO
 WRITE(MSG%LU_DEBUG, *) '------- MGM%UUU (1:24)'
-DO IC = 1, G%NC
+DO IC = 1, 24
    WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(IC, JC), JC = 1, 24)
 ENDDO
 #endif
@@ -1190,7 +1198,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, 
                DO IX = 1, L%NX
                   ICS = G%CELL_NUMBER(IX, IY, IZ)              ! structured cell number
                   MGM%SIP(IX, IY, IZ) = ST%X(ICS) 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-POISSON:A: IX, IY, IZ, ICS, SP:',&
                                                                      IX, IY, IZ, ICS, MGM%SIP(IX, IY, IZ)
 #endif
@@ -1206,7 +1214,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM-POISSON:A: IX, IY, IZ,
             IX = GWC%IXG;  IY = GWC%IYG;  IZ = GWC%IZG
             ICE = L%STRUCTURED%CELL_NUMBER(IX, IY, IZ)
             MGM%SIP(IX, IY, IZ) = ST%X(ICE) 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ, IW, ICE, SP:',&
                                                                      IX, IY, IZ, IW, ICE, MGM%SIP(IX, IY, IZ)
 #endif
@@ -1218,6 +1226,16 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ,
 
          G => L%UNSTRUCTURED
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) '=======================> BEGOM   OF MGM_STORE_SOLUTION: LAPLACE'
+IF (TYPE_MGM_LAPLACe >= NSCARC_MGM_LAPLACE_LU) THEN
+   WRITE(MSG%LU_DEBUG, *) 'MGM%X'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%X(ICU), ICU = 1, G%NC)
+ELSE
+   WRITE(MSG%LU_DEBUG, *) 'ST%X'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (ST%X(ICU), ICU = 1, G%NC)
+ENDIF
+#endif
          IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
             DO IZ = 0, L%NZ+1
                DO IY = 0, L%NY+1
@@ -1246,7 +1264,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
                         ICU = G%CELL_NUMBER(IX, IY, IZ)
                      ENDIF
                      MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
-#ifdef WITH_SCARC_DEBUG 
+#ifdef WITH_SCARC_DEBUG
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ, ICU, UL:',&
                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
 #endif
@@ -1260,7 +1278,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
                      ICU = G%CELL_NUMBER(IX, IY, IZ)           
                      MGM%UHL(IX, IY, IZ) = ST%X(ICU)
-#ifdef WITH_SCARC_DEBUG 
+#ifdef WITH_SCARC_DEBUG
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ, ICU, UL:',&
                                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
 #endif
@@ -1322,7 +1340,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL,
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
                      M%H(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                   ENDDO
@@ -1332,7 +1350,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                DO IZ = 1, L%NZ
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, 1, IZ)) M%H(IX, 0:2, IZ) = 0.0_EB
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                   ENDDO
@@ -1342,7 +1360,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                   DO IY = 1, L%NY
                      DO IX = 1, L%NX
                         IF (L%IS_SOLID(IX, IY, IZ)) M%H(IX, IY, IZ) = 0.0_EB
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%H(IX, IY, IZ)
 #endif
                      ENDDO
@@ -1356,7 +1374,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
                      M%HS(IX, IY, IZ) = MGM%UIP(IX, IY, IZ) 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-CORRECTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                   ENDDO
@@ -1366,7 +1384,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-CORRECTOR: IX, IY, IZ,
                DO IZ = 1, L%NZ
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, 1, IZ)) M%HS(IX, 0:2, IZ) = 0.0_EB
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                   ENDDO
@@ -1376,7 +1394,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ,
                   DO IY = 1, L%NY
                      DO IX = 1, L%NX
                         IF (L%IS_SOLID(IX, IY, IZ)) M%HS(IX, IY, IZ) = 0.0_EB
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 1E14.6)') 'MGM-PREDICTOR: IX, IY, IZ, UP:', IX, IY, IZ, M%HS(IX, IY, IZ)
 #endif
                      ENDDO

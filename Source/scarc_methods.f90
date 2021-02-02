@@ -295,7 +295,7 @@ ENDIF
 
 CALL SCARC_SETUP_SCOPE(NS, NP)
 TYPE_GRID = NG             ! TODO: Why? Forgot the reason ...
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
 WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
 WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
@@ -344,7 +344,7 @@ CALL SCARC_VECTOR_SUM     (B, R, -1.0_EB, 1.0_EB, NL)        !  r^0 := r^0 - b  
 RES    = SCARC_L2NORM (R, NL)                                !  res   := ||r^0||
 RESIN  = RES                                                 !  resin := res
 NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                 !  res < tolerance ?
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'SUSI: KRYLOV: NSTACK:', NSTACK, ': TYPE_MATVEC=', TYPE_MATVEC
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
@@ -355,14 +355,14 @@ CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
 IF (NSTATE /= NSCARC_STATE_CONV_INITIAL) THEN                !  if no convergence yet, call intial preconditioner
    CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^0 := Precon(r^0)
    SIGMA1 = SCARC_SCALAR_PRODUCT(R, V, NL)                   !  SIGMA1 := (r^0,v^0)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
 WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
 #endif
    CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
 ENDIF
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'RESIN, RES, ITE, SIGMA1:', RESIN, RES, ITE, SIGMA1
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 #endif
@@ -371,7 +371,7 @@ CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 
 CG_LOOP: DO ITE = 1, NIT
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
 #endif
    TNOWI = CURRENT_TIME()
@@ -381,7 +381,7 @@ WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
    CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                      !  y^k := A*d^k
 
    ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                   !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 #endif
@@ -390,7 +390,7 @@ CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 
    CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)           !  x^{k+1} := x^k + ALPHA0 * d^k
    CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)           !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
@@ -407,7 +407,7 @@ WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
    SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                  !  SIGMA0 := (r^{k+1},v^{k+1})
    BETA0  = SIGMA0/SIGMA1                                     !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
    SIGMA1 = SIGMA0                                            !  save last SIGMA0
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
@@ -744,7 +744,7 @@ SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NS, NL
 INTEGER:: J, K, N, NM
-REAL(EB):: VAL
+REAL(EB):: VAL, VAL2, DIFF
 REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
 #ifdef WITH_SCARC_DEBUG
 INTEGER:: I
@@ -795,8 +795,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    WRITE(MSG%LU_DEBUG, '(8E14.6)') (ST%B(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
    WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(I), I = 1, G%NC)
-   !CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
-   !CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
+   CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
+   CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
 #endif
 
 
@@ -804,9 +804,11 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MGM%Y(J) = MGM%B(J)
       DO K = 1, J-1
          VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
-         MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
-         !MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
-#ifdef WITH_SCARC_DEBUG2
+         !MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
+         MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
+         DIFF = VAL - AAA(J,K)
+         IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM2: J, K, DIFF:', J, K, DIFF
+#ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
                         MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
 #endif
@@ -817,15 +819,21 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MGM%X(J) = MGM%Y(J)
       DO K = J+1, N
          VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
-         MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
-#ifdef WITH_SCARC_DEBUG2
+         !MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
+         MGM%X(J) = MGM%X(J) - AAA(J,K)*MGM%X(K)
+         DIFF = VAL - AAA(J,K)
+         IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM3: J, K, DIFF:', J, K, DIFF
+#ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
                         MGM%X(J), MGM%X(K), AAA(J, K), VAL
 #endif
       ENDDO
       VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
+      VAL = MGM%AAA(J,J)
+      DIFF = VAL - AAA(J,J)
+      IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM4: J, J, DIFF:', J, J, DIFF
       MGM%X(J) = MGM%X(J)/VAL
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
 #endif
    ENDDO
