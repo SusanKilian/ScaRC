@@ -1,15 +1,15 @@
-&HEAD CHID='cg1',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
+&HEAD CHID='lu1',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
 
 &MESH IJK=5,1,5  XB=0.0,0.5,-0.01,0.01,0.0,0.5 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER                   ='USCARC'
+&PRES SOLVER                   = 'USCARC'
       SCARC_MATRIX             = 'COMPACT'
       SCARC_METHOD             = 'MGM'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'KRYLOV'  /
+      SCARC_MGM_LAPLACE_SOLVER = 'LU'  /
 
 &TIME T_END=0.02, DT=0.002 /
 

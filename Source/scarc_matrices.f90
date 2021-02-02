@@ -802,7 +802,7 @@ ELSE
       G%PERM_FW(IC) = IC
    ENDDO
 
-   G%NONZERO = G%NC
+   G%NONZERO = 1
 
 ENDIF
 
