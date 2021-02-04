@@ -744,7 +744,7 @@ SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NS, NL
 INTEGER:: J, K, N, NM
-REAL(EB):: VAL, VAL2, DIFF
+REAL(EB):: VAL, DIFF
 REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
 #ifdef WITH_SCARC_DEBUG
 INTEGER:: I
@@ -772,7 +772,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO J = 1, N
       MGM%B(J) = ST%B(G%PERM_BW(J))
    ENDDO
-#ifdef WITH_SCARC_DEBUG2
+   MGM%B = 1.0_EB
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) 'METHOD_MGM_LU'
    WRITE(MSG%LU_DEBUG, *) '=============================== A'
    DO I = 1, N
       WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
@@ -808,7 +810,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
          DIFF = VAL - AAA(J,K)
          IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM2: J, K, DIFF:', J, K, DIFF
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
                         MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
 #endif
@@ -823,7 +825,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          MGM%X(J) = MGM%X(J) - AAA(J,K)*MGM%X(K)
          DIFF = VAL - AAA(J,K)
          IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM3: J, K, DIFF:', J, K, DIFF
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
                         MGM%X(J), MGM%X(K), AAA(J, K), VAL
 #endif
@@ -833,14 +835,14 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       DIFF = VAL - AAA(J,J)
       IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM4: J, J, DIFF:', J, J, DIFF
       MGM%X(J) = MGM%X(J)/VAL
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
 #endif
    ENDDO
 
 #ifdef WITH_SCARC_DEBUG
-   !WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
-   !WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
    WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(I), I = 1, G%NC)
 #endif
