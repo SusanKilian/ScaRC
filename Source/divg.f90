@@ -17,14 +17,13 @@ USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP,INTERPOLATE1D_UNIFORM
 USE PHYSICAL_FUNCTIONS, ONLY: GET_CONDUCTIVITY,GET_SPECIFIC_HEAT,GET_SENSIBLE_ENTHALPY_Z,GET_SENSIBLE_ENTHALPY,&
                               GET_VISCOSITY,GET_MOLECULAR_WEIGHT
-USE TURBULENCE, ONLY: TENSOR_DIFFUSIVITY_MODEL,WANNIER_FLOW
 USE MASS, ONLY: SCALAR_FACE_VALUE
 USE GEOMETRY_FUNCTIONS, ONLY: ASSIGN_PRESSURE_ZONE
 USE MANUFACTURED_SOLUTIONS, ONLY: DIFF_MMS,UF_MMS,WF_MMS,VD2D_MMS_Z_SRC !,RHO_0_MMS,RHO_1_MMS
 USE EVAC, ONLY: EVAC_EMESH_EXITS_TYPE, EMESH_EXITS, EMESH_NFIELDS, N_EXITS, N_CO_EXITS, N_DOORS
-USE COMPLEX_GEOMETRY, ONLY : SET_EXIMDIFFLX_3D,SET_DOMAINDIFFLX_3D,SET_EXIMRHOHSLIM_3D,SET_EXIMRHOZZLIM_3D,&
-                             IBM_CGSC, IBM_IDCC, IBM_SOLID, IBM_CUTCFE, &
-                             CCREGION_DIVERGENCE_PART_1,CFACE_PREDICT_NORMAL_VELOCITY
+USE COMPLEX_GEOMETRY, ONLY : IBM_CGSC, IBM_IDCC, IBM_SOLID, IBM_CUTCFE
+USE CC_SCALARS_IBM, ONLY : SET_EXIMDIFFLX_3D,SET_DOMAINDIFFLX_3D,SET_EXIMRHOHSLIM_3D,SET_EXIMRHOZZLIM_3D,&
+                           CCREGION_DIVERGENCE_PART_1,CFACE_PREDICT_NORMAL_VELOCITY
 
 ! Compute contributions to the divergence term
 
@@ -36,15 +35,16 @@ REAL(EB), POINTER, DIMENSION(:,:,:) :: KDTDX,KDTDY,KDTDZ,DP,KP,CP, &
 REAL(EB), POINTER, DIMENSION(:,:,:,:) :: ZZP,RHO_D_DZDX,RHO_D_DZDY,RHO_D_DZDZ
 REAL(EB), POINTER, DIMENSION(:,:) :: PBAR_P
 REAL(EB) :: DELKDELT,VC,VC1,DTDX,DTDY,DTDZ,TNOW, &
-            DZDX,DZDY,DZDZ,RDT,RHO_D_DZDN,TSI,TIME_RAMP_FACTOR,DELTA_P,PRES_RAMP_FACTOR,&
+            DZDX,DZDY,DZDZ,RDT,TSI,TIME_RAMP_FACTOR,DELTA_P,PRES_RAMP_FACTOR,&
             TMP_G,DIV_DIFF_HEAT_FLUX,H_S,ZZZ(1:4),DU,DU_P,DU_M,UN,PROFILE_FACTOR, &
-            XHAT,ZHAT,TT,Q_Z,D_Z_TEMP,D_Z_N(0:5000),RHO_D_DZDN_GET(1:N_TRACKED_SPECIES),JCOR,UN_P,TMP_F_GAS,R_PFCT
-REAL(EB), ALLOCATABLE, DIMENSION(:) :: ZZ_GET
-TYPE(SURFACE_TYPE), POINTER :: SF
-TYPE(SPECIES_MIXTURE_TYPE), POINTER :: SM
+            XHAT,ZHAT,TT,Q_Z,D_Z_TEMP,D_Z_N(0:5000),RHO_D_DZDN_GET(1:N_TRACKED_SPECIES),JCOR,UN_P,TMP_F_GAS,R_PFCT,RHO_D_DZDN
 INTEGER :: IW,N,IOR,II,JJ,KK,IIG,JJG,KKG,I,J,K,IPZ,IOPZ,N_ZZ_MAX,ICC
+REAL(EB), ALLOCATABLE, DIMENSION(:) :: ZZ_GET
+TYPE(SURFACE_TYPE), POINTER :: SF=>NULL()
+TYPE(SPECIES_MIXTURE_TYPE), POINTER :: SM=>NULL()
 TYPE(VENTS_TYPE), POINTER :: VT=>NULL()
 TYPE(WALL_TYPE), POINTER :: WC=>NULL()
+TYPE(EXTERNAL_WALL_TYPE), POINTER :: EWC=>NULL()
 
 ! Check whether to skip this routine
 
@@ -173,39 +173,49 @@ SPECIES_GT_1_IF: IF (N_TOTAL_SCALARS>1) THEN
       ENDDO
       !$OMP END PARALLEL DO
 
-      ! Tensor diffusivity model (experimental)
-
-      IF (TENSOR_DIFFUSIVITY .AND. SIM_MODE/=DNS_MODE) CALL TENSOR_DIFFUSIVITY_MODEL(NM,N)
-
-      ! Store rho*D_n grad Z_n at OPEN boundaries, zero out otherwise
+      ! Store rho*D_n grad Z_n at OPEN boundaries, flux match at INTERPOLATED boundaries, zero out otherwise
 
       WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS
          WC => WALL(IW)
-         IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY .OR. &
-             WC%BOUNDARY_TYPE==INTERPOLATED_BOUNDARY) CYCLE WALL_LOOP
+         IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY) CYCLE WALL_LOOP
          IIG = WC%ONE_D%IIG
          JJG = WC%ONE_D%JJG
          KKG = WC%ONE_D%KKG
          IOR = WC%ONE_D%IOR
-         IF (WC%BOUNDARY_TYPE==OPEN_BOUNDARY) THEN
-            SELECT CASE(IOR)
-               CASE( 1); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDX(IIG-1,JJG,KKG,N)
-               CASE(-1); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDX(IIG,JJG,KKG,N)
-               CASE( 2); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDY(IIG,JJG-1,KKG,N)
-               CASE(-2); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDY(IIG,JJG,KKG,N)
-               CASE( 3); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDZ(IIG,JJG,KKG-1,N)
-               CASE(-3); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDZ(IIG,JJG,KKG,N)
-            END SELECT
-         ELSE
-            SELECT CASE(IOR)
-               CASE( 1); RHO_D_DZDX(IIG-1,JJG,KKG,N) = 0._EB
-               CASE(-1); RHO_D_DZDX(IIG,JJG,KKG,N)   = 0._EB
-               CASE( 2); RHO_D_DZDY(IIG,JJG-1,KKG,N) = 0._EB
-               CASE(-2); RHO_D_DZDY(IIG,JJG,KKG,N)   = 0._EB
-               CASE( 3); RHO_D_DZDZ(IIG,JJG,KKG-1,N) = 0._EB
-               CASE(-3); RHO_D_DZDZ(IIG,JJG,KKG,N)   = 0._EB
-            END SELECT
-         ENDIF
+         BOUNDARY_TYPE_SELECT: SELECT CASE(WC%BOUNDARY_TYPE)
+            CASE DEFAULT
+               SELECT CASE(IOR)
+                  CASE( 1); RHO_D_DZDX(IIG-1,JJG,KKG,N) = 0._EB
+                  CASE(-1); RHO_D_DZDX(IIG,JJG,KKG,N)   = 0._EB
+                  CASE( 2); RHO_D_DZDY(IIG,JJG-1,KKG,N) = 0._EB
+                  CASE(-2); RHO_D_DZDY(IIG,JJG,KKG,N)   = 0._EB
+                  CASE( 3); RHO_D_DZDZ(IIG,JJG,KKG-1,N) = 0._EB
+                  CASE(-3); RHO_D_DZDZ(IIG,JJG,KKG,N)   = 0._EB
+               END SELECT
+            CASE(OPEN_BOUNDARY,INTERPOLATED_BOUNDARY)
+               EWC => EXTERNAL_WALL(IW)
+               IF (EWC%NIC>1) THEN
+                  ! overwrite coarse mesh diffusive flux with fine mesh average (flux matched) computed in wall_bc
+                  SELECT CASE(IOR)
+                     CASE( 1); RHO_D_DZDX(IIG-1,JJG,KKG,N) =  WC%ONE_D%RHO_D_DZDN_F(N)
+                     CASE(-1); RHO_D_DZDX(IIG,JJG,KKG,N)   = -WC%ONE_D%RHO_D_DZDN_F(N)
+                     CASE( 2); RHO_D_DZDY(IIG,JJG-1,KKG,N) =  WC%ONE_D%RHO_D_DZDN_F(N)
+                     CASE(-2); RHO_D_DZDY(IIG,JJG,KKG,N)   = -WC%ONE_D%RHO_D_DZDN_F(N)
+                     CASE( 3); RHO_D_DZDZ(IIG,JJG,KKG-1,N) =  WC%ONE_D%RHO_D_DZDN_F(N)
+                     CASE(-3); RHO_D_DZDZ(IIG,JJG,KKG,N)   = -WC%ONE_D%RHO_D_DZDN_F(N)
+                  END SELECT
+               ELSE
+                  ! store computed flux for output
+                  SELECT CASE(IOR)
+                     CASE( 1); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDX(IIG-1,JJG,KKG,N)
+                     CASE(-1); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDX(IIG,JJG,KKG,N)
+                     CASE( 2); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDY(IIG,JJG-1,KKG,N)
+                     CASE(-2); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDY(IIG,JJG,KKG,N)
+                     CASE( 3); WC%ONE_D%RHO_D_DZDN_F(N) =  RHO_D_DZDZ(IIG,JJG,KKG-1,N)
+                     CASE(-3); WC%ONE_D%RHO_D_DZDN_F(N) = -RHO_D_DZDZ(IIG,JJG,KKG,N)
+                  END SELECT
+               ENDIF
+         END SELECT BOUNDARY_TYPE_SELECT
       ENDDO WALL_LOOP
 
       IF (CHECK_MASS_CONSERVE) THEN
@@ -1358,21 +1368,6 @@ PREDICT_NORMALS: IF (PREDICTOR) THEN
                   END IF
                   WC%ONE_D%U_NORMAL_S = TIME_RAMP_FACTOR*WC%ONE_D%U_NORMAL_0
                END IF EVACUATION_BC_IF
-               WANNIER_BC: IF (PERIODIC_TEST==5) THEN
-                  II = WC%ONE_D%II
-                  JJ = WC%ONE_D%JJ
-                  KK = WC%ONE_D%KK
-                  SELECT CASE(IOR)
-                     CASE( 1)
-                        WC%ONE_D%U_NORMAL_S = -WANNIER_FLOW(X(II),ZC(KK),1)
-                     CASE(-1)
-                        WC%ONE_D%U_NORMAL_S =  WANNIER_FLOW(X(II-1),ZC(KK),1)
-                     CASE( 3)
-                        WC%ONE_D%U_NORMAL_S = -WANNIER_FLOW(XC(II),Z(KK),2)
-                     CASE(-3)
-                        WC%ONE_D%U_NORMAL_S =  WANNIER_FLOW(XC(II),Z(KK-1),2)
-                  END SELECT
-               ENDIF WANNIER_BC
             ENDIF VENT_IF
 
          CASE(OPEN_BOUNDARY,INTERPOLATED_BOUNDARY)
@@ -1490,7 +1485,7 @@ EVACUATION_PREDICTOR: IF (PREDICTOR) THEN
       IF (N==0) THEN
          WRITE(LU_ERR,'(A,A)') 'ERROR FDS+Evac: Zone error, no pressure zone found for mesh ',TRIM(MESH_NAME(NM))
       END IF
-      
+
       U=0._EB; V=0._EB; W=0._EB; US=0._EB; VS=0._EB; WS=0._EB; FVX=0._EB; FVY=0._EB; FVZ=0._EB
       H=0._EB; HS=0._EB; KRES=0._EB; DDDT=0._EB; D=0._EB; DS=0._EB
       P_0=P_INF; TMP_0=TMPA

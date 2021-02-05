@@ -1,28 +1,22 @@
-&HEAD CHID='pressure_iteration2d_scarc_gmg',TITLE='ScaRC-GMG for 2D-square with obstruction on 8 meshes' /
+&HEAD CHID='mgm_lu1',TITLE='Basic Poisson test of default ScaRC solver on 2D-pipe geometry with 4 meshes' /
 
-&MESH IJK=8,1,16, XB=0.0,0.2,-0.01,0.01,0.0,0.4, MULT_ID='mesh' /
-&MULT ID='mesh', DX=0.2, DY=0.02, DZ=0.4, I_UPPER=3, J_UPPER=0, K_UPPER=1 /
+&MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER                  = 'SCARC'
-      SCARC_METHOD            = 'MULTIGRID'
-      SCARC_MULTIGRID_ACCURACY=   1.0E-8 
-      SCARC_MULTIGRID_LEVEL   =   3
-      SCARC_COARSE            = 'DIRECT'
-      SCARC_SMOOTH_ITERATIONS =   2           /
+&PRES SOLVER                   ='USCARC' 
+      SCARC_MATRIX             = 'COMPACT'
+      SCARC_METHOD             = 'MGM'
+      SCARC_MGM_EXACT_INITIAL  = .TRUE.
+      SCARC_MGM_LAPLACE_SOLVER = 'LU'  /
 
-&TIME T_END=0.5, DT=0.002 /
+&TIME T_END=0.05, DT=0.002 /
 
-&SURF ID='INFLOW1',VEL=-2.0, RAMP_V='IN1' /
 &SURF ID='INFLOW2',VEL=-2.0, RAMP_V='IN2' /
 
-&VENT XB=0.3,0.5,-0.01,0.01,0.0,0.0 SURF_ID='INFLOW1' /
 &VENT XB=0.0,0.0,-0.01,0.01,0.3,0.5 SURF_ID='INFLOW2' /
-
 &VENT MB='XMAX', SURF_ID='OPEN' /
-&VENT MB='ZMAX', SURF_ID='OPEN' /
 
 &OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
 

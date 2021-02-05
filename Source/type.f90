@@ -133,8 +133,8 @@ END TYPE MATL_COMP_TYPE
 
 !> \brief Gas mass concentration in solid for 1-D mass transfer
 TYPE SPEC_COMP_TYPE
-   REAL(EB), POINTER, DIMENSION(:) :: RHO !< (1:NWP) Gas density (kg/m3)
-!   REAL(EB), POINTER, DIMENSION(:) :: RHO_DOT !< (1:NWP) Change in gas density (kg/m3/s)
+   REAL(EB), POINTER, DIMENSION(:) :: RHO_ZZ !< (0:NWP+1) Gas concentratoin (kg/m3)
+!   REAL(EB), POINTER, DIMENSION(:) :: RHO_DOT !< (1:NWP) Change in gas concentration (kg/m3/s)
 END TYPE SPEC_COMP_TYPE
 
 
@@ -232,7 +232,7 @@ END TYPE ONE_D_M_AND_E_XFER_TYPE
 
 ! Note: If you change the number of scalar variables in LAGRANGIAN_PARTICLE_TYPE, adjust the numbers below
 
-INTEGER, PARAMETER :: N_PARTICLE_SCALAR_REALS=18,N_PARTICLE_SCALAR_INTEGERS=10,N_PARTICLE_SCALAR_LOGICALS=4
+INTEGER, PARAMETER :: N_PARTICLE_SCALAR_REALS=19,N_PARTICLE_SCALAR_INTEGERS=10,N_PARTICLE_SCALAR_LOGICALS=4
 
 !> \brief Variables assoicated with a single Lagrangian particle
 
@@ -263,6 +263,7 @@ TYPE LAGRANGIAN_PARTICLE_TYPE
    REAL(EB), POINTER :: DZ                  !< Length scale used in POROUS_DRAG calculation (m)
    REAL(EB), POINTER :: M_DOT               !< Particle mass evaporation rate (kg/s)
    REAL(EB), POINTER :: HTC_LIMIT           !< Limiter for the heat transfer coefficient (W/m2/K)
+   REAL(EB), POINTER :: C_DRAG              !< Drag coefficient
 
    INTEGER, POINTER :: TAG                  !< Unique integer identifier for the particle
    INTEGER, POINTER :: ARRAY_INDEX          !< Index in the array of evaporating particles
@@ -328,6 +329,7 @@ TYPE EXTERNAL_WALL_TYPE
    INTEGER :: NOM                                     !< Number of the adjacent (Other) Mesh
    INTEGER :: NIC_MIN                                 !< Start of indices for the cell in the other mesh
    INTEGER :: NIC_MAX                                 !< End of indices for the cell in the other mesh
+   INTEGER :: NIC                                     !< NIC_MAX-NIC_MIN
    INTEGER :: IIO_MIN                                 !< Minimum I index of adjacent cell in other mesh
    INTEGER :: IIO_MAX                                 !< Maximum I index of adjacent cell in other mesh
    INTEGER :: JJO_MIN                                 !< Minimum J index of adjacent cell in other mesh
@@ -482,7 +484,7 @@ TYPE REACTION_TYPE
    CHARACTER(LABEL_LENGTH), ALLOCATABLE, DIMENSION(:) :: SPEC_ID_N_S      !< Array of finite rate species exponents
    CHARACTER(LABEL_LENGTH), ALLOCATABLE, DIMENSION(:) :: SPEC_ID_N_S_READ !< Holding array of finite rate species exponents
    CHARACTER(MESSAGE_LENGTH) :: FYI='null'  !< User comment
-   CHARACTER(FORMULA_LENGTH) :: EQUATION    !< Reaction equation 
+   CHARACTER(FORMULA_LENGTH) :: EQUATION    !< Reaction equation
    CHARACTER(LABEL_LENGTH) :: FWD_ID        !< ID of forward reaction
    REAL(EB) :: C                            !< Number of carbon atoms in the fuel molecule (SIMPLE_CHEMISTRY)
    REAL(EB) :: H                            !< Number of hydrogen atoms in the fuel molecule (SIMPLE_CHEMISTRY)
@@ -495,7 +497,7 @@ TYPE REACTION_TYPE
    REAL(EB) :: A_IN                         !< Unajusted pre-exponential reaction kinetic parameter
    REAL(EB) :: E                            !< Activation energy (J/kmol)
    REAL(EB) :: E_IN                         !< User-specified activation energy (J/mol)
-   REAL(EB) :: K                           
+   REAL(EB) :: K
    REAL(EB) :: MW_FUEL                      !< Molecular weight of fuel (g/mol)
    REAL(EB) :: MW_SOOT                      !< Molecular weight of soot surrogate gas (g/mol)
    REAL(EB) :: Y_O2_MIN                     !< Lower oxygen limit in terms of mass fraction
@@ -539,7 +541,8 @@ END TYPE REACTION_TYPE
 TYPE (REACTION_TYPE), DIMENSION(:), ALLOCATABLE, TARGET :: REACTION
 
 TYPE MATERIAL_TYPE
-   REAL(EB) :: K_S,C_S,RHO_S,EMISSIVITY,THERMAL_DIFFUSIVITY,KAPPA_S,TMP_BOIL,REFRACTIVE_INDEX,H(0:5000)=0._EB
+   REAL(EB) :: K_S,C_S,RHO_S,EMISSIVITY,THERMAL_DIFFUSIVITY,KAPPA_S,TMP_BOIL,REFRACTIVE_INDEX,H(0:5000)=0._EB,&
+        POROSITY=0._EB,PERMEABILITY=0._EB
    INTEGER :: PYROLYSIS_MODEL
    CHARACTER(LABEL_LENGTH) :: ID
    CHARACTER(LABEL_LENGTH) :: RAMP_H_R(MAX_REACTIONS),RAMP_K_S,RAMP_C_S
@@ -568,7 +571,7 @@ TYPE (MATERIAL_TYPE), DIMENSION(:), ALLOCATABLE, TARGET :: MATERIAL
 
 TYPE SURFACE_TYPE
    REAL(EB) :: AREA_MULTIPLIER=1._EB                     !< Factor for manual surface area adjustment
-   REAL(EB) :: TMP_FRONT=-1._EB,TMP_BACK=-1._EB,VEL,VEL_GRAD,PLE, &
+   REAL(EB) :: TMP_FRONT=-1._EB,TMP_BACK=-1._EB,TMP_INNER_HT3D=-1._EB,VEL,VEL_GRAD,PLE, &
                Z0,Z_0,CONVECTIVE_HEAT_FLUX,NET_HEAT_FLUX, &
                VOLUME_FLOW,HRRPUA,MLRPUA,T_IGN,SURFACE_DENSITY,CELL_SIZE_FACTOR, &
                E_COEFFICIENT,TEXTURE_WIDTH,TEXTURE_HEIGHT,THICKNESS,EXTERNAL_FLUX, &
@@ -576,7 +579,7 @@ TYPE SURFACE_TYPE
                TMP_IGN,TMP_EXT,H_V,LAYER_DIVIDE,ROUGHNESS,LENGTH=-1._EB,WIDTH=-1._EB, &
                DT_INSERT,H_FIXED=-1._EB,H_FIXED_B=-1._EB,HM_FIXED=-1._EB,EMISSIVITY_BACK, &
                CONV_LENGTH,XYZ(3),FIRE_SPREAD_RATE, &
-               MINIMUM_LAYER_THICKNESS,INNER_RADIUS=0._EB,MASS_FLUX_VAR=-1._EB,VEL_BULK, &
+               MINIMUM_LAYER_THICKNESS,INNER_RADIUS=0._EB,MASS_FLUX_VAR=-1._EB,VEL_BULK,VEL_PART, &
                PARTICLE_SURFACE_DENSITY=-1._EB,DRAG_COEFFICIENT=2.8_EB,SHAPE_FACTOR=0.25_EB,&
                MINIMUM_BURNOUT_TIME=1.E6_EB,DELTA_TMP_MAX=10._EB,BURN_DURATION=1.E6_EB,CONE_HEAT_FLUX=-1._EB,&
                PARTICLE_EXTRACTION_VELOCITY=1.E6_EB
@@ -618,6 +621,12 @@ TYPE SURFACE_TYPE
    CHARACTER(LABEL_LENGTH), ALLOCATABLE, DIMENSION(:) :: RAMP_MF
    CHARACTER(LABEL_LENGTH) :: ID,TEXTURE_MAP,LEAK_PATH_ID(2)
    CHARACTER(MESSAGE_LENGTH) :: FYI='null'
+
+   ! 1D mass transfer
+
+   REAL(EB), DIMENSION(MAX_LAYERS,MAX_SPECIES) :: LAYER_SPEC_FRAC
+   REAL(EB), DIMENSION(MAX_LAYERS) :: LAYER_POROSITY
+   REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: PHIRHOZ_0
 
    ! Level Set Firespread
 
@@ -734,7 +743,7 @@ TYPE OBSTRUCTION_TYPE
    ! 3D pyrolysis:
    LOGICAL :: PYRO3D=.FALSE.
    LOGICAL :: MT3D=.FALSE.
-   LOGICAL :: HT3D=.FALSE.
+   LOGICAL :: HT3D=.FALSE.,HT3D_RESTART=.FALSE.
    LOGICAL :: PYRO3D_LIQUID=.FALSE.
    INTEGER :: MATL_SURF_INDEX=-1
    INTEGER :: PYRO3D_IOR=0
@@ -838,7 +847,7 @@ TYPE IBM_EDGE_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION(:,:)      :: INT_FVARS      ! (1:N_INT_FVARS,INT_NPE_LO+1:INT_NPE_LO+INT_NPE_HI)
    REAL(EB), ALLOCATABLE, DIMENSION(:,:)      :: INT_CVARS      ! (1:N_INT_CVARS,INT_NPE_LO+1:INT_NPE_LO+INT_NPE_HI)
    INTEGER,  ALLOCATABLE, DIMENSION(:,:)      :: INT_NOMIND     ! (LOW_IND:HIGH_IND,INT_NPE_LO+1:INT_NPE_LO+INT_NPE_HI)
-   REAL(EB), ALLOCATABLE, DIMENSION(:)        :: XB_IB
+   REAL(EB), ALLOCATABLE, DIMENSION(:)        :: XB_IB,DUIDXJ,MU_DUIDXJ
    INTEGER,  ALLOCATABLE, DIMENSION(:)        :: SURF_INDEX
    LOGICAL,  ALLOCATABLE, DIMENSION(:)        :: PROCESS_EDGE_ORIENTATION,EDGE_IN_MESH
 END TYPE IBM_EDGE_TYPE
@@ -863,13 +872,12 @@ TYPE IBM_CUTFACE_TYPE
    INTEGER,  ALLOCATABLE, DIMENSION(:,:)           ::  UNKH, UNKZ
    REAL(EB), ALLOCATABLE, DIMENSION(:,:)           ::  XCENLOW, XCENHIGH
    REAL(EB), ALLOCATABLE, DIMENSION(:,:)           ::  RHO
-   REAL(EB), ALLOCATABLE, DIMENSION(:,:)           ::  ZZ_FACE, DIFF_FACE, RHO_D, VELD
+   REAL(EB), ALLOCATABLE, DIMENSION(:,:)           ::  ZZ_FACE, RHO_D
    REAL(EB), ALLOCATABLE, DIMENSION(:)             :: TMP_FACE
-   REAL(EB), ALLOCATABLE, DIMENSION(:,:,:)         :: RHO_D_DZDN
-   REAL(EB), ALLOCATABLE, DIMENSION(:,:)           :: H_RHO_D_DZDN
+   REAL(EB), ALLOCATABLE, DIMENSION(:,:)           :: RHO_D_DZDN, H_RHO_D_DZDN
    REAL(EB), ALLOCATABLE, DIMENSION(:)             ::  VEL, VELS, DHDX, FN, VELNP1, VELINT
    INTEGER,  ALLOCATABLE, DIMENSION(:,:,:)         ::  JDZ, JDH
-   REAL(EB) :: VELN_CRF, VELD_CRF, DHDX_CRF, FN_CRF, VELNP1_CRF, VELINT_CRF
+   REAL(EB) :: VELINT_CRF
    INTEGER,  ALLOCATABLE, DIMENSION(:,:,:)                         ::      CELL_LIST ! [RC_TYPE I J K ]
 
    ! Here: VIND=IAXIS:KAXIS, EP=1:INT_N_EXT_PTS,
@@ -949,7 +957,8 @@ TYPE IBM_CUTCELL_TYPE
 
    REAL(EB), ALLOCATABLE, DIMENSION(:,:)                     :: DEL_RHO_D_DEL_Z_VOL, U_DOT_DEL_RHO_Z_VOL
    LOGICAL,  ALLOCATABLE, DIMENSION(:)                       :: USE_CC_VOL
-   INTEGER :: NOMICC(2)=0
+   INTEGER :: N_NOMICC=0
+   INTEGER,  ALLOCATABLE, DIMENSION(:,:) :: NOMICC
    REAL(EB):: DIVVOL_BC=0._EB
 END TYPE IBM_CUTCELL_TYPE
 
@@ -963,8 +972,8 @@ TYPE IBM_REGFACEZ_TYPE
    INTEGER :: IWC=0
    INTEGER,  DIMENSION(MAX_DIM)                                    ::       IJK
    INTEGER,  DIMENSION(1:2,1:2)                                    ::        JD
-   REAL(EB), DIMENSION(MAX_SPECIES)                                ::   DIFF_FACE=0._EB, RHO_D=0._EB, VELD=0._EB
-   REAL(EB), DIMENSION(MAX_SPECIES,LOW_IND:HIGH_IND)               ::   RHO_D_DZDN=0._EB
+   REAL(EB), DIMENSION(MAX_SPECIES)                                ::   RHO_D=0._EB
+   REAL(EB), DIMENSION(MAX_SPECIES)                                ::   RHO_D_DZDN=0._EB
    REAL(EB), DIMENSION(MAX_SPECIES)                                :: H_RHO_D_DZDN=0._EB
    REAL(EB), DIMENSION(-1:0)                                       ::    RHOPVN=0._EB
 END TYPE IBM_REGFACEZ_TYPE
@@ -984,8 +993,8 @@ TYPE IBM_RCFACE_LST_TYPE
    REAL(EB), DIMENSION(MAX_DIM,LOW_IND:HIGH_IND)                   ::      XCEN
    INTEGER,  DIMENSION(1:2,1:2)                                    ::        JD
    INTEGER,  DIMENSION(MAX_DIM+1,LOW_IND:HIGH_IND)                 :: CELL_LIST ! [RC_TYPE I J K ]
-   REAL(EB), DIMENSION(MAX_SPECIES)                              :: ZZ_FACE=0._EB,DIFF_FACE=0._EB,RHO_D=0._EB,VELD=0._EB
-   REAL(EB), DIMENSION(MAX_SPECIES,LOW_IND:HIGH_IND)               :: RHO_D_DZDN=0._EB
+   REAL(EB), DIMENSION(MAX_SPECIES)                                :: ZZ_FACE=0._EB,RHO_D=0._EB
+   REAL(EB), DIMENSION(MAX_SPECIES)                                :: RHO_D_DZDN=0._EB
    REAL(EB), DIMENSION(MAX_SPECIES)                                :: H_RHO_D_DZDN=0._EB
    REAL(EB), DIMENSION(-1:0)                                       ::    RHOPVN=0._EB
 END TYPE IBM_RCFACE_LST_TYPE
@@ -1019,7 +1028,7 @@ TYPE VENTS_TYPE
    CHARACTER(LABEL_LENGTH) :: DEVC_ID='null',CTRL_ID='null',ID='null'
    ! turbulent inflow (experimental)
    INTEGER :: N_EDDY=0
-   REAL(EB) :: R_IJ(3,3)=0._EB,A_IJ(3,3)=0._EB,SIGMA_IJ(3,3)=0._EB,EDDY_BOX_VOLUME=0._EB, &
+   REAL(EB) :: VEL=-1.E12_EB, R_IJ(3,3)=0._EB,A_IJ(3,3)=0._EB,SIGMA_IJ(3,3)=0._EB,EDDY_BOX_VOLUME=0._EB, &
                X_EDDY_MIN=0._EB,X_EDDY_MAX=0._EB, &
                Y_EDDY_MIN=0._EB,Y_EDDY_MAX=0._EB, &
                Z_EDDY_MIN=0._EB,Z_EDDY_MAX=0._EB
@@ -1092,14 +1101,25 @@ TYPE HUMAN_GRID_TYPE
    INTEGER  :: IMESH,II,JJ,KK
 END TYPE HUMAN_GRID_TYPE
 
+TYPE HUMAN_GRID_FED_TYPE
+! (x,y,z) Centers of the grid cells in the main evacuation meshes
+! SOOT_DENS: Smoke density at the center of the cell (mg/m3)
+! FED_CO_CO2_O2: Purser's FED for co, co2, and o2
+   REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: X,Y,Z,SOOT_DENS,FED_CO_CO2_O2,TMP_G,RADFLUX
+   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: II,JJ,KK,IMESH
+   INTEGER :: N, N_old, IGRID, IHUMAN, ILABEL
+! IMESH: (x,y,z) which fire mesh, if any
+! II,JJ,KK: Fire mesh cell reference
+   INTEGER  :: IBAR,JBAR,KBAR
+END TYPE HUMAN_GRID_FED_TYPE
+
 TYPE SLICE_TYPE
    INTEGER :: I1,I2,J1,J2,K1,K2,GEOM_INDEX=-1,TRNF_INDEX=-1,INDEX,INDEX2=0,Z_INDEX=-999,Y_INDEX=-999,MATL_INDEX=-999,&
               PART_INDEX=0,VELO_INDEX=0,PROP_INDEX=0,REAC_INDEX=0,SLCF_INDEX
-   INTEGER, ALLOCATABLE, DIMENSION(:) :: REORDER_TO_KJI
    REAL(FB), DIMENSION(2) :: MINMAX
    REAL(FB) :: RLE_MIN, RLE_MAX
    REAL(EB):: AGL_SLICE
-   LOGICAL :: TERRAIN_SLICE=.FALSE.,CELL_CENTERED=.FALSE.,FACE_CENTERED=.FALSE.,RLE=.FALSE.,MULTI_RES=.FALSE.
+   LOGICAL :: TERRAIN_SLICE=.FALSE.,CELL_CENTERED=.FALSE.,FACE_CENTERED=.FALSE.,RLE=.FALSE.
    CHARACTER(LABEL_LENGTH) :: SLICETYPE='STRUCTURED',SMOKEVIEW_LABEL
    CHARACTER(LABEL_LENGTH) :: SMOKEVIEW_BAR_LABEL,ID='null',MATL_ID='null',TRNF_ID='null'
 END TYPE SLICE_TYPE
@@ -1303,7 +1323,7 @@ TYPE DUCTNODE_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION(:) :: ZZ_OLD
    REAL(EB) :: LOSS, P,TMP=273.15_EB,RHO,RSUM,CP,XYZ(3),FILTER_LOSS,TMP_V,RHO_V,RSUM_V,CP_V
    REAL(EB) :: P_OLD,TMP_OLD,RHO_OLD,CP_OLD,RSUM_OLD
-   LOGICAL :: UPDATED, READ_IN, FIXED, AMBIENT = .FALSE.,LEAKAGE=.FALSE.,VENT=.FALSE.
+   LOGICAL :: UPDATED, READ_IN, FIXED, AMBIENT = .FALSE.,LEAKAGE=.FALSE.,VENT=.FALSE.,TRANSPORT_PARTICLES=.FALSE.
    LOGICAL, ALLOCATABLE, DIMENSION(:) :: IN_MESH
 END TYPE DUCTNODE_TYPE
 
