@@ -567,16 +567,16 @@ USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
 
 IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
 
-   CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                                      ! store SIP as ScaRC solution in MGM%SCARC
+   CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                                 
    CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    
 
    CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
    CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)             ! compute UScaRC with unstructured CG-method 
 
-   CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                     ! store UScaRC in MGM%USCARC
-   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                         ! update ghostcells correspondingly (global solution)
+   CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                   
 
-   CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)                             ! build difference and store it in MGM%DSCARC
+   CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)                             ! build difference DSCARC of USCARC and SCARC
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_MGM_DUMP('HS',0)
    CALL SCARC_MGM_DUMP('HU',0)
