@@ -104,7 +104,7 @@ CROUTINE = 'SCARC_SETUP_VECTORS'
 ! If multiple grid types are used (currently only in MGM method) take care that the vectors are
 ! allocated in the longest necessary length which corresponds to the structured discretization.
 ! The related workspaces are also used for possible shorter instances in the unstructured discretization
-IF (HAS_MULTIPLE_GRIDS) CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)   
+IF (HAS_MULTIPLE_GRIDS) CALL SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)   
 
 DO NSTACK = 1, N_STACK_TOTAL
 

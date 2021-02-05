@@ -46,7 +46,7 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
 
    CASE (NSCARC_METHOD_KRYLOV)
    
-      CALL SCARC_SET_GRID_TYPE (TYPE_GRID)                      ! process specified discretization type
+      CALL SET_GRID_TYPE (TYPE_GRID)                      ! process specified discretization type
       CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)               ! setup sizes on finest level
    
       IF (HAS_TWO_LEVELS .AND. .NOT.HAS_AMG_LEVELS) &
@@ -62,7 +62,7 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
 
    CASE (NSCARC_METHOD_MULTIGRID)
    
-      CALL SCARC_SET_GRID_TYPE (TYPE_GRID)                      ! process specified discretization type
+      CALL SET_GRID_TYPE (TYPE_GRID)                      ! process specified discretization type
       SELECT CASE (TYPE_MULTIGRID)
          CASE (NSCARC_MULTIGRID_GEOMETRIC)                                   
             DO NL=NLEVEL_MIN, NLEVEL_MAX
@@ -76,10 +76,10 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
 
    CASE (NSCARC_METHOD_MGM)
    
-      CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)         ! First process structured discretization
+      CALL SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)         ! First process structured discretization
       CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)        
    
-      CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)       ! Then process unstructured discretization
+      CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)       ! Then process unstructured discretization
       IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) &
          CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)            ! ... for global Poisson matrix (only if requested)
       CALL SCARC_SETUP_LOCAL_LAPLACE_SIZES (NLEVEL_MIN)         ! ... for local Laplace matrices
@@ -178,13 +178,13 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          ! Then assemble structured matrix with inhomogeneous boundary conditions
 
-         CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
+         CALL SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
          CALL SCARC_SETUP_POISSON (NM, NLEVEL_MIN)
          CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
 
          ! First assemble unstructured matrix with homogeneous Dirichlet boundary conditions
 
-         CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+         CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
          IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
             CALL SCARC_SETUP_POISSON (NM, NLEVEL_MIN)
             CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
@@ -211,12 +211,12 @@ IF (TYPE_MATRIX == NSCARC_MATRIX_COMPACT) THEN
    IF (IS_MGM) THEN
 
       TYPE_SCOPE = NSCARC_SCOPE_GLOBAL              
-      CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+      CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
       CALL SCARC_SETUP_GLOBAL_CELL_MAPPING(NLEVEL_MIN)
       CALL SCARC_SETUP_GLOBAL_POISSON_COLUMNS(NLEVEL_MIN)
 
       TYPE_SCOPE = NSCARC_SCOPE_GLOBAL
-      CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
+      CALL SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
       CALL SCARC_SETUP_GLOBAL_CELL_MAPPING(NLEVEL_MIN)
       CALL SCARC_SETUP_GLOBAL_POISSON_COLUMNS(NLEVEL_MIN)
 
@@ -233,12 +233,12 @@ ENDIF
 ! Furthermore also at all higher levels except for the AMG method,
 ! in this case it will be done later in routine SETUP_ALGEBRAIC_MULTIGRID
 
-IF (SCARC_GET_MATRIX_TYPE(NLEVEL_MIN) == NSCARC_MATRIX_COMPACT) CALL SCARC_SETUP_GLOBAL_POISSON_OVERLAPS(NLEVEL_MIN)
+IF (SET_MATRIX_TYPE(NLEVEL_MIN) == NSCARC_MATRIX_COMPACT) CALL SCARC_SETUP_GLOBAL_POISSON_OVERLAPS(NLEVEL_MIN)
 
 MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
 
    DO NL = NLEVEL_MIN+1, NLEVEL_MAX
-      IF (SCARC_GET_MATRIX_TYPE(NL) /= NSCARC_MATRIX_COMPACT) CYCLE
+      IF (SET_MATRIX_TYPE(NL) /= NSCARC_MATRIX_COMPACT) CYCLE
       CALL SCARC_SETUP_GLOBAL_CELL_MAPPING(NL)
       CALL SCARC_SETUP_GLOBAL_POISSON_COLUMNS(NL)
       CALL SCARC_SETUP_GLOBAL_POISSON_OVERLAPS(NL)
@@ -253,7 +253,7 @@ ENDIF MULTI_LEVEL_IF
 IF (IS_MGM) THEN
    TYPE_SCOPE_BACKUP = TYPE_SCOPE(0)
    TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
-   CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)        
+   CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)        
 ENDIF
 
 MESHES_MKL_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -267,7 +267,7 @@ ENDDO MESHES_MKL_LOOP
 
 IF (IS_MGM) THEN
    TYPE_SCOPE(0) = TYPE_SCOPE_BACKUP 
-   CALL SCARC_SET_GRID_TYPE (TYPE_GRID_BACKUP)        
+   CALL SET_GRID_TYPE (TYPE_GRID_BACKUP)        
 ENDIF
 
 #endif
@@ -297,7 +297,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    
-   SELECT_MATRIX_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
+   SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
    
  
       ! -------- Matrix in compact storage technique
@@ -574,7 +574,7 @@ CROUTINE = 'SCARC_SETUP_POISSON'
 ! Along internal boundaries use placeholders for the neighboring matrix entries
 ! which will be communicated in a following step
  
-SELECT_STORAGE_TYPE: SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
+SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
 
  
    ! ---------- COMPACT Storage technique
@@ -712,7 +712,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_LAPLACE:B: TYPE_SCOPE:', TYPE_SCOPE(0)
 
 ! Point to unstructured grid
 
-CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+CALL SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)              
 
 ! Allocate permutation vectors 
@@ -1590,7 +1590,7 @@ INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
-SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
+SELECT CASE (SET_MATRIX_TYPE(NL))
 
    ! ---------- Matrix in compact storage technique
  
@@ -2014,7 +2014,7 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
    ! Process last column entries of all rows except of last one
    ! for those rows only one matrix entry was stored, namely that one which connects to the last cell
  
-   SELECT CASE (SCARC_GET_MATRIX_TYPE(NL))
+   SELECT CASE (SET_MATRIX_TYPE(NL))
 
       CASE (NSCARC_MATRIX_COMPACT)
          A => G%POISSON

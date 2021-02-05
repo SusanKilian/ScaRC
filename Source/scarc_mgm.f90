@@ -128,7 +128,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_ALLOCATE_INT2(MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
 
-         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+         CALL SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
          CALL SCARC_POINT_TO_GRID(NM, NL)
 
          CALL SCARC_SETUP_MGM_TRUE_APPROXIMATE 
@@ -139,7 +139,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
 
-         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+         CALL SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
          CALL SCARC_POINT_TO_MGM(NM, NL)
          G => L%UNSTRUCTURED
 
@@ -148,12 +148,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          ! First assume dense settings and reduce later once the real sizes are known, TODO
           
-         LM%N_VAL = G%NC**2 / 2
-         LM%N_ROW = G%NC+1
-         
-         UM%N_VAL = G%NC**2 / 2
-         UM%N_ROW = G%NC+1
-
          CALL SCARC_SETUP_MGM_LU_SIZES(NM, NLEVEL_MIN)
 
          CALL SCARC_ALLOCATE_CMATRIX (LM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%L', CROUTINE)
@@ -277,72 +271,33 @@ END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 SUBROUTINE SCARC_SETUP_MGM_LU_SIZES(NM, NL)
 USE SCARC_POINTERS, ONLY: G, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NM, NL
-INTEGER:: IC, JC, KC, NMAX_U, NMAX_L
-REAL (EB):: SCAL, VL = 0.0_EB, VU = 0.0_EB, VAL
-INTEGER:: TYPE_SCOPE_SAVE
+INTEGER:: IC, JC, NMAX_U, NMAX_L
 
 CROUTINE = 'SCARC_SETUP_MGM_LU_SIZES'
 
-CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
 #endif
 
-! Temporarily extract full matrix from compact storage technique-just for proof of concept
-! These are stored in AAA, LLL and UUU which will be removed after POC is done
-! Consider permutation in G%PERM
- 
-! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
-!
-UM%N_ROW = G%NC+1
-LM%N_ROW = G%NC+1
-DO IC = 1, G%NC
-   UM%N_VAL = 1
-   LM%N_VAL = 1
-ENDDO
+A  => G%LAPLACE
 
+! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
+ 
 NMAX_U = G%NC
 NMAX_L = G%NC
 
+UM%N_ROW = G%NC+1
+LM%N_ROW = G%NC+1
+UM%N_VAL = G%NC
+LM%N_VAL = G%NC
+
 ROW_LOOP: DO IC = 1, G%NC  
-
-   ! Set main diagonal element of L to 1.0
-   VAL = 1.0_EB
-   CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, IC, IC, G%NC, NMAX_L, 'LM')
-
    COL_LOOP: DO JC = IC, G%NC
-
-      SCAL = 0.0_EB
-      DO KC = 1, IC-1
-         VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
-         VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
-         SCAL = SCAL+VL*VU
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL
-#endif
-      ENDDO
-
-      VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
-      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
-
-      SCAL = 0.0_EB
-      DO KC = 1, IC-1
-         VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
-         VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
-         SCAL = SCAL+VL*VU
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL
-#endif
-      ENDDO
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
-#endif
-      VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/SCARC_EVALUATE_CMATRIX(UM, IC, IC)
-      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
-
+      UM%N_VAL = UM%N_VAL + 1
+      LM%N_VAL = LM%N_VAL + 1
    ENDDO COL_LOOP
-
 ENDDO ROW_LOOP
 
 #ifdef WITH_SCARC_DEBUG
@@ -351,8 +306,6 @@ WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
 WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
 WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
 #endif
-
-TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
 1000 FORMAT('================= IC : ', I3, ' ===========================')
@@ -379,7 +332,7 @@ CROUTINE = 'SCARC_SETUP_MGM_LU'
 TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
 TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
 
-CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+CALL SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)
 
 ! Use pointers just for better readability
@@ -402,10 +355,6 @@ WRITE(MSG%LU_DEBUG, *) 'G%NC =', G%NC
 CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 #endif
 
-! Temporarily extract full matrix from compact storage technique-just for proof of concept
-! These are stored in AAA, LLL and UUU which will be removed after POC is done
-! Consider permutation in G%PERM
- 
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
 DO IC = 1, G%NC
@@ -465,7 +414,7 @@ ENDDO ROW_LOOP
 
 CALL SCARC_REDUCE_CMATRIX (LM, 'LM', CROUTINE)
 CALL SCARC_REDUCE_CMATRIX (UM, 'UM', CROUTINE)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L-FINAL', 'SETUP_MGM_LU ')
 CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U-FINAL', 'SETUP_MGM_LU ')
 #endif

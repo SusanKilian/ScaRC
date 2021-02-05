@@ -23,7 +23,7 @@ USE SCARC_MESSAGES, ONLY: MSG
 USE SCARC_STORAGE, ONLY: SCARC_ALLOCATE_INT1, SCARC_DEALLOCATE_INT1, &
                          SCARC_ALLOCATE_INT2, SCARC_ALLOCATE_INT3, &
                          SCARC_ALLOCATE_REAL1, SCARC_ALLOCATE_LOG3
-USE SCARC_UTILITIES, ONLY: ARE_NEIGHBORS, SCARC_SET_GRID_TYPE
+USE SCARC_UTILITIES, ONLY: ARE_NEIGHBORS, SET_GRID_TYPE
 USE SCARC_CPU, ONLY: CPU
 USE SCARC_TROUBLESHOOTING, ONLY: SCARC_ERROR
 USE SCARC_MPI, ONLY: SCARC_SETUP_EXCHANGE_DIMENSIONS
@@ -459,7 +459,7 @@ MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
  
       ! First process structured discretization
  
-      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
+      CALL SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
 
       ! Number of local cells per mesh
@@ -506,7 +506,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
  
       ! Then process unstructured discretization
  
-      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+      CALL SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
 
       ! Also allocate and preset cell numbers and state arrays for unstructured discretization
@@ -560,7 +560,7 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, 
 
       ! Only process specified type of discretization
 
-      CALL SCARC_SET_GRID_TYPE(TYPE_GRID)
+      CALL SET_GRID_TYPE(TYPE_GRID)
       CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
 
       ! Also allocate and preset cell numbers and state arrays for unstructured discretization
@@ -1195,7 +1195,7 @@ CROUTINE = 'SCARC_SETUP_WALLS'
  
 ! -------- Setup pointers for chosen grid type (structured/unstructured)
 
-CALL SCARC_SET_GRID_TYPE (NGRID_TYPE)
+CALL SET_GRID_TYPE (NGRID_TYPE)
 
 ! -------- Get dimensionings for wall cells
  

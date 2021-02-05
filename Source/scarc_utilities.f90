@@ -37,7 +37,7 @@ END FUNCTION ARE_NEIGHBORS
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SET_GRID_TYPE(NTYPE)
+SUBROUTINE SET_GRID_TYPE(NTYPE)
 INTEGER, INTENT(IN) :: NTYPE
 
 SELECT CASE (NTYPE)
@@ -53,14 +53,14 @@ SELECT CASE (NTYPE)
       IS_UNSTRUCTURED = .TRUE.
 END SELECT
 
-END SUBROUTINE SCARC_SET_GRID_TYPE
+END SUBROUTINE SET_GRID_TYPE
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SET_SYSTEM_TYPE(NGRID, NMATRIX)
+SUBROUTINE SET_SYSTEM_TYPE(NGRID, NMATRIX)
 INTEGER, INTENT(IN) :: NGRID, NMATRIX
 
 SELECT CASE (NMATRIX)
@@ -85,97 +85,97 @@ SELECT CASE (NGRID)
       IS_UNSTRUCTURED = .TRUE.
 END SELECT
 
-END SUBROUTINE SCARC_SET_SYSTEM_TYPE
+END SUBROUTINE SET_SYSTEM_TYPE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the data type of the currently processed array
 ! --------------------------------------------------------------------------------------------------------------
-CHARACTER(10) FUNCTION SCARC_GET_DATA_TYPE(NDATA)
+CHARACTER(10) FUNCTION SET_DATA_TYPE(NDATA)
 INTEGER, INTENT(IN) :: NDATA
 
 SELECT CASE (NDATA)
    CASE (NSCARC_DATA_INTEGER)
-      SCARC_GET_DATA_TYPE = 'INTEGER'
+      SET_DATA_TYPE = 'INTEGER'
    CASE (NSCARC_DATA_REAL_EB)
-      SCARC_GET_DATA_TYPE = 'REAL_EB'
+      SET_DATA_TYPE = 'REAL_EB'
    CASE (NSCARC_DATA_REAL_FB)
-      SCARC_GET_DATA_TYPE = 'REAL_FB'
+      SET_DATA_TYPE = 'REAL_FB'
    CASE (NSCARC_DATA_LOGICAL)
-      SCARC_GET_DATA_TYPE = 'LOGICAL'
+      SET_DATA_TYPE = 'LOGICAL'
    CASE (NSCARC_DATA_CMATRIX)
-      SCARC_GET_DATA_TYPE = 'CMATRIX'
+      SET_DATA_TYPE = 'CMATRIX'
    CASE (NSCARC_DATA_BMATRIX)
-      SCARC_GET_DATA_TYPE = 'BMATRIX'
+      SET_DATA_TYPE = 'BMATRIX'
    CASE DEFAULT
-      SCARC_GET_DATA_TYPE = ' '
+      SET_DATA_TYPE = ' '
 END SELECT
 
-END FUNCTION SCARC_GET_DATA_TYPE
+END FUNCTION SET_DATA_TYPE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the dimension of the currently processed array
 ! --------------------------------------------------------------------------------------------------------------
-CHARACTER(10) FUNCTION SCARC_GET_DIMENSION(NDIM)
+CHARACTER(10) FUNCTION SET_DIMENSION(NDIM)
 INTEGER, INTENT(IN) :: NDIM
 
 SELECT CASE (NDIM)
    CASE (1)
-      SCARC_GET_DIMENSION = '1'
+      SET_DIMENSION = '1'
    CASE (2)
-      SCARC_GET_DIMENSION = '2'
+      SET_DIMENSION = '2'
    CASE (3)
-      SCARC_GET_DIMENSION = '3'
+      SET_DIMENSION = '3'
    CASE DEFAULT
-      SCARC_GET_DIMENSION = '0'
+      SET_DIMENSION = '0'
 END SELECT
 
-END FUNCTION SCARC_GET_DIMENSION
+END FUNCTION SET_DIMENSION
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the initialization type of the currently processed array
 ! --------------------------------------------------------------------------------------------------------------
-CHARACTER(10) FUNCTION SCARC_GET_INIT_TYPE(NINIT, NDATA, NSTATE)
+CHARACTER(10) FUNCTION SET_INIT_TYPE(NINIT, NDATA, NSTATE)
 INTEGER, INTENT(IN) :: NINIT, NDATA, NSTATE
 
 SELECT CASE (NINIT)
    CASE (NSCARC_INIT_UNDEF)
-      SCARC_GET_INIT_TYPE = 'UNDEF'
+      SET_INIT_TYPE = 'UNDEF'
    CASE (NSCARC_INIT_NONE)
-      SCARC_GET_INIT_TYPE = 'NONE'
+      SET_INIT_TYPE = 'NONE'
    CASE (NSCARC_INIT_MINUS)
-      SCARC_GET_INIT_TYPE = 'MINUS'
+      SET_INIT_TYPE = 'MINUS'
    CASE (NSCARC_INIT_ZERO)
-      SCARC_GET_INIT_TYPE = 'ZERO'
+      SET_INIT_TYPE = 'ZERO'
    CASE (NSCARC_INIT_ONE)
-      SCARC_GET_INIT_TYPE = 'ONE'
+      SET_INIT_TYPE = 'ONE'
    CASE (NSCARC_INIT_TRUE)
-      SCARC_GET_INIT_TYPE = 'TRUE'
+      SET_INIT_TYPE = 'TRUE'
    CASE (NSCARC_INIT_FALSE)
-      SCARC_GET_INIT_TYPE = 'FALSE'
+      SET_INIT_TYPE = 'FALSE'
    CASE (NSCARC_INIT_HUGE)
-      SCARC_GET_INIT_TYPE = 'HUGE'
+      SET_INIT_TYPE = 'HUGE'
    CASE DEFAULT
-      SCARC_GET_INIT_TYPE = ' '
+      SET_INIT_TYPE = ' '
 END SELECT
 
-IF (NDATA == NSCARC_DATA_CMATRIX .OR. NDATA == NSCARC_DATA_BMATRIX) SCARC_GET_INIT_TYPE = ' '
-IF (NSTATE == NSCARC_STORAGE_REMOVE) SCARC_GET_INIT_TYPE = ' '
+IF (NDATA == NSCARC_DATA_CMATRIX .OR. NDATA == NSCARC_DATA_BMATRIX) SET_INIT_TYPE = ' '
+IF (NSTATE == NSCARC_STORAGE_REMOVE) SET_INIT_TYPE = ' '
 
-END FUNCTION SCARC_GET_INIT_TYPE
+END FUNCTION SET_INIT_TYPE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get type of matrix storage scheme for specified grid level
 ! --------------------------------------------------------------------------------------------------------------
-INTEGER FUNCTION SCARC_GET_MATRIX_TYPE(NL)
+INTEGER FUNCTION SET_MATRIX_TYPE(NL)
 INTEGER, INTENT(IN) :: NL
 
 IF (NL == NLEVEL_MAX .AND. TYPE_COARSE == NSCARC_COARSE_DIRECT) THEN
-   SCARC_GET_MATRIX_TYPE = NSCARC_MATRIX_COMPACT
+   SET_MATRIX_TYPE = NSCARC_MATRIX_COMPACT
 ELSE
-   SCARC_GET_MATRIX_TYPE = TYPE_MATRIX
+   SET_MATRIX_TYPE = TYPE_MATRIX
 ENDIF
 
-END FUNCTION SCARC_GET_MATRIX_TYPE
+END FUNCTION SET_MATRIX_TYPE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Check if a subdiagonal entry must be computed in a specified coordinate direction
@@ -226,7 +226,7 @@ END FUNCTION GET_PERM
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Filter out mean value
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_FILTER_MEANVALUE(NV, NL)
+SUBROUTINE FILTER_MEANVALUE(NV, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
 INTEGER :: NM, IC, I, J, K
@@ -260,12 +260,12 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
 ENDDO
 
-END SUBROUTINE SCARC_FILTER_MEANVALUE
+END SUBROUTINE FILTER_MEANVALUE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Restore last cell of last mesh
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RESTORE_LAST_CELL (XX, NL)
+SUBROUTINE RESTORE_LAST_CELL (XX, NL)
 USE SCARC_POINTERS, ONLY: S, VC, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: XX, NL
 
@@ -275,32 +275,32 @@ S => SCARC(UPPER_MESH_INDEX)
 VC => SCARC_POINT_TO_VECTOR (UPPER_MESH_INDEX, NL, XX)
 VC(S%NC) = S%RHS_END
 
-END SUBROUTINE SCARC_RESTORE_LAST_CELL
+END SUBROUTINE RESTORE_LAST_CELL
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell should be considered during packing of zone numbers
 ! --------------------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION SCARC_FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
+LOGICAL FUNCTION FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
 INTEGER, DIMENSION(:), INTENT(IN) :: SEND_BUFFER_INT
 INTEGER, INTENT(IN) :: IZ, ICG1, ICG2
 INTEGER :: LL, ICG
 
-SCARC_FORBIDDEN_ZONE = .FALSE.
+FORBIDDEN_ZONE = .FALSE.
 LL = 5
 DO ICG = ICG1, ICG2
    IF (SEND_BUFFER_INT(LL) == IZ) THEN
-      SCARC_FORBIDDEN_ZONE = .TRUE.
+      FORBIDDEN_ZONE = .TRUE.
       RETURN
    ENDIF
    LL = LL + 4
 ENDDO
-END FUNCTION SCARC_FORBIDDEN_ZONE
+END FUNCTION FORBIDDEN_ZONE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Control multigrid cycling (F/V/W)
 ! Note: NLEVEL_MIN corresponds to finest level, NLEVEL_MAX to coarsest level
 ! --------------------------------------------------------------------------------------------------------------
-INTEGER FUNCTION SCARC_CYCLING_CONTROL(NTYPE, NL)
+INTEGER FUNCTION CYCLING_CONTROL(NTYPE, NL)
 USE SCARC_POINTERS, ONLY: MG
 INTEGER, INTENT(IN) :: NTYPE, NL
 INTEGER :: NM, IL, ICYCLE
@@ -372,9 +372,9 @@ SELECT CASE (NTYPE)
    
 END SELECT
 
-SCARC_CYCLING_CONTROL = ICYCLE
+CYCLING_CONTROL = ICYCLE
 RETURN
-END FUNCTION SCARC_CYCLING_CONTROL
+END FUNCTION CYCLING_CONTROL
 
 END MODULE SCARC_UTILITIES
 
