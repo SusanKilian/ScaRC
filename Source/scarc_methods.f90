@@ -769,7 +769,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #endif
 
    DO IC = G%NONZERO, G%NC
-   !DO IC = 1, G%NC
       MGM%Y(IC) = MGM%B(IC)
       DO JC = 1, IC-1
          VAL = SCARC_EVALUATE_CMATRIX(LM, IC, JC)
