@@ -37,7 +37,7 @@ END FUNCTION ARE_NEIGHBORS
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SET_GRID_TYPE(NTYPE)
+SUBROUTINE SCARC_SET_GRID_TYPE(NTYPE)
 INTEGER, INTENT(IN) :: NTYPE
 
 SELECT CASE (NTYPE)
@@ -53,14 +53,14 @@ SELECT CASE (NTYPE)
       IS_UNSTRUCTURED = .TRUE.
 END SELECT
 
-END SUBROUTINE SET_GRID_TYPE
+END SUBROUTINE SCARC_SET_GRID_TYPE
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and
 !  additionally sets the requested discretization type
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SET_SYSTEM_TYPE(NGRID, NMATRIX)
+SUBROUTINE SCARC_SET_SYSTEM_TYPE(NGRID, NMATRIX)
 INTEGER, INTENT(IN) :: NGRID, NMATRIX
 
 SELECT CASE (NMATRIX)
@@ -85,7 +85,7 @@ SELECT CASE (NGRID)
       IS_UNSTRUCTURED = .TRUE.
 END SELECT
 
-END SUBROUTINE SET_SYSTEM_TYPE
+END SUBROUTINE SCARC_SET_SYSTEM_TYPE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the data type of the currently processed array
@@ -226,7 +226,7 @@ END FUNCTION GET_PERM
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Filter out mean value
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FILTER_MEANVALUE(NV, NL)
+SUBROUTINE SCARC_FILTER_MEANVALUE(NV, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
 INTEGER :: NM, IC, I, J, K
@@ -260,12 +260,12 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
 ENDDO
 
-END SUBROUTINE FILTER_MEANVALUE
+END SUBROUTINE SCARC_FILTER_MEANVALUE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Restore last cell of last mesh
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE RESTORE_LAST_CELL (XX, NL)
+SUBROUTINE SCARC_RESTORE_LAST_CELL (XX, NL)
 USE SCARC_POINTERS, ONLY: S, VC, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: XX, NL
 
@@ -275,32 +275,32 @@ S => SCARC(UPPER_MESH_INDEX)
 VC => SCARC_POINT_TO_VECTOR (UPPER_MESH_INDEX, NL, XX)
 VC(S%NC) = S%RHS_END
 
-END SUBROUTINE RESTORE_LAST_CELL
+END SUBROUTINE SCARC_RESTORE_LAST_CELL
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell should be considered during packing of zone numbers
 ! --------------------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
+LOGICAL FUNCTION SCARC_FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
 INTEGER, DIMENSION(:), INTENT(IN) :: SEND_BUFFER_INT
 INTEGER, INTENT(IN) :: IZ, ICG1, ICG2
 INTEGER :: LL, ICG
 
-FORBIDDEN_ZONE = .FALSE.
+SCARC_FORBIDDEN_ZONE = .FALSE.
 LL = 5
 DO ICG = ICG1, ICG2
    IF (SEND_BUFFER_INT(LL) == IZ) THEN
-      FORBIDDEN_ZONE = .TRUE.
+      SCARC_FORBIDDEN_ZONE = .TRUE.
       RETURN
    ENDIF
    LL = LL + 4
 ENDDO
-END FUNCTION FORBIDDEN_ZONE
+END FUNCTION SCARC_FORBIDDEN_ZONE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Control multigrid cycling (F/V/W)
 ! Note: NLEVEL_MIN corresponds to finest level, NLEVEL_MAX to coarsest level
 ! --------------------------------------------------------------------------------------------------------------
-INTEGER FUNCTION CYCLING_CONTROL(NTYPE, NL)
+INTEGER FUNCTION SCARC_CYCLING_CONTROL(NTYPE, NL)
 USE SCARC_POINTERS, ONLY: MG
 INTEGER, INTENT(IN) :: NTYPE, NL
 INTEGER :: NM, IL, ICYCLE
@@ -372,9 +372,9 @@ SELECT CASE (NTYPE)
    
 END SELECT
 
-CYCLING_CONTROL = ICYCLE
+SCARC_CYCLING_CONTROL = ICYCLE
 RETURN
-END FUNCTION CYCLING_CONTROL
+END FUNCTION SCARC_CYCLING_CONTROL
 
 END MODULE SCARC_UTILITIES
 
