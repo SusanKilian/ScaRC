@@ -1449,9 +1449,9 @@ AS%N_VAL = A%N_STENCIL_MAX * G%NC
 CALL SCARC_ALLOCATE_CMATRIX (AS, NL, TYPE_MKL_PRECISION, NSCARC_MATRIX_FULL, 'G%AS', CROUTINE)
 
 IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
-   ASCOLG  => AS%COL
+   ASCOLG  => A%COL
 ELSE
-   ASCOLG  => AS%COLG
+   ASCOLG  => A%COLG
 ENDIF
 
 ! If global MKL method is used, also allocate auxiliary space for computation of global numbering
@@ -1500,7 +1500,10 @@ DO IC = 1, AS%N_ROW - 1
          ISYM = 1
          JC0 = ACOLG(A%ROW(IC))
          DO ICOL = A%ROW(IC), A%ROW(IC+1)-1
-             JC = ACOLG(ICOL)
+            JC = ACOLG(ICOL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'MKL: IC, ICOL, JC:', IC, ICOL, JC
+#endif
             IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
                IF (JC >= JC0) THEN
                   ICOL_AUX(ISYM) = ICOL
@@ -1533,6 +1536,9 @@ DO IC = 1, AS%N_ROW - 1
                         AS%VAL_FB(IAS) = REAL(A%VAL(ICOL), FB)
                   END SELECT
                   AS%COL(IAS) = ASCOLG(ICOL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'MKL: ISYM, JC, IAS, ICOL:', ISYM, JC, IAS, ICOL, ASCOLG(ICOL)
+#endif
                   IC_AUX(ISYM) = NSCARC_HUGE_INT            ! mark entry as already used
                   IAS  = IAS  + 1
                ENDIF
@@ -1545,6 +1551,10 @@ ENDDO
 
 AS%ROW(AS%N_ROW) = IAS
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'ASCOLG:'
+WRITE(MSG%LU_DEBUG,*) (ASCOLG(IC), IC=1,9)
+#endif
 IF (IS_MKL_LEVEL(NL)) THEN
    CALL SCARC_DEALLOCATE_INT1 (ICOL_AUX, 'COL_AUX', CROUTINE)
    CALL SCARC_DEALLOCATE_INT1 (IC_AUX,  'IC_AUX', CROUTINE)

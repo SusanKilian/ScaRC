@@ -102,7 +102,7 @@ SELECT CASE (NSTATE)
 END SELECT
 
 #ifdef WITH_SCARC_VERBOSE
-IF (MYID == 0) THEN
+IF (MY_RANK == 0) THEN
    WRITE(MSG%LU_MEM,1000) STORAGE%N_ARRAYS, STORAGE%IP, TRIM(AL%CNAME), TRIM(AL%CSCOPE), TRIM(CSTATE), TRIM(CTYPE), TRIM(CDIM), &
                           AL%LBND(1), AL%RBND(1), AL%LBND(2), AL%RBND(2), AL%LBND(3), AL%RBND(3), &
                           NWORK, STORAGE%NWORK_LOG, STORAGE%NWORK_INT, STORAGE%NWORK_REAL_EB, STORAGE%NWORK_REAL_FB 
@@ -884,12 +884,12 @@ CSAVE = CID(1:1)              ! dummy command to prevent warning in case that DE
 WRITE(MSG%LU_DEBUG,1000) CID, IC, JC, VAL, NC, NP
 #endif
 
-IF (NP == A%N_VAL) WRITE(*,*) MYID+1,': SCARC_INSERT_TO_CMATRIX: Error, maximum length already reached'
+IF (NP == A%N_VAL) WRITE(*,*) MY_RANK+1,': SCARC_INSERT_TO_CMATRIX: Error, maximum length already reached'
 IF (ABS(VAL) < TOL) RETURN
 
 ALREADY_EXISTING_LOOP: DO IP = A%ROW(IC), A%ROW(IC+1)-1
    IF (JC /= IC .AND. JC == A%COL(IP)) THEN
-      WRITE(*,*) MYID+1,': SCARC_INSERT_TO_CMATRIX: Index ', JC,' already exists'
+      WRITE(*,*) MY_RANK+1,': SCARC_INSERT_TO_CMATRIX: Index ', JC,' already exists'
       EXIT
    ENDIF
 ENDDO ALREADY_EXISTING_LOOP

@@ -36,22 +36,22 @@ CHARACTER(LEN=LINE_LENGTH) :: LINE
 CHARACTER(LEN=LINE_LENGTH), DIMENSION(0:N_MPI_PROCESSES-1) :: LINE_ARRAY
 
 ! All MPI processes except root send their timings to the root process. The root process then writes them out to a file.
-WRITE(LINE,'(I5,12(",",ES10.3))') MYID,                       &
-                                  CPU(MYID)%OVERALL,          &
-                                  CPU(MYID)%SETUP,            &
-                                  CPU(MYID)%SOLVER,           &
-                                  CPU(MYID)%ITERATION,        &
-                                  CPU(MYID)%MATVEC_PRODUCT,   &
-                                  CPU(MYID)%SCALAR_PRODUCT,   &
-                                  CPU(MYID)%RELAXATION,       &
-                                  CPU(MYID)%SMOOTHER,         &
-                                  CPU(MYID)%COARSE,           &
-                                  CPU(MYID)%EXCHANGE,         &
-                                  CPU(MYID)%BUFFER_PACKING,   &
-                                  CPU(MYID)%BUFFER_UNPACKING
+WRITE(LINE,'(I5,12(",",ES10.3))') MY_RANK,                       &
+                                  CPU(MY_RANK)%OVERALL,          &
+                                  CPU(MY_RANK)%SETUP,            &
+                                  CPU(MY_RANK)%SOLVER,           &
+                                  CPU(MY_RANK)%ITERATION,        &
+                                  CPU(MY_RANK)%MATVEC_PRODUCT,   &
+                                  CPU(MY_RANK)%SCALAR_PRODUCT,   &
+                                  CPU(MY_RANK)%RELAXATION,       &
+                                  CPU(MY_RANK)%SMOOTHER,         &
+                                  CPU(MY_RANK)%COARSE,           &
+                                  CPU(MY_RANK)%EXCHANGE,         &
+                                  CPU(MY_RANK)%BUFFER_PACKING,   &
+                                  CPU(MY_RANK)%BUFFER_UNPACKING
 
-IF (MYID>0) THEN
-   CALL MPI_SEND(LINE,LINE_LENGTH,MPI_CHARACTER,0,MYID,MPI_COMM_WORLD,IERROR)
+IF (MY_RANK>0) THEN
+   CALL MPI_SEND(LINE,LINE_LENGTH,MPI_CHARACTER,0,MY_RANK,MPI_COMM_WORLD,IERROR)
 ELSE
    LINE_ARRAY(0) = LINE
    DO N=1,N_MPI_PROCESSES-1

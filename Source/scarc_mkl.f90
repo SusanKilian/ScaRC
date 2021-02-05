@@ -163,7 +163,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MKL%IPARM(42) = G%NC_OFFSET(NM) + G%NC_LOCAL(NM)         ! last global cell number for mesh NM
       !MKL%IPARM(39) = 2                                       ! provide matrix in distributed format
       !MKL%IPARM(40) = G%NC_OFFSET(NM)+1                       ! first global cell number for mesh NM
-      !MKL%IPARM(41) = G%NC_OFFSET(NM)+G%NC_LOCAL(NM)         ! last global cell number for mesh NM
+      !MKL%IPARM(41) = G%NC_OFFSET(NM)+G%NC_LOCAL(NM)          ! last global cell number for mesh NM
  
       ! First perform only reordering and symbolic factorization
       ! Then perform only factorization
@@ -188,6 +188,17 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ELSE
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CLUSTER: G%NC_GLOBAL=', G%NC_GLOBAL
+WRITE(MSG%LU_DEBUG,*) 'AS%VAL:'
+WRITE(MSG%LU_DEBUG,*) (AS%VAL(I), I=1,9)
+WRITE(MSG%LU_DEBUG,*) 'AS%ROW:'
+WRITE(MSG%LU_DEBUG,*) (AS%ROW(I), I=1,9)
+WRITE(MSG%LU_DEBUG,*) 'AS%COL:'
+WRITE(MSG%LU_DEBUG,*) (AS%COL(I), I=1,9)
+WRITE(MSG%LU_DEBUG,*) 'AS%COLG:'
+WRITE(MSG%LU_DEBUG,*) (AS%COLG(I), I=1,9)
+#endif
          MKL%IPARM(28) = 0         ! double precision
          MKL%PHASE = 11
          CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
@@ -288,6 +299,13 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO SETUP')
                         MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MKL%ERROR)
       ELSE
 #ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PARDISO: G%NC_GLOBAL=', G%NC_GLOBAL
+WRITE(MSG%LU_DEBUG,*) 'AS%VAL:'
+WRITE(MSG%LU_DEBUG,*) (AS%VAL(I), I=1,9)
+WRITE(MSG%LU_DEBUG,*) 'AS%ROW:'
+WRITE(MSG%LU_DEBUG,*) (AS%ROW(I), I=1,9)
+WRITE(MSG%LU_DEBUG,*) 'AS%COL:'
+WRITE(MSG%LU_DEBUG,*) (AS%COL(I), I=1,9)
 WRITE(MSG%LU_DEBUG,*) 'SETUP_PARDISO DOUBLE: G%NC=',G%NC
 CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO SETUP')
 #endif
