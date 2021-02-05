@@ -772,7 +772,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO J = 1, N
       MGM%B(J) = ST%B(G%PERM_BW(J))
    ENDDO
-   MGM%B = 1.0_EB
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) 'METHOD_MGM_LU'
    WRITE(MSG%LU_DEBUG, *) '=============================== A'
@@ -802,7 +801,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #endif
 
 
-   DO J = G%NONZERO, N
+   !DO J = G%NONZERO, N
+   DO J = 1, N
       MGM%Y(J) = MGM%B(J)
       DO K = 1, J-1
          VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
@@ -841,6 +841,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
 
 #ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
    WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'

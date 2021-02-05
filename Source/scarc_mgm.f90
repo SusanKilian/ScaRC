@@ -316,24 +316,18 @@ WRITE(MSG%LU_DEBUG, *) 'G%NC =', G%NC
 CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 #endif
 DO IC = 1, G%NC
-   JC = G%PERM_FW(IC)
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) 'PERMUTATION  --- IC =', IC, '-----------> JC=',JC
-#endif
-   IF (JC == 0) CYCLE
-
    DO IP = A%ROW(IC), A%ROW(IC+1)-1
       ICOL = A%COL(IP)
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG, *) 'PERMUTATION ICOL ', ICOL, A%VAL(IP), ' TO ', IC, ICOL
 #endif
-      AAA(JC, ICOL) = A%VAL(IP)
+      AAA(IC, ICOL) = A%VAL(IP)
    ENDDO
 ENDDO
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) '------- MGM%A-Copy (1:24)'
 DO IC = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(IC, JC), JC = 1, 24)
+   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(JC, IC), JC = 1, 24)
 ENDDO
 #endif
 
@@ -343,8 +337,8 @@ ENDDO
  
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
-DO JC = 1, G%NC
-   IC = G%PERM_FW(JC)
+DO IC = 1, G%NC
+   !IC = G%PERM_FW(JC)
    UM%ROW(IC) = IC ;  UM%COL(IC) = IC
    LM%ROW(IC) = IC ;  LM%COL(IC) = IC
 ENDDO
@@ -356,10 +350,11 @@ NMAX_L = G%NC
 
 ROW_LOOP: DO IC0 = 1, G%NC  
 
+   !IC = G%PERM_FW(IC0)
+   IC = IC0
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0
+WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0, ' IC=',IC
 #endif
-   IC = G%PERM_FW(IC0)
 
    ! Set main diagonal element of L to 1.0
    VAL = 1.0_EB
@@ -1258,7 +1253,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
                   DO IX = 1, L%NX
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
                      IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
-                        ICU = G%PERM_BW(G%CELL_NUMBER(IX, IY, IZ)) 
+                        ICU = G%PERM_FW(G%CELL_NUMBER(IX, IY, IZ)) 
                      ELSE
                         ICU = G%CELL_NUMBER(IX, IY, IZ)
                      ENDIF
