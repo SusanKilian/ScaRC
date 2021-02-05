@@ -743,12 +743,8 @@ END SUBROUTINE SCARC_METHOD_MGM
 SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, A, LM, UM, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NS, NL
-INTEGER:: J, K, N, NM
+INTEGER:: IC, JC, NM
 REAL(EB):: VAL, DIFF
-REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU         ! only temporarily for proof of concept
-#ifdef WITH_SCARC_DEBUG
-INTEGER:: I
-#endif
 
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
@@ -761,92 +757,60 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
    UM  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
 
-   AAA => MGM%AAA             ! only temporarily - just for better readability
-   LLL => MGM%LLL
-   UUU => MGM%UUU
-
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
-   N = G%NC
-
-   DO J = 1, N
-      MGM%B(J) = ST%B(G%PERM_BW(J))
+   DO IC = 1, G%NC
+      MGM%B(IC) = ST%B(G%PERM_BW(IC))
    ENDDO
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) 'METHOD_MGM_LU'
-   WRITE(MSG%LU_DEBUG, *) '=============================== A'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(I, J), J = 1, 24)
-   ENDDO
-   WRITE(MSG%LU_DEBUG, *) '=============================== L'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(I, J), J = 1, 24)
-   ENDDO
-   WRITE(MSG%LU_DEBUG, *) '=============================== U'
-   DO I = 1, N
-      WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(I, J), J = 1, 24)
-   ENDDO
-#endif
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
-   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
-   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (ST%B(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (ST%B(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+#endif
+#ifdef WITH_SCARC_DEBUG2
    CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L', 'METHOD_MGM_LU ')
    CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U', 'METHOD_MGM_LU ')
 #endif
 
-
-   !DO J = G%NONZERO, N
-   DO J = 1, N
-      MGM%Y(J) = MGM%B(J)
-      DO K = 1, J-1
-         VAL = SCARC_EVALUATE_CMATRIX(LM, J, K)
-         !MGM%Y(J) = MGM%Y(J) - VAL*MGM%Y(K)
-         MGM%Y(J) = MGM%Y(J) - AAA(J, K)*MGM%Y(K)
-         DIFF = VAL - AAA(J,K)
-         IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM2: J, K, DIFF:', J, K, DIFF
+   DO IC = G%NONZERO, G%NC
+   !DO IC = 1, G%NC
+      MGM%Y(IC) = MGM%B(IC)
+      DO JC = 1, IC-1
+         VAL = SCARC_EVALUATE_CMATRIX(LM, IC, JC)
+         MGM%Y(IC) = MGM%Y(IC) - VAL*MGM%Y(JC)
 #ifdef WITH_SCARC_DEBUG2
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'A: J, K, Y(J), Y(K), AAA(J, K), LM(J, K):', J, K,  &
-                        MGM%Y(J), MGM%Y(K), AAA(J, K), VAL
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 3E14.6)') 'A: IC, JC, Y(IC), Y(JC), LM(IC, JC):', IC, JC, MGM%Y(IC), MGM%Y(JC), VAL
 #endif
       ENDDO
    ENDDO
 
-   DO J = N, 1, -1
-      MGM%X(J) = MGM%Y(J)
-      DO K = J+1, N
-         VAL = SCARC_EVALUATE_CMATRIX(UM, J, K)
-         !MGM%X(J) = MGM%X(J) - VAL*MGM%X(K)
-         MGM%X(J) = MGM%X(J) - AAA(J,K)*MGM%X(K)
-         DIFF = VAL - AAA(J,K)
-         IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM3: J, K, DIFF:', J, K, DIFF
+   DO IC = G%NC, 1, -1
+      MGM%X(IC) = MGM%Y(IC)
+      DO JC = IC+1, G%NC
+         VAL = SCARC_EVALUATE_CMATRIX(UM, IC, JC)
+         MGM%X(IC) = MGM%X(IC) - VAL*MGM%X(JC)
 #ifdef WITH_SCARC_DEBUG2
-   WRITE(MSG%LU_DEBUG, '(A, 2I4, 4E14.6)') 'B: J, K, X(J), X(K), AAA(J, K), UM(J, K):', J, K,  &
-                        MGM%X(J), MGM%X(K), AAA(J, K), VAL
+   WRITE(MSG%LU_DEBUG, '(A, 2I4, 3E14.6)') 'B: IC, JC, X(IC), X(JC), UM(IC, JC):', IC, JC, MGM%X(IC), MGM%X(JC), VAL
 #endif
       ENDDO
-      VAL = SCARC_EVALUATE_CMATRIX(UM, J, J)
-      VAL = MGM%AAA(J,J)
-      DIFF = VAL - AAA(J,J)
-      IF (ABS(DIFF) > TWO_EPSILON_EB) WRITE(*,*) 'ALARM4: J, J, DIFF:', J, J, DIFF
-      MGM%X(J) = MGM%X(J)/VAL
+      VAL = SCARC_EVALUATE_CMATRIX(UM, IC, IC)
+      MGM%X(IC) = MGM%X(IC)/VAL
 #ifdef WITH_SCARC_DEBUG2
-   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: J, X(J), AAA(J, J):', J, MGM%X(J), AAA(J, J), VAL
+   WRITE(MSG%LU_DEBUG, '(A, I4, 3E14.6)') 'C: IC, X(IC) :', IC, MGM%X(IC), VAL
 #endif
    ENDDO
-
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(I), I = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
 
 ENDDO

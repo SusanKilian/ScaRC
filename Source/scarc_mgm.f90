@@ -154,13 +154,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          UM%N_VAL = G%NC**2 / 2
          UM%N_ROW = G%NC+1
 
+         CALL SCARC_SETUP_MGM_LU_SIZES(NM, NLEVEL_MIN)
+
          CALL SCARC_ALLOCATE_CMATRIX (LM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%L', CROUTINE)
          CALL SCARC_ALLOCATE_CMATRIX (UM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'MGM%U', CROUTINE)
-         
-         ! Only temporarily use full versions of A, L and U just for proof of concept - will be removed afterwards
-         CALL SCARC_ALLOCATE_REAL2(MGM%AAA, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%AAA', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL2(MGM%LLL, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%LLL', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL2(MGM%UUU, 1, G%NC, 1, G%NC, NSCARC_INIT_ZERO, 'MGM%UUU', CROUTINE)
          
          CALL SCARC_ALLOCATE_REAL1(MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
@@ -277,12 +274,104 @@ END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
 ! -------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_LU(NM, NL)
-USE SCARC_POINTERS, ONLY: G, MGM, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+SUBROUTINE SCARC_SETUP_MGM_LU_SIZES(NM, NL)
+USE SCARC_POINTERS, ONLY: G, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NM, NL
-INTEGER:: I, J, IC0, IC, JC, KC, ICOL, IP, NMAX_U, NMAX_L
-REAL(EB), DIMENSION(:,:), POINTER :: AAA, LLL, UUU
-REAL (EB):: SCAL, SCAL2, VL = 0.0_EB, VU = 0.0_EB, VAL, VAL2, DIFF1, DIFF2
+INTEGER:: IC, JC, KC, NMAX_U, NMAX_L
+REAL (EB):: SCAL, VL = 0.0_EB, VU = 0.0_EB, VAL
+INTEGER:: TYPE_SCOPE_SAVE
+
+CROUTINE = 'SCARC_SETUP_MGM_LU_SIZES'
+
+CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+CALL SCARC_POINT_TO_GRID (NM, NL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
+#endif
+
+! Temporarily extract full matrix from compact storage technique-just for proof of concept
+! These are stored in AAA, LLL and UUU which will be removed after POC is done
+! Consider permutation in G%PERM
+ 
+! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
+!
+UM%N_ROW = G%NC+1
+LM%N_ROW = G%NC+1
+DO IC = 1, G%NC
+   UM%N_VAL = 1
+   LM%N_VAL = 1
+ENDDO
+
+NMAX_U = G%NC
+NMAX_L = G%NC
+
+ROW_LOOP: DO IC = 1, G%NC  
+
+   ! Set main diagonal element of L to 1.0
+   VAL = 1.0_EB
+   CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, IC, IC, G%NC, NMAX_L, 'LM')
+
+   COL_LOOP: DO JC = IC, G%NC
+
+      SCAL = 0.0_EB
+      DO KC = 1, IC-1
+         VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
+         VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
+         SCAL = SCAL+VL*VU
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL
+#endif
+      ENDDO
+
+      VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
+
+      SCAL = 0.0_EB
+      DO KC = 1, IC-1
+         VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
+         VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
+         SCAL = SCAL+VL*VU
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL
+#endif
+      ENDDO
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
+#endif
+      VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/SCARC_EVALUATE_CMATRIX(UM, IC, IC)
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
+
+   ENDDO COL_LOOP
+
+ENDDO ROW_LOOP
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
+#endif
+
+TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
+
+#ifdef WITH_SCARC_DEBUG
+1000 FORMAT('================= IC : ', I3, ' ===========================')
+1100 FORMAT('LLL(',I3, ',',I3, '):', E14.6)
+1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
+1300 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6)
+1400 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6, ',  LLL(',I3, ',',I3, '):', E14.6)
+#endif
+END SUBROUTINE SCARC_SETUP_MGM_LU_SIZES
+
+
+! -------------------------------------------------------------------------------------------------------------
+!> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
+! -------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MGM_LU(NM, NL)
+USE SCARC_POINTERS, ONLY: G, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN):: NM, NL
+INTEGER:: IC0, IC, JC, KC, NMAX_U, NMAX_L
+REAL (EB):: SCAL, VL = 0.0_EB, VU = 0.0_EB, VAL
 INTEGER:: TYPE_SCOPE_SAVE
 
 CROUTINE = 'SCARC_SETUP_MGM_LU'
@@ -295,9 +384,6 @@ CALL SCARC_POINT_TO_GRID (NM, NL)
 
 ! Use pointers just for better readability
 
-AAA => MGM%AAA
-LLL => MGM%LLL
-UUU => MGM%UUU
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
 WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
@@ -315,18 +401,6 @@ WRITE(MSG%LU_DEBUG, *) 'G%NC =', G%NC
 #ifdef WITH_SCARC_DEBUG2
 CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 #endif
-DO IC = 1, G%NC
-   DO IP = A%ROW(IC), A%ROW(IC+1)-1
-      ICOL = A%COL(IP)
-      AAA(IC, ICOL) = A%VAL(IP)
-   ENDDO
-ENDDO
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, *) '------- MGM%A-Copy (1:24)'
-DO IC = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (AAA(JC, IC), JC = 1, 24)
-ENDDO
-#endif
 
 ! Temporarily extract full matrix from compact storage technique-just for proof of concept
 ! These are stored in AAA, LLL and UUU which will be removed after POC is done
@@ -335,7 +409,6 @@ ENDDO
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
 DO IC = 1, G%NC
-   !IC = G%PERM_FW(JC)
    UM%ROW(IC) = IC ;  UM%COL(IC) = IC
    LM%ROW(IC) = IC ;  LM%COL(IC) = IC
 ENDDO
@@ -354,109 +427,55 @@ WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0, ' IC=',I
 
    ! Set main diagonal element of L to 1.0
    VAL = 1.0_EB
-   LLL(IC, IC) = VAL
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1000) IC
-WRITE(MSG%LU_DEBUG, 1100) IC, IC, LLL(IC, IC)
-#endif
    CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, IC, IC, G%NC, NMAX_L, 'LM')
 
    COL_LOOP: DO JC = IC, G%NC
 
-      SCAL  = 0.0_EB
-      SCAL2 = 0.0_EB
+      SCAL = 0.0_EB
       DO KC = 1, IC-1
-         SCAL = SCAL + LLL(IC, KC) * UUU(KC, JC)
          VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
-         SCAL2 = SCAL2+VL*VU
+         SCAL = SCAL+VL*VU
 #ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL, SCAL2
+WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL
 #endif
       ENDDO
-      VAL = AAA(IC, JC) - SCAL
-      IF (ABS(VAL) > TWO_EPSILON_EB) UUU(IC, JC) = VAL
 
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1300) IC, JC, AAA(IC, JC), IC, JC, UUU(IC, JC)
-#endif
-      VAL2 = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL2
-      IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL2, IC, JC, G%NC, NMAX_U, 'UM')
-
+      VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
 
       SCAL = 0.0_EB
-      SCAL2 = 0.0_EB
       DO KC = 1, IC-1
-         SCAL = SCAL + LLL(JC, KC) * UUU(KC, IC)
          VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
          VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
-         SCAL2 = SCAL2+VL*VU
+         SCAL = SCAL+VL*VU
 #ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL2
+WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL
 #endif
       ENDDO
-      VAL = (AAA(JC, IC) - SCAL)/UUU(IC, IC)
-      IF (ABS(VAL) > TWO_EPSILON_EB) LLL(JC, IC) = VAL
-
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
 #endif
-      VAL2 = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL2)/SCARC_EVALUATE_CMATRIX(UM, IC, IC)
-      IF (ABS(VAL2) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL2, JC, IC, G%NC, NMAX_L, 'LM')
-
-      DIFF2 = VAL-VAL2
+      VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/SCARC_EVALUATE_CMATRIX(UM, IC, IC)
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
-   !LM%ROW(IC+1) = IL
-   !UM%ROW(IC+1) = IL
 
 ENDDO ROW_LOOP
 
 CALL SCARC_REDUCE_CMATRIX (LM, 'LM', CROUTINE)
 CALL SCARC_REDUCE_CMATRIX (UM, 'UM', CROUTINE)
 #ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, *) '=============================== MGM%A (1:24) '
-DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.3)') (AAA(I, J), J = 1, 24)
-ENDDO
-WRITE(MSG%LU_DEBUG, *) 'MGM%L'
-DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.3)') (LLL(I, J), J = 1, 24)
-ENDDO
-WRITE(MSG%LU_DEBUG, *) 'MGM%U'
-DO I = 1, G%NC
-   WRITE(MSG%LU_DEBUG, '(24F8.3)') (UUU(I, J), J = 1, 24)
-ENDDO
 CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L-FINAL', 'SETUP_MGM_LU ')
 CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U-FINAL', 'SETUP_MGM_LU ')
 #endif
 
-DO I = 1, G%NC
-   DO J = 1, I-1
-      AAA(I, J) = LLL(I, J)
-   ENDDO
-   DO J = I, G%NC
-      AAA(I, J) = UUU(I, J)
-   ENDDO
-ENDDO
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, *) '------- MGM%LLL (1:24)'
-DO IC = 1, 24
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (LLL(IC, JC), JC = 1, 24)
-ENDDO
-WRITE(MSG%LU_DEBUG, *) '------- MGM%UUU (1:24)'
-DO IC = 1, 24
-   WRITE(MSG%LU_DEBUG, '(24F8.2)') (UUU(IC, JC), JC = 1, 24)
-ENDDO
-#endif
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
 
 #ifdef WITH_SCARC_DEBUG
 1000 FORMAT('================= IC : ', I3, ' ===========================')
 1100 FORMAT('LLL(',I3, ',',I3, '):', E14.6)
-1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL, SCAL2:',2E14.6)
+1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
 1300 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6)
 1400 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6, ',  LLL(',I3, ',',I3, '):', E14.6)
 #endif
@@ -1250,7 +1269,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
                         ICU = G%CELL_NUMBER(IX, IY, IZ)
                      ENDIF
                      MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ, ICU, UL:',&
                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
 #endif
@@ -1264,7 +1283,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
                      ICU = G%CELL_NUMBER(IX, IY, IZ)           
                      MGM%UHL(IX, IY, IZ) = ST%X(ICU)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ, ICU, UL:',&
                                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
 #endif
