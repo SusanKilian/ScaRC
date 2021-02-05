@@ -25,7 +25,6 @@ IMPLICIT NONE
 
 CONTAINS
 
-
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup system of equations (Poisson matrix + BC's) for different variants of ScaRC
 ! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
@@ -246,7 +245,6 @@ MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
 
 ENDIF MULTI_LEVEL_IF
 
-  
 ! ------ IF MKL-solver is used on specific levels, then setup symmetric Poisson matrix there
   
 #ifdef WITH_MKL
@@ -298,7 +296,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    
    SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
-   
  
       ! -------- Matrix in compact storage technique
  
@@ -329,7 +326,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             OA%N_VAL = 4 * OG%NCG * A%N_STENCIL            ! TODO: CHECK LENGTH
             OA%N_ROW = OG%NCG + 1
          ENDDO
-
  
       ! -------- Matrix in bandwise storage technique
  
@@ -423,7 +419,6 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
 ENDDO MESHES_LOOP
    
- 
 ! -------- Exchange matrix sizes in case of a multi-mesh geometry
  
 IF (NMESHES > 1) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MATRIX_SIZES, NSCARC_MATRIX_POISSON, NL)
@@ -458,6 +453,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO MESHES_LOOP
   
 END SUBROUTINE SCARC_SETUP_LOCAL_LAPLACE_SIZES
+
 
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Get global numberings for compact column vector of Poisson matrix 
@@ -685,8 +681,6 @@ END SELECT SELECT_STORAGE_TYPE
 END SUBROUTINE SCARC_SETUP_POISSON
 
 
-
-
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Assemble local unstructured Laplace matrices
 ! The grid numbering is permuted in such a way that all the nonzero entries of the RHS 
@@ -805,7 +799,6 @@ ELSE
    G%NONZERO = 1
 
 ENDIF
-
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:'
 WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
@@ -860,7 +853,6 @@ IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
          WRITE(MSG%LU_DEBUG,*) 'KKC = ', KKC
          WRITE(MSG%LU_DEBUG,*) 'IX, IY, IZ=', IX, IY, IZ
 #endif
-
          
       ! Lower subdiagonals
 
@@ -876,7 +868,6 @@ IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
 
    ENDDO
       
-
 ! Assemble Laplace matrix without grid permutation 
 
 ELSE
@@ -1208,7 +1199,6 @@ WRITE(MSG%LU_DEBUG,*)
 
       ENDDO 
 
-
    ! --------------------------------------------------------------------------
    CASE DEFAULT
 
@@ -1323,7 +1313,6 @@ IF (IS_INTERNAL_CELL) THEN
       CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
    ENDIF
 
- 
 ! If IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
  
 !ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
@@ -1389,7 +1378,6 @@ IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
 ELSE
    ACOLG  => A%COLG
 ENDIF
-
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_MATRIX_MKL: BEGIN')
 WRITE(MSG%LU_DEBUG,*) 'TYPE_SCOPE(',0,')=', TYPE_SCOPE(0), NMESHES
@@ -1664,7 +1652,6 @@ WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:'
 #ifdef WITH_SCARC_DEBUG
       CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY')
 #endif
-
  
    ! ---------- Matrix in bandwise storage technique
  
@@ -1820,7 +1807,6 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
 
 ENDIF LAST_CELL_IN_LAST_MESH_IF
 
- 
 ! Cycle boundary cells to check if there is a periodic communication partner whose stencil is coupled
 ! with the last cell of last mesh;
 ! this can be a cell on the opposite side of the own mesh or on a different mesh
@@ -1944,7 +1930,6 @@ LAST_CELL_IN_LAST_MESH_BANDWISE_IF: IF (NM == NMESHES) THEN
    ENDIF
 
 ENDIF LAST_CELL_IN_LAST_MESH_BANDWISE_IF
-
  
 ! Cycle boundary cells to check if there is a periodic communication partner whose stencil is coupled
 ! with the last cell of last mesh;
@@ -2039,10 +2024,8 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
    VC(NC) = 0.0_EB                 ! set last entry of last mesh to zero
 
 ENDIF
-
 IF (ITYPE == 0) RETURN
 
- 
 ! Broadcast last RHS-value of last cell in last mesh to all meshes
  
 IF (N_MPI_PROCESSES > 1) &
@@ -2053,7 +2036,6 @@ DO NM = 1, NMESHES
    SCARC(NM)%RHS_END = MESH_REAL(NMESHES)
 ENDDO
 
- 
 ! Only in case of periodic BC's:
 ! Subtract B*RHS(end) for corresponding entries of all periodic communication partners
  

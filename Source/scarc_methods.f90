@@ -276,12 +276,11 @@ REAL (EB) :: TNOW, TNOWI
 TNOW = CURRENT_TIME()
 ITE_CG = 0
 
-! Get current and parent stack position, and current level
 TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
 NS = NSTACK
 NP = NPARENT
 NL = NLEVEL
-NG = TYPE_GRID             ! TODO: Why? Forgot the reason ...
+NG = TYPE_GRID                              ! TODO: Why? Forgot the reason ...
 #ifdef WITH_SCARC_POSTPROCESSING
 IF (SCARC_DUMP .AND. ICYC == 1) THEN
    CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_MESH)
@@ -289,12 +288,12 @@ IF (SCARC_DUMP .AND. ICYC == 1) THEN
 ENDIF
 #endif
 
-! ---------- Initialization:
+! ---------- Initialization
 !   - Get parameters for current scope (note: NL denotes the finest level)
 !   - Get right hand side vector and clear solution vectors
 
 CALL SCARC_SETUP_SCOPE(NS, NP)
-TYPE_GRID = NG             ! TODO: Why? Forgot the reason ...
+TYPE_GRID = NG                              ! TODO: Why? Forgot the reason ...
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
 WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
@@ -378,9 +377,9 @@ WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
    CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
 
    !TYPE_MATVEC = NSCARC_MATVEC_LOCAL
-   CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                      !  y^k := A*d^k
+   CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                        !  y^k := A*d^k
 
-   ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                   !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
+   ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                    !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
@@ -388,8 +387,8 @@ CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 
    ALPHA0 = SIGMA1/ALPHA0                                      !  ALPHA0 := (r^k,v^k)/(d^k,A*d^k)
 
-   CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)           !  x^{k+1} := x^k + ALPHA0 * d^k
-   CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)           !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
+   CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)            !  x^{k+1} := x^k + ALPHA0 * d^k
+   CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)            !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
@@ -398,22 +397,22 @@ CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE ', NL)
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
 #endif
 
-   RES = SCARC_L2NORM (R, NL)                                !  res := ||r^{k+1}||
-   NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)              !  res < tolerance ??
+   RES = SCARC_L2NORM (R, NL)                                  !  res := ||r^{k+1}||
+   NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                !  res < tolerance ??
    IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT CG_LOOP
 
-   CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^{k+1} := Precon(r^{k+1})
+   CALL SCARC_PRECONDITIONER(NS, NS, NL)                       !  v^{k+1} := Precon(r^{k+1})
 
-   SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                  !  SIGMA0 := (r^{k+1},v^{k+1})
-   BETA0  = SIGMA0/SIGMA1                                     !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
-   SIGMA1 = SIGMA0                                            !  save last SIGMA0
+   SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                    !  SIGMA0 := (r^{k+1},v^{k+1})
+   BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
+   SIGMA1 = SIGMA0                                             !  save last SIGMA0
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
 #endif
 
-   CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)           !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
+   CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
 
    CPU(MYID)%ITERATION=MAX(CPU(MYID)%ITERATION,CURRENT_TIME()-TNOWI)
 
@@ -472,12 +471,8 @@ CALL SCARC_SETUP_MGM(NLEVEL_MIN, NLEVEL_MIN)
 ! ------- First part of method: Setup CG solver for inhomogeneous problem on structured discretization
 !         Use FFT-preconditioning by default
 
-
 TYPE_PRECON = NSCARC_RELAX_FFT
-TYPE_PRECON = NSCARC_RELAX_SSOR
 CALL SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
-
-CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, 'Structured Pass', NSCARC_NONE)
 
 NSTACK = NSCARC_STACK_ROOT
 STACK(NSTACK)%SOLVER => MAIN_CG_STRUCTURED
@@ -491,14 +486,11 @@ CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
 
 ! ------- Second part of method: Setup CG solver for homogeneous problem on unstructured discretization
 !         Only working for compact matrix storage technique (because of the unstructured grid)
-!         Use LU-preconditioning by default
+!         Use IntelMKL-PARDISO-preconditioning by default
 
-
-TYPE_PRECON = NSCARC_RELAX_SSOR
 TYPE_MATRIX = NSCARC_MATRIX_COMPACT
+TYPE_PRECON = NSCARC_RELAX_MKL
 CALL SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-
-CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, 'Unstructured Pass', NSCARC_NONE)
 
 NSTACK = NSTACK + 1
 STACK(NSTACK)%SOLVER => MAIN_CG_UNSTRUCTURED
@@ -509,18 +501,16 @@ IF (TYPE_PRECON == NSCARC_RELAX_MKL .AND. TYPE_MATRIX == NSCARC_MATRIX_COMPACT) 
 #ifdef WITH_MKL
    STACK(NSTACK)%SOLVER => PRECON_MKL
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)          ! use global PARDISO from MKL
+   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)        
 #else
    STACK(NSTACK)%SOLVER => PRECON_SSOR
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-   !CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MIN)
    CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_LU, 'Unstructured Pass', NSCARC_NONE)
 #endif
 
 ELSE
    STACK(NSTACK)%SOLVER => PRECON_SSOR
    CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-   !CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MAX)
 ENDIF
 
 ! Store final number of stacks
@@ -550,7 +540,7 @@ CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 CALL SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
 CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
 
-CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this solution as MGM%SIP
+CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this structured inhomogeneous Poisson solution in MGM%SIP
 CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
 
 CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)                 ! Initialize unstructured inhomogeneous Poisson UIP with SIP
@@ -562,7 +552,7 @@ CALL SCARC_MGM_DUMP('SIP',0)
 CALL SCARC_MGM_DUMP('UIP',0)
 #endif
 
-! Determine of correct initialization of interface boundary values is required
+! Determine if correct initialization of interface boundary values is required
 ! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
 
 USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
@@ -570,10 +560,10 @@ USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
                               (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
 
 ! The upper computation of the structured inhomogeneous Poisson (SIP) solution corresponds to the usual ScaRC solution
-! (To this end the structured Poisson matrix is assembled during setup)
+! (To this end the structured Poisson matrix was assembled during the setup phase)
 ! If comparison with exact solution is required, also compute UScaRC solution
-! (To this end the unstructured Poisson matrix will additionally be assembled during setup)
-! For both inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
+! (In this case the unstructured Poisson matrix was also assembled during the setup phase)
+! In both cases inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
 ! Compute the difference DScaRC of UScaRC and ScaRC 
 
 IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
