@@ -1850,7 +1850,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    MKL => L%MKL
    MKL%PHASE  = 33                                ! only solving
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'G%NC_GLOBAL=', G%NC_GLOBAL
 WRITE(MSG%LU_DEBUG,*) 'CLUSTER, PRE, V1:'
 WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
@@ -1880,7 +1880,7 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
 
    IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V1:'
 WRITE(MSG%LU_DEBUG,'(2E14.6)') V1
 WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V2:'
@@ -2572,7 +2572,7 @@ CALL SCARC_SETUP_SCOPE(NS, NP)
 ! Because initial vector in MG is set to zero, this defect corresponds to F
  
 ITE = 0
-BVERBOSE = .FALSE.
+BVERBOSE = .TRUE.
 IF (BVERBOSE) THEN
    BL2NORM  = .TRUE.
    BMATVEC  = .TRUE.
@@ -3012,10 +3012,10 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
  
    ! --------- Preconditioning by blockwise Geometric Multigrid
  
-   !CASE (NSCARC_RELAX_MULTIGRID)
+   CASE (NSCARC_RELAX_MULTIGRID)
 
-       NP0 = NP               ! Only dummy command until multigrid is used again
-   !   CALL SCARC_METHOD_MULTIGRID (NS, NP, NLEVEL_MIN)
+      NP0 = NP               ! Only dummy command until multigrid is used again
+      CALL SCARC_METHOD_MULTIGRID (NS, NP, NLEVEL_MIN)
 
  
    ! --------- Preconditioning by blockwise FFT based on Crayfishpak
