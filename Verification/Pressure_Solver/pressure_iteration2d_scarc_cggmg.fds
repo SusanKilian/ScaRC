@@ -8,9 +8,12 @@
 
 &PRES SOLVER                     = 'SCARC'
       SCARC_PRECON               = 'MULTIGRID'
+      SCARC_MATRIX               = 'COMPACT'
+      SCARC_COARSE               = 'DIRECT'
+      SCARC_KRYLOV_ACCURACY      = 1E-8
       SCARC_MULTIGRID_LEVEL      =   3
       SCARC_MULTIGRID_ITERATIONS =   2
-      SCARC_SMOOTH_ITERATIONS    =   5        /
+      SCARC_SMOOTH_ITERATIONS    =   8        /
 
 &TIME T_END=0.5, DT=0.002 /
 

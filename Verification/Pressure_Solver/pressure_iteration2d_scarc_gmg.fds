@@ -10,7 +10,9 @@
       SCARC_METHOD            = 'MULTIGRID'
       SCARC_MULTIGRID_ACCURACY=   1.0E-8 
       SCARC_MULTIGRID_LEVEL   =   3
-      SCARC_COARSE            = 'DIRECT'
+      SCARC_SMOOTH            = 'SSOR'
+      SCARC_MATRIX            = 'COMPACT'
+      SCARC_COARSE            = 'ITERATIVE'
       SCARC_SMOOTH_ITERATIONS =   2           /
 
 &TIME T_END=0.5, DT=0.002 /
