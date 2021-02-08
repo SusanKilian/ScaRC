@@ -218,7 +218,7 @@ END SUBROUTINE SCARC_SETUP_SCOPE
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Reset environment of calling routine when leaving solver
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RELEASE_SOLVER(NS, NP)
+SUBROUTINE SCARC_RELEASE_SCOPE(NS, NP)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN)  :: NS, NP                            ! references to current stack and parent
 
@@ -236,6 +236,7 @@ ENDIF
 SV%RESIN = RESIN
 SV%RES   = RES
 SV%ITE   = ITE
+SV%EPS   = EPS
 SV%CAPPA = CAPPA
 
 ! If not first solver in stack, reset environment of parent (calling) routine
@@ -289,7 +290,7 @@ IF (NP > 0) THEN
 
 ENDIF
 
-END SUBROUTINE SCARC_RELEASE_SOLVER
+END SUBROUTINE SCARC_RELEASE_SCOPE
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup references to solution vectors related to used scope (main solver or preconditioner)
