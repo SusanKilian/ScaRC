@@ -370,7 +370,7 @@ CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 
 CG_LOOP: DO ITE = 1, NIT
 
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
 #endif
    TNOWI = CURRENT_TIME()
@@ -380,7 +380,7 @@ WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
    CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                        !  y^k := A*d^k
 
    ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                    !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 #endif
@@ -388,7 +388,7 @@ CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
 
    CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)            !  x^{k+1} := x^k + ALPHA0 * d^k
    CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)            !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
@@ -405,7 +405,7 @@ WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
    SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                    !  SIGMA0 := (r^{k+1},v^{k+1})
    BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
    SIGMA1 = SIGMA0                                             !  save last SIGMA0
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
@@ -2054,7 +2054,7 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
             ST%B = 0.0_EB                                    ! set RHS to zero
             ST%X = 0.0_EB                                    ! use zero as initial vector
-            !ST%V = 0.0_EB
+            !ST%V = 0.0_EB                                   ! TODO: not necessary ?
             !ST%D = 0.0_EB
             !ST%R = 0.0_EB
             !ST%Y = 0.0_EB
@@ -2273,6 +2273,12 @@ SUBROUTINE SCARC_UPDATE_PRECONDITIONER(NL)
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'UPDATE_PRECONDITIONER, NM=', NM,': X(NSTAGE_TWO)'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)%X
+WRITE(MSG%LU_DEBUG,*) 'UPDATE_PRECONDITIONER, NM=', NM,': V(NSTAGE_ONE)'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)%V
+#endif
    SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_ONE)%V = SCARC(NM)%LEVEL(NL)%STAGE(NSCARC_STAGE_TWO)%X
 ENDDO
 END SUBROUTINE SCARC_UPDATE_PRECONDITIONER
