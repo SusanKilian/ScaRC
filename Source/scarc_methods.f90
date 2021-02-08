@@ -343,8 +343,7 @@ CALL SCARC_VECTOR_SUM     (B, R, -1.0_EB, 1.0_EB, NL)        !  r^0 := r^0 - b  
 RES    = SCARC_L2NORM (R, NL)                                !  res   := ||r^0||
 RESIN  = RES                                                 !  resin := res
 NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                 !  res < tolerance ?
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'SUSI: KRYLOV: NSTACK:', NSTACK, ': TYPE_MATVEC=', TYPE_MATVEC
+#ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
 #endif
@@ -354,14 +353,14 @@ CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
 IF (NSTATE /= NSCARC_STATE_CONV_INITIAL) THEN                !  if no convergence yet, call intial preconditioner
    CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^0 := Precon(r^0)
    SIGMA1 = SCARC_SCALAR_PRODUCT(R, V, NL)                   !  SIGMA1 := (r^0,v^0)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
 WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
 #endif
    CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
 ENDIF
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'RESIN, RES, ITE, SIGMA1:', RESIN, RES, ITE, SIGMA1
 CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
 #endif
@@ -390,6 +389,7 @@ CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
    CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)            !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
+CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
 CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE ', NL)
@@ -401,17 +401,21 @@ WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
    IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT CG_LOOP
 
    CALL SCARC_PRECONDITIONER(NS, NS, NL)                       !  v^{k+1} := Precon(r^{k+1})
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'after precon'
+#endif
 
    SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                    !  SIGMA0 := (r^{k+1},v^{k+1})
    BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
    SIGMA1 = SIGMA0                                             !  save last SIGMA0
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
-CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE ', NL)
-CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
-#endif
 
    CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
+CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE2 ', NL)
+CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE2 ', NL)
+CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE2 ', NL)
+#endif
 
    CPU(MY_RANK)%ITERATION=MAX(CPU(MY_RANK)%ITERATION,CURRENT_TIME()-TNOWI)
 
