@@ -59,13 +59,13 @@ REAL (EB)     :: SCARC_MULTIGRID_THETA       = 0.10E+0_EB        !< Threshold fo
 
 ! ---------- Parameters for MGM method
 
-REAL(EB)      :: SCARC_MGM_ACCURACY         = 1.E-2_EB           !< Requested accuracy for interface velocity error 
+REAL(EB)      :: SCARC_MGM_ACCURACY         = 1.E-4_EB           !< Requested accuracy for interface velocity error 
 CHARACTER(40) :: SCARC_MGM_BC               = 'MEAN'             !< Type of interface boundary condition for local Laplace problems
 CHARACTER(40) :: SCARC_MGM_INTERPOL         = 'LINEAR'           !< Type of interpolation for Lapalce BC settings
 CHARACTER(40) :: SCARC_MGM_LAPLACE_SOLVER   = 'LUPERM'           !< Type of solver for local Laplace problems
-INTEGER       :: SCARC_MGM_ITERATIONS       = 50                 !< Maximum allowed number of Laplace iterations 
+INTEGER       :: SCARC_MGM_ITERATIONS       = 20                 !< Maximum allowed number of Laplace iterations 
 LOGICAL       :: SCARC_MGM_CHECK_LAPLACE    = .FALSE.            !< Requested check of Laplace solutions against ScaRC-UScaRC diff
-LOGICAL       :: SCARC_MGM_EXACT_INITIAL    = .TRUE.             !< Use exact solutions for initialization of interface BCs
+LOGICAL       :: SCARC_MGM_EXACT_INITIAL    = .FALSE.             !< Use exact solutions for initialization of interface BCs
 
 ! ---------- Parameters for smoothing method (used in multigrids-methods)
  

@@ -1449,9 +1449,9 @@ AS%N_VAL = A%N_STENCIL_MAX * G%NC
 CALL SCARC_ALLOCATE_CMATRIX (AS, NL, TYPE_MKL_PRECISION, NSCARC_MATRIX_FULL, 'G%AS', CROUTINE)
 
 IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
-   ASCOLG  => A%COL
+   ASCOLG  => AS%COL
 ELSE
-   ASCOLG  => A%COLG
+   ASCOLG  => AS%COLG
 ENDIF
 
 ! If global MKL method is used, also allocate auxiliary space for computation of global numbering

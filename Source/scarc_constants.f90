@@ -203,11 +203,12 @@ INTEGER, PARAMETER :: NSCARC_MGM_OUHL_TO_OUHL2       = 37        !< Type of MGM 
 INTEGER, PARAMETER :: NSCARC_MGM_USCARC_VS_SCARC     = 41        !< Type of MGM difference: UScaRC vs ScaRC
 INTEGER, PARAMETER :: NSCARC_MGM_UHL_VS_DSCARC       = 42        !< Type of MGM difference: UScaRC-ScaRC vs unstruct hom Laplace
 INTEGER, PARAMETER :: NSCARC_MGM_UIP_VS_USCARC       = 43        !< Type of MGM difference: UScaRC vs unstruct inhom Poisson
-INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_KRYLOV      = 51        !< Type of MGM Laplace solver: Use Krylov-CG method
-INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_PARDISO     = 52        !< Type of MGM Laplace solver: Use IntelMKL-Pardiso solver
-INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_FFT         = 53        !< Type of MGM Laplace solver: Use Crayfishpak FFT solver
-INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_LU          = 54        !< Type of MGM Laplace solver: Use permuted LU method
-INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_LUPERM      = 55        !< Type of MGM Laplace solver: Use permuted LU method
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_AMG         = 51        !< Type of MGM Laplace solver: Use Krylov-CG method
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_KRYLOV      = 52        !< Type of MGM Laplace solver: Use Krylov-CG method
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_PARDISO     = 53        !< Type of MGM Laplace solver: Use IntelMKL-Pardiso solver
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_FFT         = 54        !< Type of MGM Laplace solver: Use Crayfishpak FFT solver
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_LU          = 55        !< Type of MGM Laplace solver: Use permuted LU method
+INTEGER, PARAMETER :: NSCARC_MGM_LAPLACE_LUPERM      = 56        !< Type of MGM Laplace solver: Use permuted LU method
 INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_LINEAR     = 61        !< Type of MGM interpolation: Use linear interpolation
 INTEGER, PARAMETER :: NSCARC_MGM_INTERPOL_SQUARE     = 62        !< Type of MGM interpolation: Use quadratic interpolation
 
