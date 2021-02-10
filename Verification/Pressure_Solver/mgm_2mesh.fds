@@ -9,11 +9,6 @@
 &PRES SOLVER                   ='USCARC' 
       SCARC_MATRIX             = 'COMPACT'
       SCARC_METHOD             = 'MGM'
-      SCARC_PRECON             = 'SSOR'
-      SCARC_KRYLOV_ACCURACY    = 1E-16
-      SCARC_MGM_BC             = 'MEAN'
-      SCARC_MGM_ITERATIONS     = 20
-      SCARC_MGM_ACCURACY       = 1E-8
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
       SCARC_MGM_LAPLACE_SOLVER = 'KRYLOV'  /
 
