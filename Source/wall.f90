@@ -41,7 +41,7 @@ REAL(EB) :: TNOW
 REAL(EB), INTENT(IN) :: T,DT
 INTEGER, INTENT(IN) :: NM
 
-IF (EVACUATION_ONLY(NM)) RETURN
+IF (DO_EVACUATION) RETURN
 IF (LEVEL_SET_MODE==1 .OR. LEVEL_SET_MODE==2 .OR. LEVEL_SET_MODE==3) RETURN
 
 TNOW=CURRENT_TIME()
@@ -222,9 +222,8 @@ CONTAINS
 
 SUBROUTINE CALCULATE_TMP_F(WALL_INDEX,CFACE_INDEX,PARTICLE_INDEX)
 
-USE MASS, ONLY: SCALAR_FACE_VALUE
 USE PHYSICAL_FUNCTIONS, ONLY: GET_VISCOSITY
-USE MATH_FUNCTIONS, ONLY: INTERPOLATE1D_UNIFORM
+USE MATH_FUNCTIONS, ONLY: INTERPOLATE1D_UNIFORM, SCALAR_FACE_VALUE
 
 INTEGER, INTENT(IN), OPTIONAL :: WALL_INDEX,CFACE_INDEX,PARTICLE_INDEX
 REAL(EB) :: ARO,FDERIV,QEXTRA,QNET,RAMP_FACTOR,RHO_G_2,RSUM_F,PBAR_F,TMP_OTHER_SOLID,TSI,UN, &
@@ -796,9 +795,15 @@ SUBSTEP_LOOP: DO WHILE ( ABS(T_SUB-DT_BC_HT3D)>TWO_EPSILON_EB )
                      SELECT CASE(ABS(OB%PYRO3D_IOR))
                         CASE DEFAULT
                            ! isotropic shrinking and swelling
-                           VSRVC_X(I,J,K) = VSRVC(I,J,K)**ONTH
-                           VSRVC_Y(I,J,K) = VSRVC_X(I,J,K)
-                           VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
+                           IF (TWO_D) THEN
+                              VSRVC_X(I,J,K) = VSRVC(I,J,K)**0.5_EB
+                              VSRVC_Y(I,J,K) = 1._EB
+                              VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
+                           ELSE
+                              VSRVC_X(I,J,K) = VSRVC(I,J,K)**ONTH
+                              VSRVC_Y(I,J,K) = VSRVC_X(I,J,K)
+                              VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
+                           ENDIF
                         CASE(1)
                            VSRVC_X(I,J,K) = VSRVC(I,J,K)
                            VSRVC_Y(I,J,K) = 1._EB
