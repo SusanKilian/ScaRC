@@ -30,7 +30,7 @@ REAL (EB)     :: SCARC_RESIDUAL           =  0.0_EB              !< Residual of 
 
 ! ---------- Parameters for coarse grid method
  
-CHARACTER(40) :: SCARC_COARSE             = 'ITERATIVE'          !< Type of coarse grid solver (ITERATIVE/DIRECT)
+CHARACTER(40) :: SCARC_COARSE             = 'DIRECT'             !< Type of coarse grid solver (ITERATIVE/DIRECT)
 REAL (EB)     :: SCARC_COARSE_ACCURACY    = 1.E-14_EB            !< Requested accuracy for iterative solver
 INTEGER       :: SCARC_COARSE_ITERATIONS  = 100                  !< Max number of iterations for iterative solver
 INTEGER       :: SCARC_COARSE_LEVEL       =  1                   !< Coarse grid level for twolevel-Krylov method
@@ -134,7 +134,7 @@ LOGICAL :: HAS_GMG_LEVELS        = .FALSE.                       !< Flag for GMG
 ! ---------- Globally used types for description of different solvers
   
 INTEGER :: TYPE_ACCURACY            = NSCARC_ACCURACY_ABSOLUTE   !< Type of requested accuracy
-INTEGER :: TYPE_COARSE              = NSCARC_COARSE_ITERATIVE    !< Type of coarse grid solver 
+INTEGER :: TYPE_COARSE              = NSCARC_COARSE_DIRECT       !< Type of coarse grid solver 
 INTEGER :: TYPE_COARSENING          = NSCARC_COARSENING_CUBIC    !< Type of grid coarsening 
 INTEGER :: TYPE_CYCLING             = NSCARC_CYCLING_V           !< Type of cycling for multigrid method
 INTEGER :: TYPE_GRID                = NSCARC_GRID_STRUCTURED     !< Type of discretization 

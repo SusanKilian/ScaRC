@@ -1,6 +1,6 @@
 Test pressure iteration routine for flow through a duct across meshes
 
-&HEAD CHID='duct_flow_mgm_simple', TITLE='Flow through a duct, test of unstructured ScaRC solver' /
+&HEAD CHID='duct_flow_mgm_mean_krylov', TITLE='Flow through a duct, test of structured ScaRC solver' /
 
 &MESH IJK=16,16,16, XB=-.2,3.0,-.2,3.0,-.2,3.0, MULT_ID='mesh' /
 &MULT ID='mesh', DX=3.2, DY=3.2, DZ=3.2, I_UPPER=1, J_UPPER=1, K_UPPER=1 /
@@ -12,7 +12,10 @@ MESH IJK=32,32,32, XB=-.2,6.2,-.2,6.2,-.2,6.2 /
 
 &MISC STRATIFICATION=.FALSE. /
 
-&PRES SOLVER = 'USCARC', SCARC_METHOD = 'MGM', SCARC_MGM_BC = 'SIMPLE' /
+&PRES SOLVER                   = 'USCARC' 
+      SCARC_METHOD             = 'MGM'
+      SCARC_MGM_EXACT_INITIAL  = .TRUE.
+      SCARC_MGM_LAPLACE_SOLVER = 'KRYLOV'  /
 
 &SURF ID='DUCT', COLOR='GRAY 30', TRANSPARENCY=0.5 /
 

@@ -1535,7 +1535,7 @@ WRITE(MSG%LU_DEBUG,*) 'MKL: IC, ICOL, JC:', IC, ICOL, JC
                      CASE (NSCARC_PRECISION_SINGLE)
                         AS%VAL_FB(IAS) = REAL(A%VAL(ICOL), FB)
                   END SELECT
-                  AS%COL(IAS) = ASCOLG(ICOL)
+                  AS%COL(IAS) = ACOLG(ICOL)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'MKL: ISYM, JC, IAS, ICOL:', ISYM, JC, IAS, ICOL, ASCOLG(ICOL)
 #endif
