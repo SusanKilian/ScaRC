@@ -1464,11 +1464,11 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             IWG = OG%ICG_TO_IWG(ICG)
             ICW = OG%ICG_TO_ICW(ICG, 1)
 
+            IF (ICW == -1) CYCLE
+
             I = G%ICX(ICW) 
             J = G%ICY(ICW) 
             K = G%ICZ(ICW) 
-
-            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
 
 #ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, *) '          IWG, ICW, I, J, K :', IWG, ICW, I, J, K

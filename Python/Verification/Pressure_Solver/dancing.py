@@ -11,7 +11,7 @@ site = []
 sres = []
 scon = []
 
-def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, i):
+def read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, i):
 
     time0  =[]
     v10  =[]
@@ -23,7 +23,7 @@ def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, i):
     v70  =[]
 
     chid0 = chid[i]
-    name_chid= "%s_devc.csv" % (chid0)
+    name_chid= "%s/%s_devc.csv" % (path,chid0)
     print ('reading %s'%name_chid)
 
     chid_in  = open(name_chid ,'r')
@@ -83,10 +83,9 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
     fig = plt.figure (facecolor='w')
     ax = fig.add_subplot(111)
 
-    markers = ["s","D","o","v","h","^","<"]
-    colors  = ["c","m","y","k","r","b","g"]
-    colors  = ["r","b","g","k","c","m","y"]
-    linestyles  = ["-","-.",":","--"]
+    markers = ["s","D","o","v","h","^","<","s","D","o","v","h","^","<"]
+    colors  = ["r","b","g","k","c","m","y","c","m","y","k","r","b","g"]
+    linestyles  = ["-","-.",":","--","-","-.",":","--","-","-.",":","--"]
 
     legsize = fnt.FontProperties(size=8)
 
@@ -134,6 +133,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
 #tstart = 0.1
 #tend   = 1.00
 
+path = '/home/susanne/GIT/A_ScaRC/Verification/Pressure_Solver'
 case = 'dancing_eddies'
 nmeshes = 4
 tstart = 0.0
@@ -143,7 +143,9 @@ chid=[]
 #chid.append('%s_default' %case)
 chid.append('%s_scarc' %case)
 chid.append('%s_uscarc' %case)
-chid.append('%s_uglmat' %case)
+chid.append('%s_mgm_mean_krylov' %case)
+#chid.append('%s_mgm_mean_lu' %case)
+#chid.append('%s_uglmat' %case)
 
 
 nsim = len(chid)
@@ -161,7 +163,7 @@ v6 = []
 v7 = []
 
 for i in range(nsim):
-   read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, i)
+   read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, i)
 
 plot_csv(case, chid, time, v1, values[0], tstart, tend)
 plot_csv(case, chid, time, v2, values[1], tstart, tend)

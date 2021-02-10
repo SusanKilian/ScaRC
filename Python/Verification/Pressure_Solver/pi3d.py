@@ -11,7 +11,7 @@ site = []
 sres = []
 scon = []
 
-def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i):
+def read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i):
 
     time0  =[]
     v10  =[]
@@ -22,9 +22,10 @@ def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i):
     v60  =[]
     v70  =[]
     v80  =[]
+    v90  =[]
 
     chid0 = chid[i]
-    name_chid= "%s_devc.csv" % (chid0)
+    name_chid= "%s/%s_devc.csv" % (path, chid0)
     print ('reading %s'%name_chid)
 
     chid_in  = open(name_chid ,'r')
@@ -65,14 +66,14 @@ def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i):
         v = float(quan[6])
         v60.append(v)
 
-        #v = float(quan[7])
-        #v70.append(v)
+        v = float(quan[7])
+        v70.append(v)
 
-        #v = float(quan[8])
-        #v80.append(v)
+        v = float(quan[8])
+        v80.append(v)
 
-        #v = float(quan[9])
-        #v90.append(v)
+        v = float(quan[9])
+        v90.append(v)
 
     time.append(time0)
     v1.append(v10)
@@ -81,9 +82,9 @@ def read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i):
     v4.append(v40)
     v5.append(v50)
     v6.append(v60)
-    #v7.append(v70)
-    #v8.append(v80)
-    #v9.append(v90)
+    v7.append(v70)
+    v8.append(v80)
+    v9.append(v90)
 
 
 def plot_csv(case, chid, time, quan, name, tstart, tend):
@@ -111,14 +112,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
        if name[0] == "s" and "cg" not in chid[i]: continue
        #ax.plot (time[i], quan[i],'-r', linewidth=0.2, marker=markers[i], color = colors[i])
        ax.plot (time[i], quan[i], linewidth=1.0, linestyle = linestyles[i], color = colors[i])
-       if "uglmat" in chid[i] :
-          legend.append('UGLMAT')
-       elif "uscarc" in chid[i] :
-          legend.append('USCARC')
-       elif "mgm_simple" in chid[i] :
-          legend.append('MGM-SM')
-       elif "mgm_expol" in chid[i] :
-          legend.append('MGM-LE')
+       legend.append(chid[i])
 
     ax.legend(legend, prop=legsize, loc="lower center",
               bbox_to_anchor=(0.50, -0.28), fancybox=True, shadow=True, ncol=2)
@@ -149,6 +143,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
 #tstart = 0.1
 #tend   = 1.00
 
+path = '/home/susanne/GIT/A_ScaRC/Verification/Pressure_Solver'
 case = 'pressure_iteration3d'
 nmeshes = 8
 tstart = 0.0
@@ -157,11 +152,13 @@ tend = 0.5
 chid=[]
 #chid.append('%s_1mesh' %case)
 #chid.append('%s_default' %case)
-chid.append('%s_uglmat' %case)
+#chid.append('%s_uglmat' %case)
 chid.append('%s_scarc' %case)
 chid.append('%s_uscarc' %case)
 chid.append('%s_scarc_gmg' %case)
 chid.append('%s_scarc_cggmg' %case)
+chid.append('%s_mgm_mean_krylov' %case)
+#chid.append('%s_mgm_mean_lu' %case)
 #chid.append('%s_scarc_tight' %case)
 #chid.append('%s_scarc_twolevel' %case)
 #chid.append('%s_scarc_tight' %case)
@@ -183,16 +180,16 @@ v8 = []
 v9 = []
 
 for i in range(nsim):
-   read_csv(chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i)
+   read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, v8, v9, i)
 
-#plot_csv(case, chid, time, v1, values[0], tstart, tend)
-#plot_csv(case, chid, time, v2, values[1], tstart, tend)
-#plot_csv(case, chid, time, v3, values[2], tstart, tend)
+plot_csv(case, chid, time, v1, values[0], tstart, tend)
+plot_csv(case, chid, time, v2, values[1], tstart, tend)
+plot_csv(case, chid, time, v3, values[2], tstart, tend)
 plot_csv(case, chid, time, v4, values[3], tstart, tend)
 plot_csv(case, chid, time, v5, values[4], tstart, tend)
 plot_csv(case, chid, time, v6, values[5], tstart, tend)
-#plot_csv(case, chid, time, v7, values[6], tstart, tend)
-#plot_csv(case, chid, time, v8, values[7], tstart, tend)
-#plot_csv(case, chid, time, v9, values[8], tstart, tend)
+plot_csv(case, chid, time, v7, values[6], tstart, tend)
+plot_csv(case, chid, time, v8, values[7], tstart, tend)
+plot_csv(case, chid, time, v9, values[8], tstart, tend)
 
 
