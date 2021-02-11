@@ -79,8 +79,8 @@ TYPE (SCARC_CMATRIX_TYPE), POINTER:: OA=>NULL()       !< Pointer to compactly st
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAC=>NULL()      !< Pointer to compactly stored coarse neighboring matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OAF=>NULL()      !< Pointer to compactly stored fine neighboring matrix
 
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: LM=>NULL()       !< Pointer to compactly stored matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: UM=>NULL()       !< Pointer to compactly stored matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: LO=>NULL()       !< Pointer to compactly stored lower matrix from MGM-LU-decomposition
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: UP=>NULL()       !< Pointer to compactly stored upper matrix from MGM-LU-decomposition
 
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: P=>NULL()        !< Pointer to compactly stored Prolongation matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: PC=>NULL()       !< Pointer to compactly stored coarse Prolongation matrix
@@ -363,22 +363,24 @@ SELECT CASE(NTYPE)
       SCARC_POINT_TO_CMATRIX => G%CONNECTION
    CASE (NSCARC_MATRIX_POISSON)
       SCARC_POINT_TO_CMATRIX => G%POISSON
+   CASE (NSCARC_MATRIX_LAPLACE)
+      SCARC_POINT_TO_CMATRIX => G%LAPLACE
 #ifdef WITH_MKL
    CASE (NSCARC_MATRIX_POISSON_SYM)
       SCARC_POINT_TO_CMATRIX => G%POISSON_SYM
+   CASE (NSCARC_MATRIX_LAPLACE_SYM)
+      SCARC_POINT_TO_CMATRIX => G%LAPLACE_SYM
 #endif
-   CASE (NSCARC_MATRIX_LAPLACE)
-      SCARC_POINT_TO_CMATRIX => G%LAPLACE
    CASE (NSCARC_MATRIX_PROLONGATION)
       SCARC_POINT_TO_CMATRIX => G%PROLONGATION
    CASE (NSCARC_MATRIX_RESTRICTION)
       SCARC_POINT_TO_CMATRIX => G%RESTRICTION
    CASE (NSCARC_MATRIX_ZONES)
       SCARC_POINT_TO_CMATRIX => G%ZONES
-   CASE (NSCARC_MATRIX_LM)
-      SCARC_POINT_TO_CMATRIX => G%LM
-   CASE (NSCARC_MATRIX_UM)
-      SCARC_POINT_TO_CMATRIX => G%UM
+   CASE (NSCARC_MATRIX_LOWER)
+      SCARC_POINT_TO_CMATRIX => G%LOWER
+   CASE (NSCARC_MATRIX_UPPER)
+      SCARC_POINT_TO_CMATRIX => G%UPPER
 END SELECT
 
 END FUNCTION SCARC_POINT_TO_CMATRIX

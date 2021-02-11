@@ -3586,7 +3586,7 @@ END SUBROUTINE READ_RESTART
 
 SUBROUTINE WRITE_DIAGNOSTICS(T,DT)
 
-USE SCRC, ONLY: SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL
+USE SCRC, ONLY: SCARC_METHOD, SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL, SCARC_MGM_ACCURACY, SCARC_MGM_ITERATIONS
 USE COMP_FUNCTIONS, ONLY : CURRENT_TIME,GET_DATE,GET_DATE_ISO_8601
 REAL(EB), INTENT(IN) :: T,DT
 INTEGER :: NM,II,JJ,KK
@@ -3660,9 +3660,17 @@ IF (ITERATE_PRESSURE) THEN
                                                ' on Mesh ',NM,' at (',II,JJ,KK,')'
 ENDIF
 IF (TRIM(PRES_METHOD) == 'SCARC' .OR. TRIM(PRES_METHOD) == 'USCARC') THEN
-   WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
-                                              ', residual ',SCARC_RESIDUAL,&
-                                              ', convergence rate  ',SCARC_CAPPA
+   IF (TRIM(SCARC_METHOD) /= 'MGM') THEN
+      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2)') 'ScaRC: Iterations', SCARC_ITERATIONS, &
+                                                 ', Residual ',SCARC_RESIDUAL,&
+                                                 ', Rate  ',SCARC_CAPPA
+   ELSE
+      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,i6,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
+                                                 ', Residual ',SCARC_RESIDUAL,&
+                                                 ', Rate ',SCARC_CAPPA, &
+                                                 ', MGM Iterations ',SCARC_MGM_ITERATIONS, &
+                                                 ', MGM Velocity Error ',SCARC_MGM_ACCURACY
+   ENDIF
 ENDIF
 WRITE(LU_OUTPUT,'(7X,A)') '---------------------------------------------------------------'
 

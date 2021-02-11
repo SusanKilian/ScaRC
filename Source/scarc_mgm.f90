@@ -27,7 +27,8 @@ CONTAINS
 !> \brief Allocate vectors and define variables needed for McKeeney-Greengard-Mayo method
 ! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM(NLMIN, NLMAX)
-USE SCARC_POINTERS, ONLY: L, G, MGM, LM, UM, SCARC_POINT_TO_MGM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, MGM, LO, UP, SCARC_POINT_TO_MGM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_CONVERGENCE, ONLY: VELOCITY_ERROR_MGM, NIT_MGM
 INTEGER, INTENT(IN):: NLMIN, NLMAX
 INTEGER:: NM, NL
 
@@ -48,6 +49,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MGM%NWI = L%N_WALL_CELLS_INT
       MGM%NW1 = L%N_WALL_CELLS_EXT+1
       MGM%NW2 = L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
+
+      VELOCITY_ERROR_MGM = SCARC_MGM_ACCURACY
+      NIT_MGM = SCARC_MGM_ITERATIONS
 
       ! Allocate workspace for the storage of the different vectors in the MGM methods
 
@@ -142,15 +146,15 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_POINT_TO_MGM(NM, NL)
          G => L%UNSTRUCTURED
 
-         LM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LM)
-         UM => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UM)
+         LO => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LOWER)
+         UP => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UPPER)
 
          ! First assume dense settings and reduce later once the real sizes are known, TODO
           
          CALL SCARC_SETUP_MGM_LU_SIZES(NM, NLEVEL_MIN)
 
-         CALL SCARC_ALLOCATE_CMATRIX (LM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'LM', CROUTINE)
-         CALL SCARC_ALLOCATE_CMATRIX (UM, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UM', CROUTINE)
+         CALL SCARC_ALLOCATE_CMATRIX (LO, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'LO', CROUTINE)
+         CALL SCARC_ALLOCATE_CMATRIX (UP, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UP', CROUTINE)
          
          CALL SCARC_ALLOCATE_REAL1(MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
          CALL SCARC_ALLOCATE_REAL1(MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
@@ -265,10 +269,10 @@ END SUBROUTINE SCARC_SETUP_MGM_TRUE_APPROXIMATE
 
 
 ! -------------------------------------------------------------------------------------------------------------
-!> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
+!> \brief Setup sizes for LU-decomposition of McKeeney-Greengard-Mayo method
 ! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_LU_SIZES(NM, NL)
-USE SCARC_POINTERS, ONLY: G, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: G, LO, UP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: IC, JC, NMAX_U, NMAX_L
 
@@ -276,42 +280,29 @@ CROUTINE = 'SCARC_SETUP_MGM_LU_SIZES'
 
 CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
-#endif
 
-A  => G%LAPLACE
-
-! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
+! Preset pointers for LO and UP with one-value rows (corresponding to initialization with diagonal element)
  
 NMAX_U = G%NC
 NMAX_L = G%NC
 
-UM%N_ROW = G%NC+1
-LM%N_ROW = G%NC+1
-UM%N_VAL = G%NC
-LM%N_VAL = G%NC
+UP%N_ROW = G%NC+1
+LO%N_ROW = G%NC+1
+UP%N_VAL = G%NC
+LO%N_VAL = G%NC
 
 ROW_LOOP: DO IC = 1, G%NC  
    COL_LOOP: DO JC = IC, G%NC
-      UM%N_VAL = UM%N_VAL + 1
-      LM%N_VAL = LM%N_VAL + 1
+      UP%N_VAL = UP%N_VAL + 1
+      LO%N_VAL = LO%N_VAL + 1
    ENDDO COL_LOOP
 ENDDO ROW_LOOP
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
-WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
-#endif
-
-#ifdef WITH_SCARC_DEBUG
-1000 FORMAT('================= IC : ', I3, ' ===========================')
-1100 FORMAT('LLL(',I3, ',',I3, '):', E14.6)
-1200 FORMAT('LLL(',I3, ',',I3, '),  UUU(',I3, ',',I3, ') --> JC:', I3, ', VL, VU:', 2E14.6, ', SCAL2:',E14.6)
-1300 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6)
-1400 FORMAT('AAA(',I3, ',',I3, '):',E14.6, ',  UUU(',I3, ',',I3, '):', E14.6, ',  LLL(',I3, ',',I3, '):', E14.6)
+WRITE(MSG%LU_DEBUG, *) 'LO%N_VAL =', LO%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'LO%N_ROW =', LO%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'UP%N_VAL =', UP%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'UP%N_ROW =', UP%N_ROW
 #endif
 END SUBROUTINE SCARC_SETUP_MGM_LU_SIZES
 
@@ -320,7 +311,7 @@ END SUBROUTINE SCARC_SETUP_MGM_LU_SIZES
 !> \brief Setup LU-decomposition for McKeeney-Greengard-Mayo method
 ! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_LU(NM, NL)
-USE SCARC_POINTERS, ONLY: G, A, LM, UM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: G, A, LO, UP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NM, NL
 INTEGER:: IC0, IC, JC, KC, NMAX_U, NMAX_L
 REAL (EB):: SCAL, VL = 0.0_EB, VU = 0.0_EB, VAL
@@ -338,10 +329,10 @@ CALL SCARC_POINT_TO_GRID (NM, NL)
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG, *) 'SETTING SIZES FOR L AND U MATRICES'
-WRITE(MSG%LU_DEBUG, *) 'LM%N_VAL =', LM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'LM%N_ROW =', LM%N_ROW
-WRITE(MSG%LU_DEBUG, *) 'UM%N_VAL =', UM%N_VAL
-WRITE(MSG%LU_DEBUG, *) 'UM%N_ROW =', UM%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'LO%N_VAL =', LO%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'LO%N_ROW =', LO%N_ROW
+WRITE(MSG%LU_DEBUG, *) 'UP%N_VAL =', UP%N_VAL
+WRITE(MSG%LU_DEBUG, *) 'UP%N_ROW =', UP%N_ROW
 #endif
 
 A  => G%LAPLACE
@@ -357,11 +348,11 @@ CALL SCARC_MATLAB_MATRIX(A%VAL, A%ROW, A%COL, G%NC, G%NC, NM, NL, 'LAPLACE')
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
 DO IC = 1, G%NC
-   UM%ROW(IC) = IC ;  UM%COL(IC) = IC
-   LM%ROW(IC) = IC ;  LM%COL(IC) = IC
+   UP%ROW(IC) = IC ;  UP%COL(IC) = IC
+   LO%ROW(IC) = IC ;  LO%COL(IC) = IC
 ENDDO
-UM%ROW(G%NC+1) = G%NC+1
-LM%ROW(G%NC+1) = G%NC+1
+UP%ROW(G%NC+1) = G%NC+1
+LO%ROW(G%NC+1) = G%NC+1
 
 NMAX_U = G%NC
 NMAX_L = G%NC
@@ -375,47 +366,38 @@ WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0, ' IC=',I
 
    ! Set main diagonal element of L to 1.0
    VAL = 1.0_EB
-   CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, IC, IC, G%NC, NMAX_L, 'LM')
+   CALL SCARC_INSERT_TO_CMATRIX(LO, VAL, IC, IC, G%NC, NMAX_L, 'LO')
 
    COL_LOOP: DO JC = IC, G%NC
 
       SCAL = 0.0_EB
       DO KC = 1, IC-1
-         VL = SCARC_EVALUATE_CMATRIX (LM, IC, KC)
-         VU = SCARC_EVALUATE_CMATRIX (UM, KC, JC)
+         VL = SCARC_EVALUATE_CMATRIX (LO, IC, KC)
+         VU = SCARC_EVALUATE_CMATRIX (UP, KC, JC)
          SCAL = SCAL+VL*VU
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) IC, KC, KC, JC, JC, VL, VU, SCAL
-#endif
       ENDDO
 
       VAL = SCARC_EVALUATE_CMATRIX(A, IC, JC)  - SCAL
-      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UM, VAL, IC, JC, G%NC, NMAX_U, 'UM')
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(UP, VAL, IC, JC, G%NC, NMAX_U, 'UM')
 
       SCAL = 0.0_EB
       DO KC = 1, IC-1
-         VL = SCARC_EVALUATE_CMATRIX (LM, JC, KC)
-         VU = SCARC_EVALUATE_CMATRIX (UM, KC, IC)
+         VL = SCARC_EVALUATE_CMATRIX (LO, JC, KC)
+         VU = SCARC_EVALUATE_CMATRIX (UP, KC, IC)
          SCAL = SCAL+VL*VU
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1200) JC, KC, KC, IC, KC, VL, VU, SCAL, SCAL
-#endif
       ENDDO
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, 1400) JC, IC, AAA(JC, IC), IC, IC, UUU(IC, IC), JC, IC, LLL(IC, JC)
-#endif
-      VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/SCARC_EVALUATE_CMATRIX(UM, IC, IC)
-      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LM, VAL, JC, IC, G%NC, NMAX_L, 'LM')
+      VAL = (SCARC_EVALUATE_CMATRIX(A, JC, IC) - SCAL)/SCARC_EVALUATE_CMATRIX(UP, IC, IC)
+      IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX(LO, VAL, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
 
 ENDDO ROW_LOOP
 
-CALL SCARC_REDUCE_CMATRIX (LM, 'LM', CROUTINE)
-CALL SCARC_REDUCE_CMATRIX (UM, 'UM', CROUTINE)
+CALL SCARC_REDUCE_CMATRIX (LO, 'LO', CROUTINE)
+CALL SCARC_REDUCE_CMATRIX (UP, 'UP', CROUTINE)
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX (LM, 'MGM%L-FINAL', 'SETUP_MGM_LU ')
-CALL SCARC_DEBUG_CMATRIX (UM, 'MGM%U-FINAL', 'SETUP_MGM_LU ')
+CALL SCARC_DEBUG_CMATRIX (LO, 'MGM%L-FINAL', 'SETUP_MGM_LU ')
+CALL SCARC_DEBUG_CMATRIX (UP, 'MGM%U-FINAL', 'SETUP_MGM_LU ')
 #endif
 
 TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
@@ -433,9 +415,9 @@ END SUBROUTINE SCARC_SETUP_MGM_LU
 ! --------------------------------------------------------------------------------------------------------------------
 !> \brief Convergence state of MGM method
 ! --------------------------------------------------------------------------------------------------------------------
-INTEGER FUNCTION SCARC_MGM_CONVERGENCE_STATE(ITE_MGM)
+INTEGER FUNCTION SCARC_MGM_CONVERGENCE_STATE(ITE_MGM, NTYPE)
 USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
-INTEGER, INTENT(IN):: ITE_MGM
+INTEGER, INTENT(IN):: ITE_MGM, NTYPE
 INTEGER:: NM
 
 ! Note: Convergence history of previous Krylov method is available in ITE and CAPPA 
@@ -447,7 +429,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
 
-   SELECT CASE (ITE_MGM)
+   SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL
+   SCARC_MGM_ITERATIONS = ITE_MGM
+
+   SELECT CASE (NTYPE)
 
       ! Initialization - after first structured inhomogeneous Poisson solution
 
@@ -469,10 +454,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! MGM iteration - after each unstructured homogeneous Laplace solution
 
-      CASE DEFAULT
+      CASE (1)
          MGM%ITE = ITE_MGM
 #ifdef WITH_SCARC_DEBUG
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_DEBUG, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                       MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                       ITE, CAPPA, &
@@ -484,7 +469,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDIF
 #endif
 #ifdef WITH_SCARC_VERBOSE
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_VERBOSE, 1200) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                         MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                         ITE, CAPPA, &
@@ -506,9 +491,11 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ! termination - after whole MGM solution
 
       CASE (-1)
+         CAPPA = MGM%CAPPA_POISSON   ! Reset to Krylov statistics of Poisson solution for statistics in chid.out
+         ITE   = MGM%ITE_POISSON
 #ifdef WITH_SCARC_DEBUG
-      IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+      IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_DEBUG, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                       MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                       MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
@@ -519,7 +506,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                       MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
          ENDIF
       ELSE
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_DEBUG, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                       MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                       MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
@@ -532,8 +519,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ENDIF
 #endif
 #ifdef WITH_SCARC_VERBOSE
-      IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) THEN
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+      IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                         MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                         MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
@@ -544,7 +531,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                         MGM%ITE, VELOCITY_ERROR_GLOBAL, ' ... success'
          ENDIF
       ELSE
-         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_KRYLOV) THEN
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
             WRITE(MSG%LU_VERBOSE, 1300) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
                                         MGM%ITE_POISSON, MGM%CAPPA_POISSON, &
                                         MGM%ITE_LAPLACE, MGM%CAPPA_LAPLACE, &
@@ -557,7 +544,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ENDIF
 #endif
    END SELECT
-   IF (VELOCITY_ERROR_GLOBAL <= SCARC_MGM_ACCURACY) SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_SUCCESS
+   IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_SUCCESS
 
 ENDDO
 

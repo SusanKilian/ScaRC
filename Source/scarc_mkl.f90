@@ -42,9 +42,9 @@ CALL SCARC_SETUP_MKL(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, 
 ! In the multi-mesh case use CLUSTER_SPARSE_SOLVER, else PARDISO solver (only on finest grid level)
 
 IF (NMESHES > 1) THEN 
-   CALL SCARC_SETUP_CLUSTER(NLEVEL_MIN, NLEVEL_MIN)
+   CALL SCARC_SETUP_CLUSTER(NSCARC_MATRIX_POISSON_SYM, NLEVEL_MIN, NLEVEL_MIN)
 ELSE 
-   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
+   CALL SCARC_SETUP_PARDISO(NSCARC_MATRIX_POISSON_SYM, NLEVEL_MIN, NLEVEL_MIN)
 ENDIF
 
 END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
@@ -92,9 +92,9 @@ END SUBROUTINE SCARC_SETUP_MKL
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize CLUSTER_SPARSE_SOLVER from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_CLUSTER(NLMIN, NLMAX)
-USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID
-INTEGER, INTENT(IN) :: NLMIN, NLMAX
+SUBROUTINE SCARC_SETUP_CLUSTER(NMATRIX, NLMIN, NLMAX)
+USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX, NLMIN, NLMAX
 INTEGER :: NM, NL, I 
 REAL (EB) :: TNOW
 REAL (EB) :: DUMMY(1)=0.0_EB
@@ -109,7 +109,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
       MKL => L%MKL
-      AS  => G%POISSON_SYM
+      AS  => SCARC_POINT_TO_CMATRIX (G, NMATRIX)
 
       ! Allocate workspace for parameters and pointers needed in MKL-routine
  
@@ -222,9 +222,9 @@ END SUBROUTINE SCARC_SETUP_CLUSTER
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_PARDISO(NLMIN, NLMAX)
-USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID
-INTEGER, INTENT(IN) :: NLMIN, NLMAX
+SUBROUTINE SCARC_SETUP_PARDISO(NMATRIX, NLMIN, NLMAX)
+USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX, NLMIN, NLMAX
 INTEGER :: NM, NL, I, IDUMMY(1)=0
 REAL (EB) :: TNOW
 REAL (EB) :: DUMMY(1)=0.0_EB
@@ -237,8 +237,9 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
 
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
       MKL => L%MKL
-      AS  => G%POISSON_SYM
+      AS  => SCARC_POINT_TO_CMATRIX (G, NMATRIX)
 
       ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  

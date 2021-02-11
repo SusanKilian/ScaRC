@@ -355,14 +355,16 @@ END TYPE SCARC_STAGE_TYPE
   
 TYPE SCARC_MULTIGRID_TYPE
 
-   REAL(EB) :: APPROX_SPECTRAL_RADIUS = 2.0_EB             !< Relaxation parameter (AMG only)
-   REAL(EB) :: AMG_TOL = 0.25_EB                           !< Tolerance for coarsening
    REAL(EB) :: OMEGA = 1.0_EB                              !< Relaxation parameter
-   REAL(EB) :: THETA = 0.10_EB                             !< Threshold for aggregation process
 
    INTEGER :: CYCLING(2) = 0                               !< Counter for multigrid cycling
    INTEGER :: N_PRESMOOTH, N_POSTSMOOTH                    !< Number of pre- and post-processing steps
 
+#ifdef WITH_SCARC_AMG
+   REAL(EB) :: APPROX_SPECTRAL_RADIUS = 2.0_EB             !< Relaxation parameter (AMG only)
+   REAL(EB) :: AMG_TOL = 0.25_EB                           !< Tolerance for coarsening (AMG only)
+   REAL(EB) :: THETA = 0.10_EB                             !< Threshold for aggregation process (AMG only)
+#endif
 END TYPE SCARC_MULTIGRID_TYPE
 
 !> \brief Information related to discretization type (structured/unstructured)
@@ -376,59 +378,27 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_BMATRIX_TYPE) :: POISSONB                       !< Poisson matrix in bandwise storage technique
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
-   TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN                       !< Galerkin matrix (AMG only)
 
 #ifdef WITH_MKL
-   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix (only for MKL)
-   TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN_SYM                   !< Galerkin matrix symmetric version (AMG only)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix 
+   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE_SYM                    !< Symmetric part of compact Laplace matrix (MGM only)
+   TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN_SYM                   !< Galerkin matrix symmetric version
 #endif
 
    TYPE (SCARC_CMATRIX_TYPE) :: PROLONGATION                   !< Prolongation matrix
    TYPE (SCARC_CMATRIX_TYPE) :: RESTRICTION                    !< Restriction matrix
-   TYPE (SCARC_CMATRIX_TYPE) :: CONNECTION                     !< Strength of connection matrix
-   TYPE (SCARC_CMATRIX_TYPE) :: ZONES                          !< Aggregation Zones matrix
-   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_PROL                   !< Poisson times Prolongation matrix (AMG only)
 
-   TYPE (SCARC_CMATRIX_TYPE) :: LM            
-   TYPE (SCARC_CMATRIX_TYPE) :: UM           
+   TYPE (SCARC_CMATRIX_TYPE) :: LOWER                          !< Lower matrix for MGM-LU decompostion
+   TYPE (SCARC_CMATRIX_TYPE) :: UPPER                          !< Upper matrix for MGM-LU decompostion
 
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: MEASURES            !< Measure for grid coarsening (AMG only)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: NULLSPACE           !< Nullspace vector (AMG only)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: AUX1, AUX2          !< Auxiliary vectors (AMG only)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: DIAG                !< Matrix diagonal, possible inverted (AMG only)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: QQ, RR              !< workspace for QR-decompostion (AMG only)
-
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: CELLS_LOCAL         !< Local coarse cells which influence Galerkin matrix (AMG only)
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: CELLS_GLOBAL        !< Global coarse cells which influence Galerkin matrix (AMG only)
    INTEGER,  ALLOCATABLE, DIMENSION (:) :: LOCAL_TO_GLOBAL     !< Mapping from local to global numbering 
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ORDER               !< Search order for aggregation
 
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ZONES_GLOBAL        !< Global zone numbers (AMG only)
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ZONES_LOCAL         !< Local  zone numbers (AMG only)
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ZONE_CENTERS        !< Zone centers for grid coarsening (AMG only)
-
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: ELAYER2_VALS        !< Values of cells in external second layer(AMG only)
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: ILAYER2_VALS        !< Values of cells in internal second layer(AMG only)
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ELAYER2_NUMS        !< Number of cells in external second layer (AMG only)
-   INTEGER,  ALLOCATABLE, DIMENSION (:) :: ILAYER2_NUMS        !< Number of cells in internal second layer (AMG only)
-
-   ! Pointer arrays for data exchange with neighbors
    INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICE_TO_IWG         !< Mapping from ICE to IWG
    INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICE_TO_ICN         !< Mapping from ICE to ICN
 
    INTEGER, ALLOCATABLE, DIMENSION (:,:) :: ICG_TO_ICW         !< Mapping from ICG to ICW
    INTEGER, ALLOCATABLE, DIMENSION (:,:) :: ICG_TO_ICE         !< Mapping from ICG to ICE 
    INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_IWG         !< Mapping from ICG to IWG
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ECELL       !< Mapping from ICG to global neighboring cell (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ICELL       !< Mapping from ICG to local neighboring cell (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_GCELL       !< Mapping from ICG to global neighboring cell (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_OCELL       !< Mapping from ICG to local neighboring cell (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_IZONE       !< Mapping from ICG to internal own zone (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_EZONE       !< Mapping from ICG to external own zone (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_GZONE       !< Mapping from ICG to global neighboring zone (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_OZONE       !< Mapping from ICG to local neighboring zone (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ELAYER2     !< Mapping from ICG to external second layer (AMG only)
-   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ILAYER2     !< Mapping from ICG to internal second layer (AMG only)
 
    ! Forward and backward permutation vectors for grid renumbering strategies (MGM only)
    INTEGER, ALLOCATABLE, DIMENSION (:)   :: PERM_FW            !< Permutation vector for LU - forward direction
@@ -463,11 +433,6 @@ TYPE SCARC_GRID_TYPE
    ! Number of Dirichlet and Neumann boundary cells
    INTEGER :: N_DIRIC   = NSCARC_ZERO_INT                      !< Number of Dirichlet BCs
    INTEGER :: N_NEUMANN = NSCARC_ZERO_INT                      !< Number of Neumann BCs
-   INTEGER :: N_FINE    = NSCARC_ZERO_INT                      !< Number of fine cells (AMG only)
-   INTEGER :: N_COARSE  = NSCARC_ZERO_INT                      !< Number of coarse cells (AMG only)
-   INTEGER :: N_ZONES   = NSCARC_ZERO_INT                      !< Number of zones (AMG only)
-
-   INTEGER :: N_STENCIL_MAX  = 25                              !< Max stencil size (AMG only)
 
    ! Pointer variables and arrays for data exchange with neighbors
    INTEGER :: ICG  = NSCARC_ZERO_INT                           !< Ghost cell pointer for first layer
@@ -479,6 +444,48 @@ TYPE SCARC_GRID_TYPE
    INTEGER :: NLEN_BUFFER_LAYER4  = NSCARC_ZERO_INT            !< Length for fourfold length exchange on that level
    INTEGER :: NLEN_BUFFER_STENCIL = NSCARC_ZERO_INT            !< Length for stencil layer length exchange on that level
    INTEGER :: NLEN_BUFFER_FULL    = NSCARC_ZERO_INT            !< Length for full length exchange on that level
+
+#ifdef WITH_SCARC_AMG
+   TYPE (SCARC_CMATRIX_TYPE) :: GALERKIN                       !< Galerkin matrix (AMG only)
+   TYPE (SCARC_CMATRIX_TYPE) :: CONNECTION                     !< Strength of connection matrix (AMG only)
+   TYPE (SCARC_CMATRIX_TYPE) :: ZONES                          !< Aggregation Zones matrix (AMG only)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_PROL                   !< Poisson times Prolongation matrix (AMG only)
+
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: MEASURES           !< Measure for grid coarsening (AMG only)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: NULLSPACE          !< Nullspace vector (AMG only)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: AUX1, AUX2         !< Auxiliary vectors (AMG only)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: DIAG               !< Matrix diagonal, possible inverted (AMG only)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: QQ, RR             !< workspace for QR-decompostion (AMG only)
+
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: CELLS_LOCAL        !< Local coarse cells which influence Galerkin matrix (AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: CELLS_GLOBAL       !< Global coarse cells which influence Galerkin matrix (AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ORDER              !< Search order for aggregation (AMG only)
+
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ZONES_GLOBAL       !< Global zone numbers (AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ZONES_LOCAL        !< Local  zone numbers (AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ZONE_CENTERS       !< Zone centers for grid coarsening (AMG only)
+
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: ELAYER2_VALS       !< Values of cells in external second layer(AMG only)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)  :: ILAYER2_VALS       !< Values of cells in internal second layer(AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ELAYER2_NUMS       !< Number of cells in external second layer (AMG only)
+   INTEGER,  ALLOCATABLE, DIMENSION (:)  :: ILAYER2_NUMS       !< Number of cells in internal second layer (AMG only)
+
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ECELL       !< Mapping from ICG to global neighboring cell (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ICELL       !< Mapping from ICG to local neighboring cell (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_GCELL       !< Mapping from ICG to global neighboring cell (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_OCELL       !< Mapping from ICG to local neighboring cell (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_IZONE       !< Mapping from ICG to internal own zone (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_EZONE       !< Mapping from ICG to external own zone (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_GZONE       !< Mapping from ICG to global neighboring zone (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_OZONE       !< Mapping from ICG to local neighboring zone (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ELAYER2     !< Mapping from ICG to external second layer (AMG only)
+   INTEGER, ALLOCATABLE, DIMENSION (:)   :: ICG_TO_ILAYER2     !< Mapping from ICG to internal second layer (AMG only)
+
+   INTEGER :: N_FINE    = NSCARC_ZERO_INT                      !< Number of fine cells (AMG only)
+   INTEGER :: N_COARSE  = NSCARC_ZERO_INT                      !< Number of coarse cells (AMG only)
+   INTEGER :: N_ZONES   = NSCARC_ZERO_INT                      !< Number of zones (AMG only)
+   INTEGER :: N_STENCIL_MAX  = 25                              !< Max stencil size (AMG only)
+#endif
 
 END TYPE SCARC_GRID_TYPE
 
@@ -533,6 +540,9 @@ TYPE SCARC_MGM_TYPE
    REAL(EB):: VELOCITY_ERROR = 0.0_EB                              !< Velocity error in single Laplace iteration
    REAL(EB):: VELOCITY_ERROR_MAX = 0.0_EB                          !< Maximum achieved velocity error over all Laplace iterations
    REAL(EB):: VELOCITY_TOLERANCE = 1.E-4_EB                        !< Requested velocity tolerance for MGM Laplace problems
+
+   REAL(EB):: THRESHOLD = 1.E-4_EB                                 !< Default requested velocity tolerance Laplace problems
+   INTEGER :: NIT                                                  !< Default max number of iterations for Laplace problems
 
    INTEGER, ALLOCATABLE, DIMENSION (:,:) :: BTYPE                  !< Boundary type of an interface cell
 

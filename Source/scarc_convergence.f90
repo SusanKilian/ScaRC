@@ -22,9 +22,11 @@ REAL(EB) :: RES                                 !< Current residual of current s
 REAL(EB) :: RESIN = -1.0_EB                     !< Initial residual of current solver
 REAL(EB) :: CAPPA = -1.0_EB                     !< Convergence rate of current solver
 
-REAL(EB) :: VELOCITY_ERROR_GLOBAL 
+REAL(EB) :: VELOCITY_ERROR_MGM                  !< Requested threshold for velocity error in MGM method
+REAL(EB) :: VELOCITY_ERROR_GLOBAL               !< Global velocity error achieved in MGM pass
 
 INTEGER :: NIT        = 0                       !< Maximum number of iterations in current solver
+INTEGER :: NIT_MGM    = 0                       !< Maximum number of iterations in MGM solver
 INTEGER :: ITE        = 0                       !< Current number of iterations in current solver
 INTEGER :: ITE_CG     = 0                       !< Statistical information about number of Krylov iterations
 INTEGER :: ITE_MG     = 0                       !< Statistical information about number of multigrid iterations

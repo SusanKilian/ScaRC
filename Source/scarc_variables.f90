@@ -61,11 +61,12 @@ REAL (EB)     :: SCARC_MULTIGRID_THETA       = 0.10E+0_EB        !< Threshold fo
 
 REAL(EB)      :: SCARC_MGM_ACCURACY         = 1.E-4_EB           !< Requested accuracy for interface velocity error 
 CHARACTER(40) :: SCARC_MGM_BC               = 'MEAN'             !< Type of interface boundary condition for local Laplace problems
-CHARACTER(40) :: SCARC_MGM_INTERPOL         = 'LINEAR'           !< Type of interpolation for Lapalce BC settings
+CHARACTER(40) :: SCARC_MGM_INTERPOLATION    = 'LINEAR'           !< Type of interpolation for Laplace BC settings
 CHARACTER(40) :: SCARC_MGM_LAPLACE_SOLVER   = 'LUPERM'           !< Type of solver for local Laplace problems
 INTEGER       :: SCARC_MGM_ITERATIONS       = 20                 !< Maximum allowed number of Laplace iterations 
 LOGICAL       :: SCARC_MGM_CHECK_LAPLACE    = .FALSE.            !< Requested check of Laplace solutions against ScaRC-UScaRC diff
-LOGICAL       :: SCARC_MGM_EXACT_INITIAL    = .FALSE.             !< Use exact solutions for initialization of interface BCs
+LOGICAL       :: SCARC_MGM_EXACT_INITIAL    = .FALSE.            !< Exact solutions for initialization of interface BCs are used
+LOGICAL       :: SCARC_MGM_USE_FFT          = .FALSE.            !< If local mesh is structured, use FFT as Laplace solver
 
 ! ---------- Parameters for smoothing method (used in multigrids-methods)
  
@@ -147,7 +148,7 @@ INTEGER :: TYPE_MATVEC              = NSCARC_MATVEC_GLOBAL       !< Type of matr
 INTEGER :: TYPE_METHOD              = NSCARC_METHOD_KRYLOV       !< Type of ScaRC method
 INTEGER :: TYPE_MGM_BC              = NSCARC_MGM_BC_MEAN         !< Type of internal MGM boundary conditions
 INTEGER :: TYPE_MGM_LAPLACE         = NSCARC_MGM_LAPLACE_LUPERM  !< Type of solver for local Laplace problems
-INTEGER :: TYPE_MGM_INTERPOL        = NSCARC_MGM_INTERPOL_LINEAR !< Type of internal MGM boundary conditions
+INTEGER :: TYPE_MGM_INTERPOLATION   = NSCARC_MGM_INTERPOL_LINEAR !< Type of internal MGM boundary conditions
 INTEGER :: TYPE_MKL(0:10)           = NSCARC_MKL_NONE            !< Type of use of MKL solvers
 INTEGER :: TYPE_MKL_PRECISION       = NSCARC_PRECISION_DOUBLE    !< Type of double precision MKL solver
 INTEGER :: TYPE_MULTIGRID           = NSCARC_MULTIGRID_GEOMETRIC !< Type of multigrid method 
@@ -223,10 +224,11 @@ PUBLIC :: SCARC_MULTIGRID_THETA           !< Optional relaxation parameter for m
 
 PUBLIC :: SCARC_MGM_BC                    !< Interface boundary conditions for Laplace problems of MGM method
 PUBLIC :: SCARC_MGM_ACCURACY              !< Requested accuracy for velocity error of MGM method
-PUBLIC :: SCARC_MGM_INTERPOL              !< Interpolation type for BC definition
+PUBLIC :: SCARC_MGM_INTERPOLATION              !< Interpolation type for BC definition
 PUBLIC :: SCARC_MGM_ITERATIONS            !< Maximum number of allowed Laplace iterations for MGM method
 PUBLIC :: SCARC_MGM_CHECK_LAPLACE         !< Requested check of Laplace solutions against ScaRC-UScaRC difference 
-PUBLIC :: SCARC_MGM_EXACT_INITIAL         !< Use exact Laplace solution for initialization of interface BC's
+PUBLIC :: SCARC_MGM_EXACT_INITIAL         !< Exact Laplace solution for initialization of interface BC's is used
+PUBLIC :: SCARC_MGM_USE_FFT               !< If local mesh is structured, use FFT as Laplace solver
 
 PUBLIC :: SCARC_PRECON                    !< Selection parameter for preconditioner
 PUBLIC :: SCARC_PRECON_ACCURACY           !< Requested accuracy for preconditioner 
