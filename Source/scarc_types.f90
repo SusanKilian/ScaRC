@@ -493,6 +493,8 @@ END TYPE SCARC_GRID_TYPE
   
 TYPE SCARC_MGM_TYPE
 
+   TYPE (SCARC_FFT_TYPE) :: FFT                                    !< FFT preconditioner for local Laplace problems (if structured)
+
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: SIP                 !< structured inhomogeneous Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UIP                 !< unstructured Poisson MGM solution 
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL                 !< unstructured Laplace MGM solution 
@@ -552,6 +554,8 @@ TYPE SCARC_MGM_TYPE
    INTEGER :: ITE = 0                            
    INTEGER :: ITE_POISSON = 0
    INTEGER :: ITE_LAPLACE = 0
+
+   LOGICAL :: HAS_OBSTRUCTIONS = .FALSE.
 
 END TYPE SCARC_MGM_TYPE
 

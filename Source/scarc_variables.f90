@@ -169,6 +169,7 @@ INTEGER :: NLEVEL_MIN, NLEVEL_MAX                           !< Minimum and maxim
 INTEGER :: NC_GLOBAL(20)  = 0                               !< Number of global cells
 INTEGER :: N_DIRIC_GLOBAL(20)  = 0                          !< Global number of Dirichlet BCs
 INTEGER :: N_STACK_TOTAL  = 0                               !< Maximum number of used solvers in stack
+INTEGER :: N_STACK_LAPLACE = 0                              !< Stack position of local MGM Laplace problems
 
 INTEGER :: N_REQ, N_EXCHANGES, TAG                          !< Information for data exchange
 INTEGER :: SNODE, RNODE                                     !< Process Indicator for data exchange
@@ -254,6 +255,7 @@ TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG                 !< Solver stru
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG_STRUCTURED      !< Solver structure for structured Krylov main solver 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG_UNSTRUCTURED    !< Solver structure for unstructured Krylov main solver 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_GMG                !< Solver structure for Multigrid main solver 
+TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_CG                  !< Solver structure for MGM second pass
 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_KRYLOV           !< Solver structure for Krylov coarse grid solver 
 
