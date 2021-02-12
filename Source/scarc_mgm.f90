@@ -26,145 +26,143 @@ CONTAINS
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate vectors and define variables needed for McKeeney-Greengard-Mayo method
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM(NLMIN, NLMAX)
+SUBROUTINE SCARC_SETUP_MGM (NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, LO, UP, SCARC_POINT_TO_MGM, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 USE SCARC_CONVERGENCE, ONLY: VELOCITY_ERROR_MGM, NIT_MGM
-INTEGER, INTENT(IN):: NLMIN, NLMAX
-INTEGER:: NM, NL
+INTEGER, INTENT(IN):: NL
+INTEGER:: NM
 
 CROUTINE = 'SCARC_SETUP_MGM'
 IS_MGM = .TRUE.
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   DO NL = NLMIN, NLMAX
 
-      CALL SCARC_POINT_TO_MGM(NM, NL)
+   CALL SCARC_POINT_TO_MGM(NM, NL)
 
-      ! Store number of cells and external/internal boundary cells for simpler use in MGM method
+   ! Store number of cells and external/internal boundary cells for simpler use in MGM method
 
-      MGM%NCS = L%STRUCTURED%NC
-      MGM%NCU = L%UNSTRUCTURED%NC
+   MGM%NCS = L%STRUCTURED%NC
+   MGM%NCU = L%UNSTRUCTURED%NC
 
-      MGM%NWE = L%N_WALL_CELLS_EXT
-      MGM%NWI = L%N_WALL_CELLS_INT
-      MGM%NW1 = L%N_WALL_CELLS_EXT+1
-      MGM%NW2 = L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
+   MGM%NWE = L%N_WALL_CELLS_EXT
+   MGM%NWI = L%N_WALL_CELLS_INT
+   MGM%NW1 = L%N_WALL_CELLS_EXT+1
+   MGM%NW2 = L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
 
-      VELOCITY_ERROR_MGM = SCARC_MGM_ACCURACY
-      NIT_MGM = SCARC_MGM_ITERATIONS
+   VELOCITY_ERROR_MGM = SCARC_MGM_ACCURACY
+   NIT_MGM = SCARC_MGM_ITERATIONS
 
-      ! Allocate workspace for the storage of the different vectors in the MGM methods
+   ! Allocate workspace for the storage of the different vectors in the MGM methods
 
-      ! SIP   : structured inhomogeneous Poisson solution (pass 1)
-      ! UIP   : unstructured inhomogeneous Poisson solution (merge)
-      ! UHL   : unstructured homogeneous Laplace solution (pass 2)
-      ! UHL2  : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
+   ! SIP   : structured inhomogeneous Poisson solution (pass 1)
+   ! UIP   : unstructured inhomogeneous Poisson solution (merge)
+   ! UHL   : unstructured homogeneous Laplace solution (pass 2)
+   ! UHL2  : unstructured homogeneous Laplace solution of previous time step (extrapolation BCs only)
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%SIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SIP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%SIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SIP', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%UIP, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%UHL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL', CROUTINE)
 
-      ! OUIP  : other unstructured inhomogeneous Poisson solution on boundary
-      ! OUHL  : other unstructured homogeneous Laplace solution on boundary
-      ! OUHL2 : other unstructured homogeneous Laplace solution of previous time step on boundary
+   ! OUIP  : other unstructured inhomogeneous Poisson solution on boundary
+   ! OUHL  : other unstructured homogeneous Laplace solution on boundary
+   ! OUHL2 : other unstructured homogeneous Laplace solution of previous time step on boundary
 
-      CALL SCARC_ALLOCATE_REAL1(MGM%OUIP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUIP', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OUHL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(MGM%OUIP, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUIP', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(MGM%OUHL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL', CROUTINE)
 
-      IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
-         CALL SCARC_ALLOCATE_REAL3(MGM%UHL2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL2', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL1(MGM%OUHL2, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL2', CROUTINE)
-      ENDIF
+   IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
+      CALL SCARC_ALLOCATE_REAL3(MGM%UHL2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL2', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%OUHL2, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUHL2', CROUTINE)
+   ENDIF
 
-      ! BXS, BXF, BYS, BYF, BZS, BZF: boundary value vectors for the different faces
+   ! BXS, BXF, BYS, BYF, BZS, BZF: boundary value vectors for the different faces
 
-      CALL SCARC_ALLOCATE_REAL2(MGM%BXS, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BXF, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXF', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BYS, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BYF, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYF', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BZS, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZS', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL2(MGM%BZF, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZF', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BXS, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXS', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BXF, 1, L%NY, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BXF', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BYS, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYS', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BYF, 1, L%NX, 1, L%NZ, NSCARC_INIT_ZERO, 'MGM%BYF', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BZS, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZS', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL2(MGM%BZF, 1, L%NX, 1, L%NY, NSCARC_INIT_ZERO, 'MGM%BZF', CROUTINE)
 
-      ! UVEL,   VVEL,  WVEL : u-, v- and w-velocity components 
-      ! OUVEL, OVVEL, OWVEL : u-, v- and w-velocity components of other mesh
+   ! UVEL,   VVEL,  WVEL : u-, v- and w-velocity components 
+   ! OUVEL, OVVEL, OWVEL : u-, v- and w-velocity components of other mesh
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%WVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%WVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%UVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%VVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%VVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%WVEL, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%WVEL', CROUTINE)
 
-      CALL SCARC_ALLOCATE_REAL1(MGM%OUVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OVVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OVVEL', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(MGM%OWVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OWVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(MGM%OUVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OUVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(MGM%OVVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OVVEL', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL1(MGM%OWVEL, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%OWVEL', CROUTINE)
 
-      ! SCARC  : ScaRC solution (structured inhomogeneous by construction)
-      ! USCARC : UScaRC solution (unstructured inhomogeneous by construction)
-      ! DSCARC : difference of UScaRC and ScaRC solution 
+   ! SCARC  : ScaRC solution (structured inhomogeneous by construction)
+   ! USCARC : UScaRC solution (unstructured inhomogeneous by construction)
+   ! DSCARC : difference of UScaRC and ScaRC solution 
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC',  CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%SCARC,  0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%SCARC',  CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%USCARC', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%DSCARC', CROUTINE)
 
-      ! UIP_VS_USCARC : difference vector of unstructured inhomogeneous Poisson versus UScaRC
-      ! UHL_VS_DSCARC : difference vector of unstructured homogeneous Laplace versus difference UScaRC-ScaRC
+   ! UIP_VS_USCARC : difference vector of unstructured inhomogeneous Poisson versus UScaRC
+   ! UHL_VS_DSCARC : difference vector of unstructured homogeneous Laplace versus difference UScaRC-ScaRC
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%UIP_VS_USCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UIP_VS_US', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%UHL_VS_DSCARC, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%UHL_VS_DSCARC', CROUTINE)
 
-      ! U1, V1, W1: u-, v- and w-velocity components in first MGM pass
-      ! U2, V2, W2: u-, v- and w-velocity components in second MGM pass
+   ! U1, V1, W1: u-, v- and w-velocity components in first MGM pass
+   ! U2, V2, W2: u-, v- and w-velocity components in second MGM pass
 
-      CALL SCARC_ALLOCATE_REAL3(MGM%U1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U1', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%V1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V1', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%W1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W1', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%U1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U1', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%V1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V1', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%W1, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W1', CROUTINE)
  
-      CALL SCARC_ALLOCATE_REAL3(MGM%U2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U2', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%U2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%U2', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%V2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%V2', CROUTINE)
+   CALL SCARC_ALLOCATE_REAL3(MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
 
-      ! Configure boundary cell counters and weights for 'True Approximate' boundary setting
+   ! Configure boundary cell counters and weights for 'True Approximate' boundary setting
 
-      IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
+   IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
 
-         ! BTYPE  : Type of boundary condition in single boundary cells (Dirichlet/Neumann/Internal)
-         ! WEIGHT : Weight for true approximate setting in single boundary cells
+      ! BTYPE  : Type of boundary condition in single boundary cells (Dirichlet/Neumann/Internal)
+      ! WEIGHT : Weight for true approximate setting in single boundary cells
 
-         CALL SCARC_ALLOCATE_INT2(MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
+      CALL SCARC_ALLOCATE_INT2(MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
 
-         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-         CALL SCARC_POINT_TO_GRID(NM, NL)
+      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+      CALL SCARC_POINT_TO_GRID(NM, NL)
 
-         CALL SCARC_SETUP_MGM_TRUE_APPROXIMATE 
+      CALL SCARC_SETUP_MGM_TRUE_APPROXIMATE 
 
-      ENDIF
+   ENDIF
 
-      ! The following code is still experimental and addresses the solution of the LU method with fully stored matrices
+   ! The following code is still experimental and addresses the solution of the LU method with fully stored matrices
 
-      IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
+   IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
 
-         CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-         CALL SCARC_POINT_TO_MGM(NM, NL)
-         G => L%UNSTRUCTURED
+      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+      CALL SCARC_POINT_TO_MGM(NM, NL)
+      G => L%UNSTRUCTURED
 
-         LO => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LOWER)
-         UP => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UPPER)
+      LO => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LOWER)
+      UP => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UPPER)
 
-         ! First assume dense settings and reduce later once the real sizes are known, TODO
-          
-         CALL SCARC_SETUP_MGM_LU_SIZES(NM, NLEVEL_MIN)
+      ! First assume dense settings and reduce later once the real sizes are known, TODO
+       
+      CALL SCARC_SETUP_MGM_LU_SIZES(NM, NLEVEL_MIN)
 
-         CALL SCARC_ALLOCATE_CMATRIX (LO, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'LO', CROUTINE)
-         CALL SCARC_ALLOCATE_CMATRIX (UP, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UP', CROUTINE)
-         
-         CALL SCARC_ALLOCATE_REAL1(MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL1(MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
-         CALL SCARC_ALLOCATE_REAL1(MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
+      CALL SCARC_ALLOCATE_CMATRIX (LO, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'LO', CROUTINE)
+      CALL SCARC_ALLOCATE_CMATRIX (UP, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UP', CROUTINE)
+      
+      CALL SCARC_ALLOCATE_REAL1(MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1(MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
 
-         CALL SCARC_SETUP_MGM_LU(NM, NLEVEL_MIN)
+      CALL SCARC_SETUP_MGM_LU(NM, NLEVEL_MIN)
 
-      ENDIF
+   ENDIF
 
-   ENDDO
 ENDDO
 
 END SUBROUTINE SCARC_SETUP_MGM

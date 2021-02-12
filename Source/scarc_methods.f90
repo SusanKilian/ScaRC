@@ -463,19 +463,22 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 !> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
+USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
-USE SCARC_FFT, ONLY: SCARC_SETUP_FFT
 #ifdef WITH_MKL
-USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_CLUSTER
+USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
 #endif
-INTEGER :: NSTACK, TYPE_MATRIX_SAVE
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_MGM_FFT
+USE SCARC_MATRICES, ONLY: SCARC_SETUP_MATRIX_MKL
+INTEGER :: NSTACK, NM, TYPE_MATRIX_SAVE
 
 ! Allocate workspace and define variables for the different boundary settings in MGM-method
 
-CALL SCARC_SETUP_MGM(NLEVEL_MIN, NLEVEL_MIN)
+CALL SCARC_SETUP_MGM (NLEVEL_MIN)
 
-! ------- First part of method: Setup CG solver for inhomogeneous problem on structured discretization
-!         Use FFT-preconditioning by default
+! ------- First pass: Setup solver for inhomogeneous Poisson global problem on structured discretization
+!         By default, a global CG-method with FFT-preconditioning is used
+!         Goal is, to use PFFT or CG with PFFT-preconditioning later
 
 TYPE_PRECON = NSCARC_RELAX_FFT
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
@@ -490,11 +493,11 @@ CALL SCARC_SETUP_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
 CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
 
 ! If exact initialization or comparison versus exact solution (that is, the difference USCARC-SCARC) is required,
-! also the global unstructured Poisson matrix was assembled in SETUP_SYSTEMS before
-! thus also initialize the preconditioners for 
+! the global unstructured Poisson matrix was already assembled in SETUP_SYSTEMS, 
+! thus also initialize the related preconditioners 
 
-TYPE_MATRIX_SAVE = TYPE_MATRIX                 ! only compactly stored matrices are possible due to unstructured grids
-TYPE_MATRIX = NSCARC_MATRIX_COMPACT            ! thus remember technique of first pass (there, compact and banded is possible)
+TYPE_MATRIX_SAVE = TYPE_MATRIX             
+TYPE_MATRIX = NSCARC_MATRIX_COMPACT        
 
 IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
 
@@ -503,7 +506,7 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
    CALL SCARC_SETUP_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
 
    ! If IntelMKL-library is available, use local PARDISO preconditioners, otherwise local SSOR preconditioners 
-   ! for the global unstructured Poisson matrix 
+   ! for the global unstructured Poisson problem 
 
 #ifdef WITH_MKL
    TYPE_PRECON = NSCARC_RELAX_MKL
@@ -519,9 +522,8 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
       
 ENDIF
 
-! ------- Second part of method: Setup CG solver for homogeneous problem on unstructured discretization
-!         Only working for compact matrix storage technique (because of the unstructured grid)
-!         Use IntelMKL-PARDISO-preconditioning by default
+! ------- Second pass: Setup solvers for local homogeneous Laplace problems on unstructured discretization
+!         Different local solvers are available (CG, own LU, own permuted LU, PARDISO, even FFT if mesh happens to be structured)
 
 TYPE_MATRIX = NSCARC_MATRIX_COMPACT
 CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
@@ -531,17 +533,17 @@ N_STACK_LAPLACE = NSTACK
 
 CALL SCARC_MGM_CHECK_OBSTRUCTIONS (NLEVEL_MIN)
 
-! Solution of the local Laplace problems by local CG-methods
 
 SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
+
+   ! Setup CG-solvers for the solution of the local Laplace problems 
+   ! If IntelMKL is available use PARDISO preconditioners by default, otherwise SSOR
 
    CASE (NSCARC_MGM_LAPLACE_CG) 
 
       STACK(NSTACK)%SOLVER => MAIN_CG_UNSTRUCTURED
       CALL SCARC_SETUP_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
    
-      ! If IntelMKL-library is available, each local CG-method uses PARDISO, otherwise SSOR as preconditioner
-
       NSTACK = NSTACK + 1
 #ifdef WITH_MKL
       TYPE_PRECON = NSCARC_RELAX_MKL
@@ -555,11 +557,32 @@ SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
       CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
 #endif
 
+#ifdef WITH_MKL
+   ! Setup local IntelMKL-PARDISO solvers 
+
    CASE (NSCARC_MGM_LAPLACE_PARDISO)
-      CALL SCARC_SETUP_PARDISO (NLEVEL_MIN, NLEVEL_MIN)        
+
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         CALL SCARC_SETUP_MATRIX_MKL (NSCARC_MATRIX_LAPLACE, NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
+      ENDDO
+
+   ! Setup mixture of local Crayfishpak-FFT or IntelMKL-PARDISO solvers, depending on wether the mesh is structured or not
 
    CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
-      CALL SCARC_SETUP_MGM_OPTIMIZED (NLEVEL_MIN)
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+         CALL SCARC_SETUP_MATRIX_MKL (NSCARC_MATRIX_LAPLACE, NM, NLEVEL_MIN)
+
+         CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)   
+         IF (MGM%HAS_OBSTRUCTIONS) THEN
+            CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
+         ELSE
+            CALL SCARC_SETUP_MGM_FFT (NM, NLEVEL_MIN)
+         ENDIF
+
+      ENDDO
+#endif
 
 END SELECT SELECT_LAPLACE_SOLVER
 
@@ -567,35 +590,6 @@ TYPE_MATRIX = TYPE_MATRIX_SAVE
 N_STACK_TOTAL = NSTACK       
 
 END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-
-
-! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for requested preconditioner
-! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_OPTIMIZED(NL)
-USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
-#ifdef WITH_MKL
-USE SCARC_MKL, ONLY: SCARC_SETUP_MGM_PARDISO
-#endif
-USE SCARC_FFT, ONLY: SCARC_SETUP_MGM_FFT
-INTEGER, INTENT(IN) :: NL
-INTEGER :: NM
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_MGM (NM, NL)   
-
-   SELECT CASE(MGM%HAS_OBSTRUCTIONS)
-      CASE (.TRUE.)
-         CALL SCARC_SETUP_MGM_PARDISO (NM, NL)
-      CASE (.FALSE.)
-         CALL SCARC_SETUP_MGM_FFT(NM, NL)
-   END SELECT
-
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_SETUP_MGM_OPTIMIZED
-
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform McKeeney-Greengard-Mayo (MGM) method
