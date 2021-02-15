@@ -1,0 +1,9 @@
+dif 1 mgm_mean_cg_1mesh
+dif 1 mgm_mean_lu_1mesh
+dif 1 mgm_mean_luperm_1mesh
+dif 2 mgm_mean_cg_2mesh
+dif 2 mgm_mean_lu_2mesh
+dif 2 mgm_mean_luperm_2mesh
+dif 2 mgm_mean_pardifo_2mesh
+dif 2 mgm_mean_opt_2mesh
+dif 2 mgm_mean_luperm_2mesh_fine

@@ -328,7 +328,7 @@ END SUBROUTINE SCARC_SETUP_PARDISO
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_PARDISO(NM, NL)
-USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, IDUMMY(1)=0
 REAL (EB) :: TNOW
