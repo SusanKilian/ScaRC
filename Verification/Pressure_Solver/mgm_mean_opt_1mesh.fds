@@ -1,4 +1,4 @@
-&HEAD CHID='mgm_mean_pardiso_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 1 mesh' /
+&HEAD CHID='mgm_mean_opt_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and LU as Laplace solver on 1 mesh' /
 
 &MESH IJK=32,1,16  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
@@ -9,7 +9,7 @@
       SCARC_METHOD             = 'MGM'
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'PARDISO'  /
+      SCARC_MGM_LAPLACE_SOLVER = 'OPTIMIZED'  /
 
 &TIME T_END=0.5, DT=0.002 /
 

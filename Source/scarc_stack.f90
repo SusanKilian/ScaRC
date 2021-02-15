@@ -293,9 +293,9 @@ ENDIF
 END SUBROUTINE SCARC_RELEASE_SCOPE
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Setup references to solution vectors related to used scope (main solver or preconditioner)
+!> \brief Setup references to solution vectors related to used stack position (main solver or preconditioner)
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_REFERENCES(BX, BB, BD, BR, BV, BY, BZ, NSTACK)
+SUBROUTINE SCARC_SETUP_STACK_VECTORS(BX, BB, BD, BR, BV, BY, BZ, NSTACK)
 USE SCARC_POINTERS, ONLY: SV
 LOGICAL, INTENT(IN) :: BX, BB, BD, BR, BV, BY, BZ
 INTEGER, INTENT(IN) :: NSTACK
@@ -350,13 +350,13 @@ SELECT CASE (SV%TYPE_STAGE)
 
 END SELECT
 
-END SUBROUTINE SCARC_SETUP_REFERENCES
+END SUBROUTINE SCARC_SETUP_STACK_VECTORS
 
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for requested preconditioner
+!> \brief Setup convergence environment for stack position of requested preconditioner
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_PRECON(NSTACK, NSCOPE)
+SUBROUTINE SCARC_SETUP_STACK_PRECON(NSTACK, NSCOPE)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN) :: NSTACK, NSCOPE
  
@@ -451,12 +451,12 @@ ENDIF
 SV%E = SVP%E
 #endif
 
-END SUBROUTINE SCARC_SETUP_PRECON
+END SUBROUTINE SCARC_SETUP_STACK_PRECON
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for Krylov method
+!> \brief Setup convergence environment for stack position of requested smoother
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SMOOTH(NSTACK, NSCOPE)
+SUBROUTINE SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCOPE)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN) :: NSTACK, NSCOPE
  
@@ -544,12 +544,12 @@ SV%E = SVP%E
 SV%R = SVP%R
 #endif
 
-END SUBROUTINE SCARC_SETUP_SMOOTH
+END SUBROUTINE SCARC_SETUP_STACK_SMOOTH
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for requested preconditioner
+!> \brief Setup convergence environment for stack position of MGM method 
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_LOCAL(NSTACK, NSCOPE)
+SUBROUTINE SCARC_SETUP_STACK_MGM(NSTACK, NSCOPE)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN) :: NSTACK, NSCOPE
  
@@ -613,12 +613,12 @@ IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
    SV%V_FB = SVP%V_FB
 ENDIF
 
-END SUBROUTINE SCARC_SETUP_MGM_LOCAL
+END SUBROUTINE SCARC_SETUP_STACK_MGM
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for Krylov method
+!> \brief Setup convergence environment for stack position of Krylov method
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_KRYLOV(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
+SUBROUTINE SCARC_SETUP_STACK_KRYLOV(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
 
@@ -680,14 +680,14 @@ END SELECT
  
 ! Point to solution vectors (in corresponding scope)
  
-CALL SCARC_SETUP_REFERENCES(.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE., NSTACK)
+CALL SCARC_SETUP_STACK_VECTORS(.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE., NSTACK)
 
-END SUBROUTINE SCARC_SETUP_KRYLOV
+END SUBROUTINE SCARC_SETUP_STACK_KRYLOV
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for Geometric Multigrid method
+!> \brief Setup convergence environment for stack position of Multigrid method
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MULTIGRID(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
+SUBROUTINE SCARC_SETUP_STACK_MULTIGRID(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
  
@@ -737,9 +737,9 @@ SV%NIT = SCARC_MULTIGRID_ITERATIONS
  
 ! Point to solution vectors (in corresponding scope)
  
-CALL SCARC_SETUP_REFERENCES(.TRUE.,.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.,.TRUE., NSTACK)
+CALL SCARC_SETUP_STACK_VECTORS(.TRUE.,.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.,.TRUE., NSTACK)
 
-END SUBROUTINE SCARC_SETUP_MULTIGRID
+END SUBROUTINE SCARC_SETUP_STACK_MULTIGRID
 
 END MODULE SCARC_STACK
 
