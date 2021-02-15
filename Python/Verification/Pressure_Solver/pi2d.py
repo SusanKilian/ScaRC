@@ -78,8 +78,7 @@ def read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, v8, i):
     v8.append(v80)
 
 
-def plot_csv(case, chid, time, quan, name, tstart, tend):
-
+def plot_csv(path, case, chid, time, quan, name, tstart, tend):
 
     fig = plt.figure (facecolor='w')
     ax = fig.add_subplot(111)
@@ -147,12 +146,12 @@ chid=[]
 chid.append('%s_uglmat' %case)
 chid.append('%s_scarc' %case)
 chid.append('%s_uscarc' %case)
-#chid.append('%s_scarc_gmg' %case)
-#chid.append('%s_scarc_cggmg' %case)
-#chid.append('%s_scarc_twolevel' %case)
-chid.append('%s_mgm_mean_krylov' %case)
+chid.append('%s_scarc_gmg' %case)
+chid.append('%s_scarc_cggmg' %case)
+chid.append('%s_scarc_twolevel' %case)
+chid.append('%s_mgm_mean_cg' %case)
 chid.append('%s_mgm_mean_lu' %case)
-#chid.append('%s_mgm_mean_luperm' %case)
+chid.append('%s_mgm_mean_luperm' %case)
 #chid.append('%s_scarc_tight' %case)
 
 
@@ -174,13 +173,13 @@ v8 = []
 for i in range(nsim):
    read_csv(path, chid, time, v1, v2, v3, v4, v5, v6, v7, v8, i)
 
-plot_csv(case, chid, time, v1, values[0], tstart, tend)
-plot_csv(case, chid, time, v2, values[1], tstart, tend)
-plot_csv(case, chid, time, v3, values[2], tstart, tend)
-plot_csv(case, chid, time, v4, values[3], tstart, tend)
-plot_csv(case, chid, time, v5, values[4], tstart, tend)
-#plot_csv(case, chid, time, v6, values[5], tstart, tend)
-#plot_csv(case, chid, time, v7, values[6], tstart, tend)
-#plot_csv(case, chid, time, v8, values[7], tstart, tend)
+plot_csv(path, case, chid, time, v1, values[0], tstart, tend)
+plot_csv(path, case, chid, time, v2, values[1], tstart, tend)
+plot_csv(path, case, chid, time, v3, values[2], tstart, tend)
+plot_csv(path, case, chid, time, v4, values[3], tstart, tend)
+plot_csv(path, case, chid, time, v5, values[4], tstart, tend)
+#plot_csv(path, case, chid, time, v6, values[5], tstart, tend)
+#plot_csv(path, case, chid, time, v7, values[6], tstart, tend)
+#plot_csv(path, case, chid, time, v8, values[7], tstart, tend)
 
 

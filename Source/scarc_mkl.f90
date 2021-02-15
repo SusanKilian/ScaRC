@@ -338,8 +338,6 @@ TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_PARDISO'
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-
-MKL => L%MKL
 AS  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE_SYM)
 
 ! Allocate workspace for parameters nnd pointers eeded in MKL-routine

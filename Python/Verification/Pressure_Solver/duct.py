@@ -136,10 +136,12 @@ tstart = 0.0
 tend = 60.0
 
 chid=[]
+chid.append('%s' %case)
 chid.append('%s_uscarc' %case)
 chid.append('%s_uglmat' %case)
-#chid.append('%s_mgm_simple' %case)
-#chid.append('%s_mgm_expol' %case)
+chid.append('%s_mgm_mean_krylov' %case)
+#chid.append('%s_mgm_mean_lu' %case)
+#chid.append('%s_mgm_mean_luperm' %case)
 
 
 nsim = len(chid)

@@ -1445,6 +1445,7 @@ CHARACTER(33) :: TEMPCHAR
 INTEGER :: TYPE_INDICATOR
 TYPE(GEOMETRY_TYPE), POINTER :: G=>NULL()
 INTEGER :: IG, IS_TERRAIN_INT
+INTEGER :: II, JJ
 
 ! If this is a RESTART case but an old .smv file does not exist, shutdown with an ERROR.
 
@@ -1684,6 +1685,12 @@ IF (N_GEOMETRY>0) THEN
          WRITE(LU_SMV,'(/A,1X,I6,1X,I6)') 'TRAN',N,NM
          WRITE(LU_SMV,'(1X,A)') TRIM(FN_GEOM_TRNF(N,NM))
       ENDDO
+   ENDDO
+   WRITE(LU_SMV,'(/A,1X,I6)') 'BOXGEOM',N_GEOMETRY
+   DO I = 1, N_GEOMETRY
+      G=>GEOMETRY(I)
+
+      WRITE(LU_SMV,'(1X,6(E13.6,1X))') ((G%GEOM_BOX(II, JJ), II=1, 2), JJ=1, 3) 
    ENDDO
 ENDIF
 
@@ -3586,7 +3593,7 @@ END SUBROUTINE READ_RESTART
 
 SUBROUTINE WRITE_DIAGNOSTICS(T,DT)
 
-USE SCRC, ONLY: SCARC_METHOD, SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL, SCARC_MGM_ACCURACY, SCARC_MGM_ITERATIONS
+USE SCRC, ONLY: SCARC_METHOD, SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL, SCARC_MGM_ACCURACY
 USE COMP_FUNCTIONS, ONLY : CURRENT_TIME,GET_DATE,GET_DATE_ISO_8601
 REAL(EB), INTENT(IN) :: T,DT
 INTEGER :: NM,II,JJ,KK
@@ -3665,10 +3672,9 @@ IF (TRIM(PRES_METHOD) == 'SCARC' .OR. TRIM(PRES_METHOD) == 'USCARC') THEN
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate  ',SCARC_CAPPA
    ELSE
-      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,i6,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
+      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate ',SCARC_CAPPA, &
-                                                 ', MGM Iterations ',SCARC_MGM_ITERATIONS, &
                                                  ', MGM Velocity Error ',SCARC_MGM_ACCURACY
    ENDIF
 ENDIF

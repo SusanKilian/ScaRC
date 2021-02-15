@@ -75,7 +75,7 @@ SELECT CASE (NERROR)
    CASE (NSCARC_ERROR_MKL_INTERNAL)
       CERROR = 'The following MKL error was detected'
    CASE (NSCARC_ERROR_MKL_PARDISO)
-      CERROR = 'MKL Library compile flag not defined, Pardiso solver not available'
+      CERROR = 'MKL Library compile flag not defined, PARDISO solver not available'
    CASE (NSCARC_ERROR_MKL_STORAGE)
       CERROR = 'Wrong matrix storage scheme for MKL solvers, only COMPACT storage available'
    CASE (NSCARC_ERROR_MULTIGRID_LEVEL)

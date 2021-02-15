@@ -144,8 +144,8 @@ chid=[]
 chid.append('%s_scarc' %case)
 chid.append('%s_uscarc' %case)
 chid.append('%s_mgm_mean_krylov' %case)
-#chid.append('%s_mgm_mean_lu' %case)
-#chid.append('%s_uglmat' %case)
+chid.append('%s_mgm_mean_lu' %case)
+chid.append('%s_uglmat' %case)
 
 
 nsim = len(chid)

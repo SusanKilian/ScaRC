@@ -1,4 +1,4 @@
-&HEAD CHID='dancing_eddies_mgm_mean_krylov', TITLE='Simple 2D Tunnel test of structured ScaRC solver'/ 
+&HEAD CHID='dancing_eddies_mgm_mean_cg', TITLE='Simple 2D Tunnel test of structured ScaRC solver'/ 
 
 &MULT ID='mesh',DX=0.075,I_UPPER=3 /
 &MESH IJK=75,1,40, XB=0.0,0.075,-0.001,0.001,-0.02,0.020, MULT_ID='mesh' /
@@ -6,7 +6,7 @@
 &PRES SOLVER                   = 'USCARC' 
       SCARC_METHOD             = 'MGM'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'KRYLOV'  /
+      SCARC_MGM_LAPLACE_SOLVER = 'CG'  /
 
 &TIME T_END=2.0 /
 

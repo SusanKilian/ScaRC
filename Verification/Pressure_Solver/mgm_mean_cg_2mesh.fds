@@ -46,15 +46,5 @@
 &RAMP ID='IN', T=  0.40,  F=  0.59 /
 &RAMP ID='IN', T=  0.45,  F=  0.31 /
 &RAMP ID='IN', T=  0.50,  F=  0.00 /
-&RAMP ID='IN', T=  0.55,  F=  0.31 /
-&RAMP ID='IN', T=  0.60,  F=  0.59 /
-&RAMP ID='IN', T=  0.65,  F=  0.81 /
-&RAMP ID='IN', T=  0.70,  F=  0.95 /
-&RAMP ID='IN', T=  0.75,  F=  1.00 /
-&RAMP ID='IN', T=  0.80,  F=  0.95 /
-&RAMP ID='IN', T=  0.85,  F=  0.81 /
-&RAMP ID='IN', T=  0.90,  F=  0.59 /
-&RAMP ID='IN', T=  0.95,  F=  0.31 /
-&RAMP ID='IN', T=  1.00,  F=  0.00 /
  
 &TAIL /
