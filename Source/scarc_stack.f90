@@ -549,7 +549,7 @@ END SUBROUTINE SCARC_SETUP_SMOOTH
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for requested preconditioner
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_LOCAL_MGM(NSTACK, NSCOPE)
+SUBROUTINE SCARC_SETUP_MGM_LOCAL(NSTACK, NSCOPE)
 USE SCARC_POINTERS, ONLY: SV, SVP
 INTEGER, INTENT(IN) :: NSTACK, NSCOPE
  
@@ -613,7 +613,8 @@ IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
    SV%V_FB = SVP%V_FB
 ENDIF
 
-END SUBROUTINE SCARC_SETUP_LOCAL_MGM
+END SUBROUTINE SCARC_SETUP_MGM_LOCAL
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for Krylov method
 ! ------------------------------------------------------------------------------------------------------------------
