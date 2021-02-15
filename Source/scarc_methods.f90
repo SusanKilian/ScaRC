@@ -509,6 +509,7 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
    ! If IntelMKL-library is available, use local PARDISO preconditioners, otherwise local SSOR preconditioners 
    ! for the global unstructured Poisson problem 
 
+   NSTACK = NSTACK + 1
 #ifdef WITH_MKL
    TYPE_PRECON = NSCARC_RELAX_MKL
    STACK(NSTACK)%SOLVER => PRECON_MKL
