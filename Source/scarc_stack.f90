@@ -547,6 +547,74 @@ SV%R = SVP%R
 END SUBROUTINE SCARC_SETUP_SMOOTH
 
 ! ------------------------------------------------------------------------------------------------------------------
+!> \brief Allocate and initialize vectors for requested preconditioner
+! ------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_LOCAL_MGM(NSTACK, NSCOPE)
+USE SCARC_POINTERS, ONLY: SV, SVP
+INTEGER, INTENT(IN) :: NSTACK, NSCOPE
+ 
+! Point to stack entry of called preconditioner and types for preconditioner
+ 
+SV => STACK(NSTACK)%SOLVER
+
+SV%TYPE_SCOPE(0) = NSCOPE
+
+SV%EPS   =  SCARC_PRECON_ACCURACY
+SV%NIT   =  SCARC_PRECON_ITERATIONS
+SV%OMEGA =  SCARC_PRECON_OMEGA
+
+! Preset name of preconditioning method
+ 
+SELECT CASE(TYPE_MGM_LAPLACE)
+   CASE (NSCARC_MGM_LAPLACE_CG)
+      SV%CNAME = 'SCARC_MGM_LAPLACE_CG'
+   CASE (NSCARC_MGM_LAPLACE_LU)
+      SV%CNAME = 'SCARC_MGM_LAPLACE_LU'
+   CASE (NSCARC_MGM_LAPLACE_LUPERM)
+      SV%CNAME = 'SCARC_MGM_LAPLACE_LUPERM'
+#ifdef WITH_MKL
+   CASE (NSCARC_MGM_LAPLACE_PARDISO)
+      SV%CNAME = 'SCARC_MGM_LAPLACE_PARDISO'
+   CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
+      SV%CNAME = 'SCARC_MGM_LAPLACE_OPTIMIZED'
+#endif
+   CASE DEFAULT
+      CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, TYPE_MGM_LAPLACE)
+END SELECT
+
+! Preset types for preconditioner (use same as for calling solver)
+ 
+SVP => STACK(NSTACK-1)%SOLVER
+
+SV%TYPE_ACCURACY      = SVP%TYPE_ACCURACY
+SV%TYPE_GRID          = SVP%TYPE_GRID
+SV%TYPE_LEVEL(0:2)    = SVP%TYPE_LEVEL(0:2)
+SV%TYPE_INTERPOL      = SVP%TYPE_INTERPOL
+SV%TYPE_MATRIX        = SVP%TYPE_MATRIX
+SV%TYPE_MKL_PRECISION = SVP%TYPE_MKL_PRECISION
+SV%TYPE_RELAX         = SVP%TYPE_RELAX
+SV%TYPE_SOLVER        = SVP%TYPE_SOLVER
+SV%TYPE_STAGE         = SVP%TYPE_STAGE
+
+! Preset pointers for preconditioner (use same as for alling solver)
+ 
+SV%X = SVP%X
+SV%B = SVP%B
+SV%D = SVP%D
+SV%R = SVP%R
+SV%V = SVP%V
+SV%Y = SVP%Y
+SV%Z = SVP%Z
+
+IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+   SV%X_FB = SVP%X_FB
+   SV%B_FB = SVP%B_FB
+   SV%R_FB = SVP%R_FB
+   SV%V_FB = SVP%V_FB
+ENDIF
+
+END SUBROUTINE SCARC_SETUP_LOCAL_MGM
+! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for Krylov method
 ! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_KRYLOV(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)

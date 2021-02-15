@@ -260,6 +260,7 @@ TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_LU                 !< Solver stru
 #endif
 
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_CG                  !< Solver structure for MGM second pass: CG solver
+TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_PRECON              !< Solver structure for MGM second pass: Preconditioner
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_FFT                 !< Solver structure for MGM second pass: FFT solver
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_LU                  !< Solver structure for MGM second pass: LU solver
 TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_LUPERM              !< Solver structure for MGM second pass: permuted LU solver
