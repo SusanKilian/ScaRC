@@ -1397,22 +1397,21 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_SET_INTERFACES(VB, BXS, BXF, BYS, BYF, BZS, BZF, NL)
+SUBROUTINE SCARC_MGM_SET_INTERFACES(VB, NM)
 USE SCARC_POINTERS, ONLY: L, F, G, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, BTYPE, &
                           SCARC_POINT_TO_MGM, SCARC_POINT_TO_OTHER_GRID
-INTEGER, INTENT(IN):: NL
+INTEGER, INTENT(IN):: NM
 REAL(EB), DIMENSION(:),   INTENT(IN), POINTER :: VB
-REAL(EB), DIMENSION(:,:), INTENT(IN), POINTER :: BXS, BXF, BYS, BYF, BZS, BZF
-INTEGER:: NM, I, J, K, IOR0, IFACE, INBR, NOM, ICG, ICW, IWG, ITYPE
+INTEGER:: I, J, K, IOR0, IFACE, INBR, NOM, ICG, ICW, IWG, ITYPE
 REAL(EB):: VAL, HB(-3:3) = 0.0_EB
 
 ITYPE = TYPE_MGM_BC
 IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITYPE = NSCARC_MGM_BC_MEAN
 
-MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+!MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_MGM(NM, NL)
-   G  => L%UNSTRUCTURED
+!   CALL SCARC_POINT_TO_MGM(NM, NL)
+!   G  => L%UNSTRUCTURED
    BTYPE => MGM%BTYPE
 
 #ifdef WITH_SCARC_DEBUG
@@ -1431,7 +1430,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MGM_NBR_LOOP: DO INBR = 1, F%N_NEIGHBORS
          
          NOM = F%NEIGHBORS(INBR)
-         CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NL)
+         CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NLEVEL_MIN)
          
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG, *) '------ IOR0: GHOST_FIRSTW, GHOST_LASTW:', IOR0, OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
@@ -1606,17 +1605,17 @@ WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGH
 
             SELECT CASE (IOR0)
                CASE ( 1)
-                  BXS(J,K) = VAL
+                  MGM%BXS(J,K) = VAL
                CASE (-1)
-                  BXF(J,K) = VAL
+                  MGM%BXF(J,K) = VAL
                CASE ( 2)
-                  BYS(I,K) = VAL
+                  MGM%BYS(I,K) = VAL
                CASE (-2)
-                  BYF(I,K) = VAL
+                  MGM%BYF(I,K) = VAL
                CASE ( 3)
-                  BZS(I,J) = VAL
+                  MGM%BZS(I,J) = VAL
                CASE (-3)
-                  BZF(I,J) = VAL
+                  MGM%BZF(I,J) = VAL
             END SELECT
 
             VB(ICW) = VB(ICW) + F%SCAL_DIRICHLET * VAL    
@@ -1628,20 +1627,20 @@ WRITE(MSG%LU_DEBUG,*) 'MGM_SET_INTERFACES: B(',ICW,')=', VB(ICW)
       ENDDO MGM_NBR_LOOP
    ENDDO MGM_FACE_LOOP
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BXS:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXS(J,K),J=1,L%NY),K=1,L%NZ)
-WRITE(MSG%LU_DEBUG,*) 'BXF:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') ((BXF(J,K),J=1,L%NY),K=1,L%NZ)
-WRITE(MSG%LU_DEBUG,*) 'BYS:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYS(I,K),I=1,L%NX),K=1,L%NZ)
-WRITE(MSG%LU_DEBUG,*) 'BYF:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BYF(I,K),I=1,L%NX),K=1,L%NZ)
-WRITE(MSG%LU_DEBUG,*) 'BZS:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZS(I,J),I=1,L%NX),J=1,L%NY)
-WRITE(MSG%LU_DEBUG,*) 'BZF:'
-WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(I,J),I=1,L%NX),J=1,L%NY)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BXS:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((MGM%BXS(J,K),J=1,L%NY),K=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BXF:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') ((MGM%BXF(J,K),J=1,L%NY),K=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BYS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((MGM%BYS(I,K),I=1,L%NX),K=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BYF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((MGM%BYF(I,K),I=1,L%NX),K=1,L%NZ)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BZS:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((MGM%BZS(I,J),I=1,L%NX),J=1,L%NY)
+WRITE(MSG%LU_DEBUG,*) 'MGM%BZF:'
+WRITE(MSG%LU_DEBUG,'(9E14.6)') ((MGM%BZF(I,J),I=1,L%NX),J=1,L%NY)
 #endif
-ENDDO MGM_MESH_LOOP
+!ENDDO MGM_MESH_LOOP
 
 #ifdef WITH_SCARC_DEBUG
 1000 FORMAT('MGM-BC: MEAN : IOR = ',I3, ': IWG =',I3, ': I, J, K =', 3I4, ': H, OH, BC, SCAL*BC = ', 4E14.6)
@@ -1656,17 +1655,16 @@ END SUBROUTINE SCARC_MGM_SET_INTERFACES
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set BC's along internal obstructions for MGM method
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS(VB, NL)
+SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS(VB)
 USE SCARC_POINTERS, ONLY: L, G, MGM, UU, VV, WW, GWC, SCARC_POINT_TO_MGM
-INTEGER, INTENT(IN) :: NL
 REAL(EB), DIMENSION(:), POINTER, INTENT(IN) :: VB
-INTEGER:: NM, IW, I, J, K, IOR0, IC
+INTEGER:: IW, I, J, K, IOR0, IC
 REAL(EB):: VAL
 
-MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+!MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_MGM(NM, NL)
-   G => L%UNSTRUCTURED
+!   CALL SCARC_POINT_TO_MGM(NM, NL)
+!   G => L%UNSTRUCTURED
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% MGM-BC: OBSTRUCTION:', TOTAL_PRESSURE_ITERATIONS
@@ -1745,9 +1743,26 @@ WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR = -3: IW, I, J
       WRITE(MSG%LU_DEBUG, MSG%CFORM1) (VB(IC), IC = 1, G%NC)
 #endif
 
-ENDDO MGM_MESH_LOOP
+!ENDDO MGM_MESH_LOOP
 
 END SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Check whether the individual meshes contain obstructions or not
+! If there are no obstructions, a faster FFT solution can be used for the local MGM Laplace problems
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS (NL)
+USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
+INTEGER, INTENT(IN) :: NL
+INTEGER :: NM
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
+   IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) MGM%HAS_OBSTRUCTIONS = .TRUE.
+ENDDO MESHES_LOOP
+
+END SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS
 
 
 ! --------------------------------------------------------------------------------------------------------------

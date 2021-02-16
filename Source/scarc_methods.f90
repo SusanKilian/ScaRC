@@ -464,7 +464,7 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
-USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM, SCARC_MGM_CHECK_OBSTRUCTIONS
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
 #endif
@@ -842,7 +842,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
    DO IC = 1, G%NC
-      MGM%B(IC) = ST%B(G%PERM_BW(IC))
+      MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
    ENDDO
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
@@ -860,7 +860,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #endif
 
    DO IC = G%NONZERO, G%NC
-      MGM%Y(IC) = MGM%B(IC)
+      !MGM%Y(IC) = MGM%B(IC)
       DO JC = 1, IC-1
          MGM%Y(IC) = MGM%Y(IC) - SCARC_EVALUATE_CMATRIX(LO, IC, JC) * MGM%Y(JC)
       ENDDO
@@ -875,24 +875,28 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL Y'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%Y(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(5E14.6)') (MGM%X(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
+
+   ST%X(1:G%NC) = MGM%X(1:G%NC)
 
 ENDDO
 
+CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_LU
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM_PARDISO(NS, NP, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, AS, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NS, NP, NL
 INTEGER :: NM
+#ifdef WITH_SCARC_DEBUG
+INTEGER :: IC
+#endif
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
@@ -903,12 +907,10 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM (NM, NL)                                    
-   G => L%UNSTRUCTURED
-
-   AS => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE_SYM)
-
+   G   => L%UNSTRUCTURED
+   AS  => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE_SYM)
    MKL => L%MKL
-   MKL%PHASE  = 33         ! only solving
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%B:', G%NC, SIZE(MGM%B)
@@ -917,7 +919,7 @@ WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%X:', G%NC, SIZE(MGM%X)
 WRITE(MSG%LU_DEBUG,'(6E14.6)') MGM%X
 CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
 #endif
-
+   MKL%PHASE  = 33                    ! only solving
    MGM%X = 0.0_EB
    CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
                   AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
@@ -926,16 +928,16 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
    IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, POST, MGM%B:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, POST, MGM%X:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%X
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
+   ST%X(1:G%NC) = MGM%X(1:G%NC)
 
 ENDDO MESHES_LOOP
 
-!CALL SCARC_RELEASE_SCOPE(NSTACK, NPARENT)
-
+CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_PARDISO
 
 
@@ -943,7 +945,7 @@ END SUBROUTINE SCARC_METHOD_MGM_PARDISO
 !> \brief Perform global Pardiso-method based on MKL
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED (NS, NP, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, FFT, AS, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, FFT, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 USE POIS, ONLY: H2CZSS, H3CZSS
 INTEGER, INTENT(IN) :: NS, NP, NL
 INTEGER :: NM, IC
@@ -958,6 +960,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM (NM, NL)                                    
    G => L%UNSTRUCTURED
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
    SELECT CASE (MGM%HAS_OBSTRUCTIONS)
 
@@ -986,10 +989,10 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
          IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: PARDISO, POST, MGM%B:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: PARDISO, POST, MGM%X:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%X
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:PARDISO: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:PARDISO: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
 
       ! If mesh contains obstructions, then the grid is structured and the FFT from Crayfishpak is used 
@@ -1025,36 +1028,19 @@ WRITE(MSG%LU_DEBUG,'(6E14.6)') MGM%X
          !$OMP END PARALLEL DO 
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT, POST, MGM%B:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT, POST, MGM%X:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') MGM%X
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:FFT: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:FFT: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
 
    END SELECT
 
+   ST%X(1:G%NC) = MGM%X(1:G%NC)
 ENDDO MESHES_LOOP
 
-!CALL SCARC_RELEASE_SCOPE(NSTACK, NPARENT)
-
+CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Check whether the individual meshes contain obstructions or not
-! If there are no obstructions, a faster FFT solution can be used for the local MGM Laplace problems
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS (NL)
-USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
-INTEGER, INTENT(IN) :: NL
-INTEGER :: NM
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
-   IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) MGM%HAS_OBSTRUCTIONS = .TRUE.
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -2483,8 +2469,8 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
             VX => MGM%X ;  VX = 0.0_EB
          ENDIF
 
-         CALL SCARC_MGM_SET_INTERFACES (VB, BXS, BXF, BYS, BYF, BZS, BZF, NL)
-         CALL SCARC_MGM_SET_OBSTRUCTIONS (VB, NL)
+         CALL SCARC_MGM_SET_INTERFACES (VB, NM)
+         CALL SCARC_MGM_SET_OBSTRUCTIONS (VB)
 
          !!$OMP PARALLEL 
          MGM_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
@@ -2570,7 +2556,6 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
    
       ENDDO MGM_MESHES_LOOP
       
-
    ! ---------- If MG is used as Krylov preconditioner, vector R of main Krylov is the new RHS for MG
  
    CASE (NSCARC_SOLVER_PRECON)
@@ -2587,7 +2572,6 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
          ENDDO
       ENDIF
    
- 
    ! ---------- If used as coarse grid solver start with zero initialization
  
    CASE (NSCARC_SOLVER_COARSE)

@@ -240,8 +240,8 @@ INTEGER, PARAMETER :: NSCARC_RELAX_MSSOR             = 11        !< Type of prec
 INTEGER, PARAMETER :: NSCARC_RELAX_MULTIGRID         = 12        !< Type of preconditioner: multigrid methods
 INTEGER, PARAMETER :: NSCARC_RELAX_SSOR              = 13        !< Type of preconditioner: SSOR-methods
 
-INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL            =  0        !< Scope of defect correction: global
-INTEGER, PARAMETER :: NSCARC_SCOPE_LOCAL             =  1        !< Scope of defect correction: local
+INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL            =  0        !< Scope of current solver: global
+INTEGER, PARAMETER :: NSCARC_SCOPE_LOCAL             =  1        !< Scope of current solver: local
 
 INTEGER, PARAMETER :: NSCARC_SOLVER_MAIN             =  1        !< Type of solver: main solver
 INTEGER, PARAMETER :: NSCARC_SOLVER_PRECON           =  2        !< Type of solver: preconditioner
