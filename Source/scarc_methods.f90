@@ -819,6 +819,7 @@ CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)
 
 END SUBROUTINE SCARC_METHOD_MGM
 
+
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Perform LU-decompositions for local unstructured Laplace matrices 
 ! -------------------------------------------------------------------------------------------------------------
@@ -841,18 +842,18 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
-   DO IC = 1, G%NC
-      MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
-   ENDDO
+   !DO IC = 1, G%NC
+   !   MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
+   !ENDDO
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
    WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
    WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(IC), IC = 1, G%NC)
    WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (ST%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%B'
    WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%Y'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(G%PERM_BW(IC)), IC = 1, G%NC)
 #endif
 #ifdef WITH_SCARC_DEBUG2
    CALL SCARC_DEBUG_CMATRIX (LO, 'MGM%LOWER', 'METHOD_MGM_LU ')
@@ -860,7 +861,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #endif
 
    DO IC = G%NONZERO, G%NC
-      !MGM%Y(IC) = MGM%B(IC)
+      MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
       DO JC = 1, IC-1
          MGM%Y(IC) = MGM%Y(IC) - SCARC_EVALUATE_CMATRIX(LO, IC, JC) * MGM%Y(JC)
       ENDDO
@@ -880,12 +881,11 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
 
-   ST%X(1:G%NC) = MGM%X(1:G%NC)
-
 ENDDO
 
 CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_LU
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
@@ -933,7 +933,6 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
    WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL X'
    WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
 #endif
-   ST%X(1:G%NC) = MGM%X(1:G%NC)
 
 ENDDO MESHES_LOOP
 
@@ -1036,7 +1035,6 @@ WRITE(MSG%LU_DEBUG,'(6E14.6)') MGM%X
 
    END SELECT
 
-   ST%X(1:G%NC) = MGM%X(1:G%NC)
 ENDDO MESHES_LOOP
 
 CALL SCARC_RELEASE_SCOPE(NS, NP)
@@ -2445,7 +2443,8 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
       ENDIF
    
  
-   ! ---------- If used as second pass in a MGM method
+   ! ---------- If used as second pass in a MGM method, use basically zero RHS with special boundary values along
+   !            mesh interfaces and internal obstructions
  
    CASE (NSCARC_SOLVER_MGM)
 

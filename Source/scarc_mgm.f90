@@ -1055,7 +1055,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      ! Store ScaRC solution
+      ! ---------- Store ScaRC solution MGM%SCARC
 
       CASE (NSCARC_MGM_SCARC)
 
@@ -1088,7 +1088,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-SCARC:B: IX, IY, IZ, I
 #endif
          ENDDO
 
-      ! Store UScaRC solution
+      ! ---------- Store UScaRC solution MGM%USCARC
 
       CASE (NSCARC_MGM_USCARC)
 
@@ -1124,7 +1124,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-USCARC:B: IX, IY, IZ, 
          ENDDO
 
 
-      ! Store inhomogeneous structured Poisson solution
+      ! ---------- Store structured inhomogeneous Poisson solution MGM%SIP
 
       CASE (NSCARC_MGM_POISSON)
 
@@ -1158,20 +1158,20 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ,
 #endif
          ENDDO
 
-      ! Store homogeneous unstructured Laplace solution
+      ! ---------- Store homogeneous unstructured Laplace solution MGM%UHL
 
       CASE (NSCARC_MGM_LAPLACE)
 
          G => L%UNSTRUCTURED
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) '=======================> BEGOM   OF MGM_STORE_SOLUTION: LAPLACE'
-IF (TYPE_MGM_LAPLACe >= NSCARC_MGM_LAPLACE_LU) THEN
-   WRITE(MSG%LU_DEBUG, *) 'MGM%X'
-   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%X(ICU), ICU = 1, G%NC)
-ELSE
+WRITE(MSG%LU_DEBUG, *) '=======================> BEGIN OF MGM_STORE_SOLUTION: LAPLACE'
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
    WRITE(MSG%LU_DEBUG, *) 'ST%X'
    WRITE(MSG%LU_DEBUG, MSG%CFORM1) (ST%X(ICU), ICU = 1, G%NC)
+ELSE
+   WRITE(MSG%LU_DEBUG, *) 'MGM%X'
+   WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%X(ICU), ICU = 1, G%NC)
 ENDIF
 #endif
          IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL) THEN
@@ -1179,8 +1179,8 @@ ENDIF
                DO IY = 0, L%NY+1
                   DO IX = 0, L%NX+1
                      IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%CELL_NUMBER(IX, IY, IZ)             
-                     MGM%UHL2(IX, IY, IZ) = MGM%UHL(IX, IY, IZ)  
+                     ICU = G%CELL_NUMBER(IX, IY, IZ)                  ! unstructured cell number
+                     MGM%UHL2(IX, IY, IZ) = MGM%UHL(IX, IY, IZ)       ! also store second level
 #ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ, ICU, UP:', &
                                                                      IX, IY, IZ, ICU, MGM%UHL2(IX, IY, IZ)
@@ -1191,39 +1191,50 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 1E14.6)') 'MGM:ULP:EXPOL: IX, IY, IZ,
          ENDIF
 
          MGM%UHL = 0.0_EB
-         IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
-            DO IZ = 1, L%NZ
-               DO IY = 1, L%NY
-                  DO IX = 1, L%NX
-                     IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
-                        ICU = G%PERM_FW(G%CELL_NUMBER(IX, IY, IZ)) 
-                     ELSE
-                        ICU = G%CELL_NUMBER(IX, IY, IZ)
-                     ENDIF
-                     MGM%UHL(IX, IY, IZ) = MGM%X(ICU)
-#ifdef WITH_SCARC_DEBUG2
-IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ, ICU, UL:',&
-                                                      IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
-#endif
-                  ENDDO
-               ENDDO
-            ENDDO
-         ELSE
-            DO IZ = 1, L%NZ
-               DO IY = 1, L%NY
-                  DO IX = 1, L%NX
-                     IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
-                     ICU = G%CELL_NUMBER(IX, IY, IZ)           
-                     MGM%UHL(IX, IY, IZ) = ST%X(ICU)
+         SELECT CASE (TYPE_MGM_LAPLACE)
+            CASE (NSCARC_MGM_LAPLACE_CG)
+               DO IZ = 1, L%NZ
+                  DO IY = 1, L%NY
+                     DO IX = 1, L%NX
+                        IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
+                        ICU = G%CELL_NUMBER(IX, IY, IZ)               ! unstructured cell number
+                        MGM%UHL(IX, IY, IZ) = ST%X(ICU)               ! solution contained in ST%X
 #ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ, ICU, UL:',&
                                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), ST%X(ICU)
 #endif
+                     ENDDO
                   ENDDO
                ENDDO
-            ENDDO
-         ENDIF
+            CASE (NSCARC_MGM_LAPLACE_LUPERM)
+               DO IZ = 1, L%NZ
+                  DO IY = 1, L%NY
+                     DO IX = 1, L%NX
+                        IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
+                        ICU = G%PERM_FW(G%CELL_NUMBER(IX, IY, IZ))    ! unstructured permuted cell number
+                        MGM%UHL(IX, IY, IZ) = MGM%X(ICU)              ! solution contained in MGM%X
+#ifdef WITH_SCARC_DEBUG
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LUPERM: IX, IY, IZ, ICU, UL:',&
+                                                      IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
+#endif
+                     ENDDO
+                  ENDDO
+               ENDDO
+            CASE DEFAULT
+               DO IZ = 1, L%NZ
+                  DO IY = 1, L%NY
+                     DO IX = 1, L%NX
+                        IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
+                        ICU = G%CELL_NUMBER(IX, IY, IZ)                ! unstructured cell number
+                        MGM%UHL(IX, IY, IZ) = MGM%X(ICU)               ! solution contained in MGM%X
+#ifdef WITH_SCARC_DEBUG2
+IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ, ICU, UL:',&
+                                                      IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
+#endif
+                     ENDDO
+                  ENDDO
+               ENDDO
+          END SELECT
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: LAPLACE'
@@ -1231,7 +1242,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
 #endif
 
-      ! Merge structured inhomogeneous Poisson and unstructured homogeneous Laplace solutions
+      ! ---------- Merge structured inhomogeneous Poisson and unstructured homogeneous Laplace solutions
 
       CASE (NSCARC_MGM_MERGE)
 
@@ -1268,7 +1279,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL,
          CALL SCARC_VERBOSE_VECTOR3 (HP, 'HP')
 #endif
 
-      ! Terminate MGM method and extract predictor/corrector solution for FDS code
+      ! ---------- Terminate MGM method and extract predictor/corrector solution for FDS code
 
       CASE (NSCARC_MGM_TERMINATE)
 
