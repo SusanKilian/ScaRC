@@ -61,7 +61,7 @@ REAL (EB)     :: SCARC_MULTIGRID_THETA       = 0.10E+0_EB        !< Threshold fo
 
 REAL(EB)      :: SCARC_MGM_ACCURACY         = 1.E-4_EB           !< Requested accuracy for interface velocity error 
 CHARACTER(40) :: SCARC_MGM_BC               = 'MEAN'             !< Type of interface boundary condition for local Laplace problems
-CHARACTER(40) :: SCARC_MGM_INTERPOL         = 'LINEAR'           !< Type of interpolation for Laplace BC settings
+CHARACTER(40) :: SCARC_MGM_INTERPOLATION    = 'LINEAR'           !< Type of interpolation for Laplace BC settings
 CHARACTER(40) :: SCARC_MGM_LAPLACE_SOLVER   = 'LUPERM'           !< Type of solver for local Laplace problems
 INTEGER       :: SCARC_MGM_ITERATIONS       = 20                 !< Maximum allowed number of Laplace iterations 
 LOGICAL       :: SCARC_MGM_CHECK_LAPLACE    = .FALSE.            !< Requested check of Laplace solutions against ScaRC-UScaRC diff
@@ -225,7 +225,7 @@ PUBLIC :: SCARC_MULTIGRID_THETA           !< Optional relaxation parameter for m
 
 PUBLIC :: SCARC_MGM_BC                    !< Interface boundary conditions for Laplace problems of MGM method
 PUBLIC :: SCARC_MGM_ACCURACY              !< Requested accuracy for velocity error of MGM method
-PUBLIC :: SCARC_MGM_INTERPOL              !< Interpolation type for BC definition
+PUBLIC :: SCARC_MGM_INTERPOLATION         !< Interpolation type for BC definition
 PUBLIC :: SCARC_MGM_ITERATIONS            !< Maximum number of allowed Laplace iterations for MGM method
 PUBLIC :: SCARC_MGM_CHECK_LAPLACE         !< Requested check of Laplace solutions against ScaRC-UScaRC difference 
 PUBLIC :: SCARC_MGM_EXACT_INITIAL         !< Exact Laplace solution for initialization of interface BC's is used

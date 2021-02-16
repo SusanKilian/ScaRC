@@ -645,6 +645,7 @@ TYPE SCARC_SOLVER_TYPE
    INTEGER :: TYPE_LEVEL(0:2)    = NSCARC_UNDEF_INT            !< Type of levels
    INTEGER :: TYPE_MATRIX        = NSCARC_MATRIX_COMPACT       !< Type of storage for matrix
    INTEGER :: TYPE_MGM_BC        = NSCARC_MGM_BC_MEAN          !< Type of MGM interface boundary condition
+   INTEGER :: TYPE_MGM_INTERPOL  = NSCARC_MGM_INTERPOL_LINEAR  !< Type of MGM interface interpolation
    INTEGER :: TYPE_MGM_LAPLACE   = NSCARC_MGM_LAPLACE_PARDISO  !< Type of MGM local Laplace solver
    INTEGER :: TYPE_METHOD        = NSCARC_METHOD_KRYLOV        !< Type of ScaRC method
    INTEGER :: TYPE_MKL(0:10)     = NSCARC_UNDEF_INT            !< Type of MKL for single levels
