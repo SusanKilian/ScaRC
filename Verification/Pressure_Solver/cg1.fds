@@ -1,12 +1,13 @@
-&HEAD CHID='mgm1',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 1 mesh' /
+&HEAD CHID='cg1',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 1 mesh' /
 
-&MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
+&MESH IJK=16,1,8  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
 &PRES SOLVER                   = 'USCARC' 
       SCARC_METHOD             = 'MGM'
+      SCARC_KRYLOV_ACCURACY    = 1.E-15
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
       SCARC_MGM_LAPLACE_SOLVER = 'CG'  /
