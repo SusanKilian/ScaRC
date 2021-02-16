@@ -243,10 +243,11 @@ INTEGER, PARAMETER :: NSCARC_RELAX_SSOR              = 13        !< Type of prec
 INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL            =  0        !< Scope of defect correction: global
 INTEGER, PARAMETER :: NSCARC_SCOPE_LOCAL             =  1        !< Scope of defect correction: local
 
-INTEGER, PARAMETER :: NSCARC_SOLVER_MAIN             =  1        !< Type of solver: used as main solver
-INTEGER, PARAMETER :: NSCARC_SOLVER_PRECON           =  2        !< Type of solver: used as preconditioner
-INTEGER, PARAMETER :: NSCARC_SOLVER_SMOOTH           =  3        !< Type of solver: used as smoother
-INTEGER, PARAMETER :: NSCARC_SOLVER_COARSE           =  4        !< Type of solver: used as coarse grid solver
+INTEGER, PARAMETER :: NSCARC_SOLVER_MAIN             =  1        !< Type of solver: main solver
+INTEGER, PARAMETER :: NSCARC_SOLVER_PRECON           =  2        !< Type of solver: preconditioner
+INTEGER, PARAMETER :: NSCARC_SOLVER_SMOOTH           =  3        !< Type of solver: smoother
+INTEGER, PARAMETER :: NSCARC_SOLVER_COARSE           =  4        !< Type of solver: coarse grid solver
+INTEGER, PARAMETER :: NSCARC_SOLVER_MGM              =  5        !< Type of solver: second pass in MGM solver
 
 INTEGER, PARAMETER :: NSCARC_STACK_ZERO              =   0       !< Order in solver stack: zero position
 INTEGER, PARAMETER :: NSCARC_STACK_ROOT              =   1       !< Order in solver stack: root position

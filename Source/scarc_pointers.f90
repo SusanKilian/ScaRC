@@ -137,6 +137,8 @@ REAL(EB), POINTER, DIMENSION(:,:):: BZF=>NULL()             !< Pointer to bounda
 
 INTEGER,  POINTER, DIMENSION(:,:):: BTYPE=>NULL()           !< Boundary type of face cell
 
+REAL(EB), POINTER, DIMENSION(:):: VX=>NULL()                !< Pointer to solution vector 
+REAL(EB), POINTER, DIMENSION(:):: VB=>NULL()                !< Pointer to right hand side vector
 REAL(EB), POINTER, DIMENSION(:):: VC=>NULL()                !< Pointer to vector on coarse grid level
 REAL(EB), POINTER, DIMENSION(:):: VF=>NULL()                !< Pointer to vector on fine grid level
 REAL(EB), POINTER, DIMENSION(:):: V1=>NULL()                !< Pointer to first vector

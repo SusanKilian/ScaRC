@@ -1397,11 +1397,12 @@ END SUBROUTINE SCARC_SETUP_MGM_WORKSPACE
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set interface boundary conditions for unstructured, homogeneous part of McKeeney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_SET_INTERFACES(NL)
-USE SCARC_POINTERS, ONLY: L, F, G, ST, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, &
-                          BXS, BXF, BYS, BYF, BZS, BZF, BTYPE, &
+SUBROUTINE SCARC_MGM_SET_INTERFACES(VB, BXS, BXF, BYS, BYF, BZS, BZF, NL)
+USE SCARC_POINTERS, ONLY: L, F, G, OL, OG, MGM, UHL, UHL2, OUHL, OUHL2, BTYPE, &
                           SCARC_POINT_TO_MGM, SCARC_POINT_TO_OTHER_GRID
 INTEGER, INTENT(IN):: NL
+REAL(EB), DIMENSION(:),   INTENT(IN), POINTER :: VB
+REAL(EB), DIMENSION(:,:), INTENT(IN), POINTER :: BXS, BXF, BYS, BYF, BZS, BZF
 INTEGER:: NM, I, J, K, IOR0, IFACE, INBR, NOM, ICG, ICW, IWG, ITYPE
 REAL(EB):: VAL, HB(-3:3) = 0.0_EB
 
@@ -1412,7 +1413,7 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NL)
    G  => L%UNSTRUCTURED
-   ST => L%STAGE(NSCARC_STAGE_ONE)
+   BTYPE => MGM%BTYPE
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG, *) '%%%%%%%%%%%%%%%%% START SET INTERFACES:', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
@@ -1421,15 +1422,6 @@ MGM_MESH_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    WRITE(MSG%LU_DEBUG, *) 'MGM%OUHL'
    WRITE(MSG%LU_DEBUG, MSG%CFORM1) (MGM%OUHL(I), I = 1, L%N_WALL_CELLS_EXT)
 #endif
-
-   BTYPE => MGM%BTYPE
-
-   BXS => MGM%BXS ;  BXS = 0.0_EB
-   BXF => MGM%BXF ;  BXF = 0.0_EB
-   BYS => MGM%BYS ;  BYS = 0.0_EB
-   BYF => MGM%BYF ;  BYF = 0.0_EB
-   BZS => MGM%BZS ;  BZS = 0.0_EB
-   BZF => MGM%BZF ;  BZF = 0.0_EB
 
    MGM_FACE_LOOP: DO IFACE = 1, 6
 
@@ -1627,10 +1619,10 @@ WRITE(MSG%LU_DEBUG, '(A, I4, 5E14.6)') 'IWG, HB(1), HB(-1), HB(3), HB(-3), WEIGH
                   BZF(I,J) = VAL
             END SELECT
 
-            ST%B(ICW) = ST%B(ICW) + F%SCAL_DIRICHLET * VAL    
+            VB(ICW) = VB(ICW) + F%SCAL_DIRICHLET * VAL    
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_SET_INTERFACES: B(',ICW,')=', ST%B(ICW)
+WRITE(MSG%LU_DEBUG,*) 'MGM_SET_INTERFACES: B(',ICW,')=', VB(ICW)
 #endif
          ENDDO MGM_CELL_LOOP
       ENDDO MGM_NBR_LOOP
@@ -1664,9 +1656,10 @@ END SUBROUTINE SCARC_MGM_SET_INTERFACES
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set BC's along internal obstructions for MGM method
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS(NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, ST, UU, VV, WW, GWC, SCARC_POINT_TO_MGM
+SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS(VB, NL)
+USE SCARC_POINTERS, ONLY: L, G, MGM, UU, VV, WW, GWC, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN) :: NL
+REAL(EB), DIMENSION(:), POINTER, INTENT(IN) :: VB
 INTEGER:: NM, IW, I, J, K, IOR0, IC
 REAL(EB):: VAL
 
@@ -1742,14 +1735,14 @@ WRITE(MSG%LU_DEBUG, '(A, 5i4, 2E14.6)') 'MGM-BC: OBSTRUCTION: IOR = -3: IW, I, J
 #endif
       END SELECT
 
-      !IF (BFIRST_WORKSPACE) ST%B(IC) = ST%B(IC) + VAL             ! Variant A
-      ST%B(IC) = ST%B(IC) + VAL                                    ! Variant B
+      !IF (BFIRST_WORKSPACE) VB(IC) = VB(IC) + VAL             ! Variant A
+      VB(IC) = VB(IC) + VAL                                    ! Variant B
       
    ENDDO MGM_OBST_LOOP
 
 #ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG, *) 'ST%B'
-      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (ST%B(IC), IC = 1, G%NC)
+      WRITE(MSG%LU_DEBUG, *) 'VB'
+      WRITE(MSG%LU_DEBUG, MSG%CFORM1) (VB(IC), IC = 1, G%NC)
 #endif
 
 ENDDO MGM_MESH_LOOP

@@ -733,9 +733,9 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
    WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
 #endif
 
-   MGM_CORRECTION_LOOP: DO ITE_MGM = 1, NIT_MGM
+   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
 
-      CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
+   MGM_CORRECTION_LOOP: DO ITE_MGM = 1, NIT_MGM
 
       ! Compute local Laplace problems either by (permuted) LU- or CG-method
       ! In both cases the following is done within the solver:
@@ -746,11 +746,11 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
          CASE (NSCARC_MGM_LAPLACE_CG)
             CALL SCARC_METHOD_KRYLOV (N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
-            CALL SCARC_METHOD_MGM_LU(N_STACK_LAPLACE, NLEVEL_MIN)
+            CALL SCARC_METHOD_MGM_LU(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_MGM_LAPLACE_PARDISO)
-            CALL SCARC_METHOD_MGM_PARDISO(NLEVEL_MIN)
+            CALL SCARC_METHOD_MGM_PARDISO(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
-            CALL SCARC_METHOD_MGM_OPTIMIZED(NLEVEL_MIN)
+            CALL SCARC_METHOD_MGM_OPTIMIZED(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
       END SELECT
    
       CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
@@ -822,11 +822,12 @@ END SUBROUTINE SCARC_METHOD_MGM
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Perform LU-decompositions for local unstructured Laplace matrices 
 ! -------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_LU(NS, NL)
+SUBROUTINE SCARC_METHOD_MGM_LU(NS, NP, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, A, LO, UP, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN):: NS, NL
+INTEGER, INTENT(IN):: NS, NP, NL
 INTEGER:: IC, JC, NM
 
+CALL SCARC_SETUP_SCOPE(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -888,14 +889,16 @@ END SUBROUTINE SCARC_METHOD_MGM_LU
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_PARDISO(NL)
+SUBROUTINE SCARC_METHOD_MGM_PARDISO(NS, NP, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, AS, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NL
+INTEGER, INTENT(IN) :: NS, NP, NL
 INTEGER :: NM
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
-!CALL SCARC_SETUP_SCOPE(NS, NP)
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -939,15 +942,17 @@ END SUBROUTINE SCARC_METHOD_MGM_PARDISO
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform global Pardiso-method based on MKL
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED (NL)
+SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED (NS, NP, NL)
 USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, FFT, AS, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
 USE POIS, ONLY: H2CZSS, H3CZSS
-INTEGER, INTENT(IN) :: NL
+INTEGER, INTENT(IN) :: NS, NP, NL
 INTEGER :: NM, IC
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
-!CALL SCARC_SETUP_SCOPE(NS, NP)
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -2248,9 +2253,9 @@ END SUBROUTINE SCARC_METHOD_PARDISO
 !> \brief Set initial solution corresponding to boundary data in BXS, BXF, ...
 ! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_WORKSPACE(NS, NL)
-USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, &
+USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, VB, VX, &
                           BXS, BXF, BYS, BYF, BZS, BZF, &
-                          SCARC_POINT_TO_GRID
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_MGM
 #ifdef WITH_SCARC_POSTPROCESSING
 USE SCARC_POINTERS, ONLY: PRES
 #endif
@@ -2297,39 +2302,18 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
    
          ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
 
-         IF (IS_MGM .AND. NS /= NSCARC_STACK_ROOT) THEN
+         BXS => M%BXS   ;  BXF => M%BXF
+         BYS => M%BYS   ;  BYF => M%BYF
+         BZS => M%BZS   ;  BZF => M%BZF
 
-            BXS => MGM%BXS ;  BXF => MGM%BXF
-            BYS => MGM%BYS ;  BYF => MGM%BYF
-            BZS => MGM%BZS ;  BZF => MGM%BZF
+         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+         DO IC = 1, G%NC
+            ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
+            ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
+         ENDDO                         
+         !$OMP END PARALLEL DO
+         ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
 
-            ST%B = 0.0_EB                                    ! set RHS to zero
-            ST%X = 0.0_EB                                    ! use zero as initial vector
-            !ST%V = 0.0_EB                                   ! TODO: not necessary ?
-            !ST%D = 0.0_EB
-            !ST%R = 0.0_EB
-            !ST%Y = 0.0_EB
-            !ST%Z = 0.0_EB
-
-            CALL SCARC_MGM_SET_INTERFACES (NL)
-            CALL SCARC_MGM_SET_OBSTRUCTIONS (NL)
-
-         ELSE
-
-            BXS => M%BXS   ;  BXF => M%BXF
-            BYS => M%BYS   ;  BYF => M%BYF
-            BZS => M%BZS   ;  BZF => M%BZF
-
-            !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-            DO IC = 1, G%NC
-               ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
-               ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
-            ENDDO                         
-            !$OMP END PARALLEL DO
-            ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
-
-         ENDIF
-      
          !!$OMP PARALLEL 
          MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
       
@@ -2340,7 +2324,7 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
             IW2 = F%NCW0 + F%NCW - 1
       
             !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
-            FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
+            MAIN_FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
       
                GWC => G%WALL(IW)
    
@@ -2349,7 +2333,6 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
                K = GWC%IZW
    
                IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-   
                IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
    
                IC = G%CELL_NUMBER(I,J,K)
@@ -2360,21 +2343,21 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
                ! (this allows to use local FFT's as preconditioners)
                ! in the unstructured case only open boundary cells lead to Dirichlet BC's
 
-               IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
+               MAIN_IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
    
                   SELECT CASE (IOR0)
-                  CASE (1)
-                     VAL =  BXS(J,K)
-                  CASE (-1)
-                     VAL =  BXF(J,K)
-                  CASE (2)
-                     VAL =  BYS(I,K)
-                  CASE (-2)
-                     VAL =  BYF(I,K)
-                  CASE (3)
-                     VAL =  BZS(I,J)
-                  CASE (-3)
-                     VAL =  BZF(I,J)
+                     CASE (1)
+                        VAL =  BXS(J,K)
+                     CASE (-1)
+                        VAL =  BXF(J,K)
+                     CASE (2)
+                        VAL =  BYS(I,K)
+                     CASE (-2)
+                        VAL =  BYF(I,K)
+                     CASE (3)
+                        VAL =  BZS(I,J)
+                     CASE (-3)
+                        VAL =  BZF(I,J)
                   END SELECT
    
                   ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL
@@ -2382,8 +2365,7 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
                                  IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-   
-               ENDIF IF_DIRICHLET
+               ENDIF MAIN_IF_DIRICHLET
    
                ! ---------- Neumann BC's:
                ! Note for the unstructured case only:
@@ -2392,23 +2374,23 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, 
                ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
                ! excluding them corresponds to a homogeneous Neumann condition for these cells
 
-               IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
+               MAIN_IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
    
                   IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
    
                   SELECT CASE (IOR0)
-                  CASE (1)
-                     VAL =  BXS(J,K)
-                  CASE (-1)
-                     VAL =  BXF(J,K)
-                  CASE (2)
-                     VAL =  BYS(I,K)
-                  CASE (-2)
-                     VAL =  BYF(I,K)
-                  CASE (3)
-                     VAL =  BZS(I,J)
-                  CASE (-3)
-                     VAL =  BZF(I,J)
+                     CASE (1)
+                        VAL =  BXS(J,K)
+                     CASE (-1)
+                        VAL =  BXF(J,K)
+                     CASE (2)
+                        VAL =  BYS(I,K)
+                     CASE (-2)
+                        VAL =  BYF(I,K)
+                     CASE (3)
+                        VAL =  BZS(I,J)
+                     CASE (-3)
+                        VAL =  BZF(I,J)
                   END SELECT
    
                   ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL
@@ -2417,10 +2399,9 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, 
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
                                  IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-   
-               ENDIF IF_NEUMANN
+               ENDIF MAIN_IF_NEUMANN
       
-            ENDDO FACE_INHOMOGENEOUS_LOOP
+            ENDDO MAIN_FACE_INHOMOGENEOUS_LOOP
             !!$OMP END DO
 
          ENDDO MAIN_INHOMOGENEOUS_LOOP
@@ -2478,6 +2459,118 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, 
       ENDIF
    
  
+   ! ---------- If used as second pass in a MGM method
+ 
+   CASE (NSCARC_SOLVER_MGM)
+
+      MGM_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   
+         CALL SCARC_POINT_TO_MGM (NM, NL)                                    
+         G => L%UNSTRUCTURED
+   
+         BXS => MGM%BXS ;  BXS = 0.0_EB
+         BXF => MGM%BXF ;  BXF = 0.0_EB
+         BYS => MGM%BYS ;  BYS = 0.0_EB
+         BYF => MGM%BYF ;  BYF = 0.0_EB
+         BZS => MGM%BZS ;  BZS = 0.0_EB
+         BZF => MGM%BZF ;  BZF = 0.0_EB
+
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
+            VB => ST%B ;  VB = 0.0_EB
+            VX => ST%X ;  VX = 0.0_EB
+         ELSE
+            VB => MGM%B ;  VB = 0.0_EB
+            VX => MGM%X ;  VX = 0.0_EB
+         ENDIF
+
+         CALL SCARC_MGM_SET_INTERFACES (VB, BXS, BXF, BYS, BYF, BZS, BZF, NL)
+         CALL SCARC_MGM_SET_OBSTRUCTIONS (VB, NL)
+
+         !!$OMP PARALLEL 
+         MGM_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
+      
+            IF (IOR0 == 0) CYCLE
+            F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+            
+            IW1 = F%NCW0
+            IW2 = F%NCW0 + F%NCW - 1
+      
+            !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
+            MGM_FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
+      
+               GWC => G%WALL(IW)
+   
+               I = GWC%IXW
+               J = GWC%IYW
+               K = GWC%IZW
+   
+               IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+               IF (L%IS_SOLID(I, J, K)) CYCLE
+   
+               IC = G%CELL_NUMBER(I,J,K)
+   
+               MGM_IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
+   
+                  SELECT CASE (IOR0)
+                     CASE (1)
+                        VAL =  BXS(J,K)
+                     CASE (-1)
+                        VAL =  BXF(J,K)
+                     CASE (2)
+                        VAL =  BYS(I,K)
+                     CASE (-2)
+                        VAL =  BYF(I,K)
+                     CASE (3)
+                        VAL =  BZS(I,J)
+                     CASE (-3)
+                        VAL =  BZF(I,J)
+                  END SELECT
+   
+                  VB(IC) = VB(IC) + F%SCAL_DIRICHLET * VAL
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
+                                 IW, I, J, K, IC, VAL, VB(IC)
+#endif
+   
+               ENDIF MGM_IF_DIRICHLET
+   
+               MGM_IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
+   
+                  IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
+   
+                  SELECT CASE (IOR0)
+                     CASE (1)
+                        VAL =  BXS(J,K)
+                     CASE (-1)
+                        VAL =  BXF(J,K)
+                     CASE (2)
+                        VAL =  BYS(I,K)
+                     CASE (-2)
+                        VAL =  BYF(I,K)
+                     CASE (3)
+                        VAL =  BZS(I,J)
+                     CASE (-3)
+                        VAL =  BZF(I,J)
+                  END SELECT
+   
+                  VB(IC) = VB(IC) + F%SCAL_NEUMANN * VAL
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
+                                 IW, I, J, K, IC, VAL, VB(IC)
+#endif
+   
+               ENDIF MGM_IF_NEUMANN
+      
+            ENDDO MGM_FACE_INHOMOGENEOUS_LOOP
+            !!$OMP END DO
+
+         ENDDO MGM_INHOMOGENEOUS_LOOP
+         !!$OMP END PARALLEL 
+   
+      ENDDO MGM_MESHES_LOOP
+      
+
    ! ---------- If MG is used as Krylov preconditioner, vector R of main Krylov is the new RHS for MG
  
    CASE (NSCARC_SOLVER_PRECON)
@@ -2580,7 +2673,7 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0,L%NX+1), K=L%NZ+1,0,-1)
 
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP: UPDATE_MAIN_CELLS')
-   CALL SCARC_DEBUG_PRESSURE (HP, NM, 'main')
+   !CALL SCARC_DEBUG_PRESSURE (HP, NM, 'main')
 #endif
 ENDDO
 
@@ -2681,7 +2774,7 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
 #endif
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP: UPDATE_GHOST_CELLS')
-   CALL SCARC_DEBUG_PRESSURE (HP, NM, 'h')
+   !CALL SCARC_DEBUG_PRESSURE (HP, NM, 'h')
 #endif
 
 ENDDO
