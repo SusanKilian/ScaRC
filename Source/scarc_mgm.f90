@@ -139,7 +139,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    ! The following code is still experimental and addresses the solution of the LU method with fully stored matrices
 
-   IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
+   IF (TYPE_MGM_LAPLACE /= NSCARC_MGM_LAPLACE_CG) THEN
 
       CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
       CALL SCARC_POINT_TO_MGM(NM, NL)
