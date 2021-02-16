@@ -665,6 +665,21 @@ WRITE(MSG%LU_DEBUG,*) 'SV%NIT=', SV%NIT,SCARC_KRYLOV_ITERATIONS
       SV%TYPE_RELAX    = TYPE_PRECON
       SV%TYPE_TWOLEVEL = TYPE_TWOLEVEL
    
+   ! Krylov method is used as local MGM Laplace solver solver
+
+   CASE (NSCARC_SOLVER_MGM)
+   
+      SV%CNAME = 'SCARC_MGM_KRYLOV'
+   
+      SV%EPS = SCARC_KRYLOV_ACCURACY
+      SV%NIT = SCARC_KRYLOV_ITERATIONS
+   
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SV%NIT=', SV%NIT,SCARC_KRYLOV_ITERATIONS
+#endif
+      SV%TYPE_RELAX    = TYPE_PRECON
+      SV%TYPE_TWOLEVEL = NSCARC_TWOLEVEL_NONE
+   
    ! Krylov method is used as coarse grid solver solver
 
    CASE (NSCARC_SOLVER_COARSE)
