@@ -1,9 +1,12 @@
 dis 1 mgm_mean_cg_1mesh
 dis 1 mgm_mean_lu_1mesh
 dis 1 mgm_mean_luperm_1mesh
+dis 1 mgm_mean_pardiso_1mesh
+dis 1 mgm_mean_opt_1mesh
+
 dis 2 mgm_mean_cg_2mesh
 dis 2 mgm_mean_lu_2mesh
 dis 2 mgm_mean_luperm_2mesh
 dis 2 mgm_mean_pardiso_2mesh
-dis 2 mgm_mean_opt_2mesh
 dis 2 mgm_mean_luperm_2mesh_fine
+dis 2 mgm_mean_opt_2mesh

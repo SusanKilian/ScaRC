@@ -7,6 +7,7 @@
 
 &PRES SOLVER                   = 'USCARC' 
       SCARC_METHOD             = 'MGM'
+      SCARC_KRYLOV_ACCURACY    = 1.E-15
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
       SCARC_MGM_LAPLACE_SOLVER = 'CG'  /

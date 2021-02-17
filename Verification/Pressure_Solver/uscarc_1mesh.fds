@@ -1,15 +1,11 @@
-&HEAD CHID='opt1',TITLE='UScaRC-MGM method with mean interface BCs and LU as Laplace solver on 1 mesh' /
+&HEAD CHID='uscarc_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 1 mesh' /
 
 &MESH IJK=16,1,8  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER                   = 'USCARC' 
-      SCARC_METHOD             = 'MGM'
-      SCARC_MGM_BC             = 'MEAN'
-      SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'OPTIMIZED'  /
+&PRES SOLVER                   = 'USCARC'  , SCARC_KRYLOV_ACCURACY = 1.0E-15/
 
 &TIME T_END=0.5, DT=0.002 /
 
@@ -18,7 +14,7 @@
 &VENT XB=0.0,0.0,-0.01,0.01,0.3,0.5 SURF_ID='INFLOW' /
 &VENT MB='XMAX', SURF_ID='OPEN' /
 
- OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
+&OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
 
 &SLCF PBY=0.0,QUANTITY='VELOCITY',VECTOR=.TRUE. /
 &SLCF PBY=0.0,QUANTITY='PRESSURE' /
