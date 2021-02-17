@@ -109,7 +109,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
       MKL => L%MKL
-      AS  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON_SYM)
+      AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
       ! Allocate workspace for parameters and pointers needed in MKL-routine
  
@@ -239,7 +239,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
       MKL => L%MKL
-      AS  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_POISSON_SYM)
+      AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
       ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  
@@ -338,7 +338,7 @@ TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_PARDISO'
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-AS  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE_SYM)
+AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
 
 ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  

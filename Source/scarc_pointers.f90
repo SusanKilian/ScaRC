@@ -90,8 +90,8 @@ TYPE (SCARC_CMATRIX_TYPE), POINTER:: OPC=>NULL()      !< Pointer to compactly st
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OPF=>NULL()      !< Pointer to compactly stored fine neighboring Prolongation matrix
 
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: R=>NULL()        !< Pointer to compactly stored Restriction matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: RC=>NULL()       !< Pointer to compactly stored fine Restriction matrix
-TYPE (SCARC_CMATRIX_TYPE), POINTER:: RF=>NULL()       !< Pointer to compactly stored coarse Restriction matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: RC=>NULL()       !< Pointer to compactly stored coarse Restriction matrix
+TYPE (SCARC_CMATRIX_TYPE), POINTER:: RF=>NULL()       !< Pointer to compactly stored fine Restriction matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: OR=>NULL()       !< Pointer to compactly stored neighboring Restriction matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: ORC=>NULL()      !< Pointer to compactly stored coarse neighboring Restriction matrix
 TYPE (SCARC_CMATRIX_TYPE), POINTER:: ORF=>NULL()      !< Pointer to compactly stored fine neighboring Restriction matrix
@@ -265,7 +265,7 @@ L => S%LEVEL(NL)
 SELECT CASE(TYPE_GRID)
    CASE (NSCARC_GRID_STRUCTURED)
       G => L%STRUCTURED
-       G%NW = L%N_WALL_CELLS_EXT                     ! TODO: set it elsewhere
+      G%NW = L%N_WALL_CELLS_EXT                     ! TODO: set it elsewhere
    CASE (NSCARC_GRID_UNSTRUCTURED)
       G => L%UNSTRUCTURED
       G%NW = L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
@@ -278,8 +278,10 @@ END SUBROUTINE SCARC_POINT_TO_GRID
 
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified pairing of mesh levels and discretization types
+! Note that pointers LF, GF, WF correspond to the fine level and LC, GC, WC to the coarsest level
+! Additionally the usual L, G, W pointers are also set to the fine level for outside use
 ! --------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_POINT_TO_MULTIGRID(NM, NL1, NL2)
+SUBROUTINE SCARC_POINT_TO_MULTIGRID (NM, NL1, NL2)
 INTEGER, INTENT(IN) ::  NM, NL1, NL2
 
 CALL SCARC_POINT_TO_NONE
@@ -287,16 +289,19 @@ CALL SCARC_POINT_TO_NONE
 M => MESHES(NM)
 S => SCARC(NM)
 
+L  => SCARC(NM)%LEVEL(NL1)                           ! L is set to the fines level
 LF => SCARC(NM)%LEVEL(NL1)
 LC => SCARC(NM)%LEVEL(NL2)
 
 SELECT CASE(TYPE_GRID)
    CASE (NSCARC_GRID_STRUCTURED)
+      G  => L%STRUCTURED                             ! G is set to the finest grid
       GF => LF%STRUCTURED
       GC => LC%STRUCTURED
-      GF%NW = LF%N_WALL_CELLS_EXT
+      GF%NW = LF%N_WALL_CELLS_EXT                    ! TODO: set it elsewhere
       GC%NW = LC%N_WALL_CELLS_EXT
    CASE (NSCARC_GRID_UNSTRUCTURED)
+      G  => L%UNSTRUCTURED
       GF => LF%UNSTRUCTURED
       GC => LC%UNSTRUCTURED
       GF%NW = LF%N_WALL_CELLS_EXT+LF%N_WALL_CELLS_INT
@@ -310,8 +315,10 @@ END SUBROUTINE SCARC_POINT_TO_MULTIGRID
 
 ! -------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified combination of a neighboring mesh level and discretization type
+! Note that pointers OLF, OGF correspond to the fine level 
+! Additionally the usual OL, OG pointers are also set to the fine level for outside use
 ! -------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_POINT_TO_OTHER_GRID(NM, NOM, NL)
+SUBROUTINE SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 INTEGER, INTENT(IN):: NM, NOM, NL
 
 OS  => SCARC(NM)%OSCARC(NOM)
@@ -331,19 +338,24 @@ END SUBROUTINE SCARC_POINT_TO_OTHER_GRID
 
 ! ---------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified combination of a neighboring mesh level and a discretization type
+! Note that pointers OLF, OGF correspond to the fine level and OLC, OGC to the coarsest level
+! Additionally the usual OL, OG pointers are also set to the fine level for outside use
 ! ---------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_POINT_TO_OTHER_MULTIGRID(NM, NOM, NL1, NL2)
+SUBROUTINE SCARC_POINT_TO_OTHER_MULTIGRID (NM, NOM, NL1, NL2)
 INTEGER, INTENT(IN):: NM, NOM, NL1, NL2
 
 OS  => SCARC(NM)%OSCARC(NOM)
+OL  => OS%LEVEL(NL1)
 OLF => OS%LEVEL(NL1)
 OLC => OS%LEVEL(NL2)
 
 SELECT CASE(TYPE_GRID)
    CASE (NSCARC_GRID_STRUCTURED)
+      OG  => OL%STRUCTURED
       OGF => OLF%STRUCTURED
       OGC => OLC%STRUCTURED
    CASE (NSCARC_GRID_UNSTRUCTURED)
+      OG  => OL%UNSTRUCTURED
       OGF => OLF%UNSTRUCTURED
       OGC => OLC%UNSTRUCTURED
 END SELECT
@@ -353,9 +365,8 @@ END SUBROUTINE SCARC_POINT_TO_OTHER_MULTIGRID
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified matrix in compact storage technique
 ! --------------------------------------------------------------------------------------------------------------------------
-FUNCTION SCARC_POINT_TO_CMATRIX(G, NTYPE)
+FUNCTION SCARC_POINT_TO_CMATRIX (NTYPE)
 TYPE(SCARC_CMATRIX_TYPE), POINTER:: SCARC_POINT_TO_CMATRIX
-TYPE(SCARC_GRID_TYPE), POINTER, INTENT(IN):: G
 INTEGER, INTENT(IN):: NTYPE
 
 SELECT CASE(NTYPE)
@@ -390,9 +401,8 @@ END FUNCTION SCARC_POINT_TO_CMATRIX
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified matrix in bandwise storage technique
 ! --------------------------------------------------------------------------------------------------------------------------
-FUNCTION SCARC_POINT_TO_BMATRIX(G, NTYPE)
+FUNCTION SCARC_POINT_TO_BMATRIX (NTYPE)
 TYPE(SCARC_BMATRIX_TYPE), POINTER:: SCARC_POINT_TO_BMATRIX
-TYPE(SCARC_GRID_TYPE), POINTER, INTENT(IN):: G
 INTEGER, INTENT(IN):: NTYPE
 
 SELECT CASE(NTYPE)
@@ -407,9 +417,8 @@ END FUNCTION SCARC_POINT_TO_BMATRIX
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified neighboring matrix in compact storage technique
 ! --------------------------------------------------------------------------------------------------------------------------
-FUNCTION SCARC_POINT_TO_OTHER_CMATRIX(OG, NTYPE)
+FUNCTION SCARC_POINT_TO_OTHER_CMATRIX (NTYPE)
 TYPE(SCARC_CMATRIX_TYPE), POINTER:: SCARC_POINT_TO_OTHER_CMATRIX
-TYPE(SCARC_GRID_TYPE), POINTER, INTENT(IN):: OG
 INTEGER, INTENT(IN):: NTYPE
 
 SELECT CASE(NTYPE)
@@ -436,9 +445,8 @@ END FUNCTION SCARC_POINT_TO_OTHER_CMATRIX
 ! --------------------------------------------------------------------------------------------------------------------------
 !> \brief Point to specified neighboring matrix in bandwise storage technique
 ! --------------------------------------------------------------------------------------------------------------------------
-FUNCTION SCARC_POINT_TO_OTHER_BMATRIX(OG, NTYPE)
+FUNCTION SCARC_POINT_TO_OTHER_BMATRIX (NTYPE)
 TYPE(SCARC_BMATRIX_TYPE), POINTER:: SCARC_POINT_TO_OTHER_BMATRIX
-TYPE(SCARC_GRID_TYPE), POINTER, INTENT(IN):: OG
 INTEGER, INTENT(IN):: NTYPE
 
 SELECT CASE(NTYPE)

@@ -431,7 +431,7 @@ ENDDO MESHES_LOOP1
  
 MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID(NM, NLEVEL_MIN)               ! sets pointers M, L and G
+   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)               ! sets pointers M, L and G
 
    ! Set pointers to already existing cell and wall index arrays from main program (on finest level)
    CALL SCARC_SETUP_CELL_INDEX(L, M, NLEVEL_MIN)
@@ -800,7 +800,7 @@ CROUTINE = 'SCARC_SETUP_FACES'
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID(NM, NLEVEL_MIN)             ! consider only finest grid level
+   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)             ! consider only finest grid level
 
    ! Allocate FACE arrays on different grid levels
 
@@ -893,7 +893,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             F%NEIGHBORS(INBR) = NOM                          ! store NOM as a neighbor of that face and if
             CALL SCARC_STORE_NEIGHBOR(NM, NOM)               ! not already done also as mesh neighbor itself
 
-            CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NLEVEL_MIN)
+            CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NLEVEL_MIN)
             IF (.NOT.ALLOCATED(OL%FACE)) THEN
                ALLOCATE(OL%FACE(-3:3), STAT=IERROR)
                CALL ChkMemErr('SCARC_SETUP_FACES','OL%FACE',IERROR)
@@ -1235,7 +1235,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          G%NCE  = G%NCE  + 1                                                ! increase number of extended grid cells
          IF (HAS_AMG_LEVELS) G%NCE2 = G%NCE2 + 2                            ! increase number of extended grid cells type2
-         CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NLEVEL_MIN)
+         CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NLEVEL_MIN)
 
          IF (ANY(IS_KNOWN)) OG%NCG = OG%NCG + 1                             ! increase counter for local ghost cells
          IF (OL%GHOST_FIRSTW(IOR0) == 0) OL%GHOST_FIRSTW(IOR0) = OG%NCG     ! save first ghost cell for -IOR0
@@ -1290,7 +1290,7 @@ WRITE(MSG%LU_DEBUG,*) 'TYPE_GRID =', TYPE_GRID,': SETTING ICE_TO_IWG in length '
       DO INBR = 1, L%FACE(IOR0)%N_NEIGHBORS
 
          NOM = L%FACE(IOR0)%NEIGHBORS(INBR)
-         CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NLEVEL_MIN)
+         CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NLEVEL_MIN)
 
          CALL SCARC_ALLOCATE_INT1 (OG%ICG_TO_IWG, 1, OG%NCG, NSCARC_INIT_ZERO, 'OG%ICG_TO_IWG', CROUTINE)
 
@@ -1409,7 +1409,7 @@ MULTI_LEVEL_IF: IF (HAS_GMG_LEVELS) THEN
       IREFINE=1
       MULTI_LEVELS_LOOP: DO NL = NLEVEL_MIN+1, NLEVEL_MAX
 
-         CALL SCARC_POINT_TO_MULTIGRID(NM, NL-1, NL)
+         CALL SCARC_POINT_TO_MULTIGRID (NM, NL-1, NL)
 
          IREFINE=IREFINE*2
          IF (IS_GMG) CALL SCARC_CHECK_DIVISIBILITY(GF%NCE-GF%NC, 'GF%NCE')
@@ -1474,7 +1474,7 @@ MULTI_LEVEL_IF: IF (HAS_GMG_LEVELS) THEN
                DO INBR = 1, LF%FACE(IOR0)%N_NEIGHBORS
 
                   NOM = LF%FACE(IOR0)%NEIGHBORS(INBR)
-                  CALL SCARC_POINT_TO_OTHER_MULTIGRID(NM, NOM, NL-1, NL)
+                  CALL SCARC_POINT_TO_OTHER_MULTIGRID (NM, NOM, NL-1, NL)
 
                   IF (IS_GMG) THEN
                      CALL SCARC_CHECK_DIVISIBILITY(OLF%N_WALL_CELLS_LOCAL, 'OLF%N_WALL_CELLS_LOCAL')
@@ -1515,7 +1515,7 @@ MULTI_LEVEL_IF: IF (HAS_GMG_LEVELS) THEN
            NOM = GC%WALL(IW)%NOM
            IF (NOM /= 0) THEN
               IOR0 = GC%WALL(IW)%IOR
-              CALL SCARC_POINT_TO_OTHER_MULTIGRID(NM, NOM, NL-1, NL)
+              CALL SCARC_POINT_TO_OTHER_MULTIGRID (NM, NOM, NL-1, NL)
               OGC%ICG2 = OGC%ICG2 + 1
               IF (OLC%GHOST_FIRSTW(IOR0) == 0) OLC%GHOST_FIRSTW(IOR0) = OGC%ICG2
               IF (OLC%GHOST_FIRSTE(IOR0) == 0) OLC%GHOST_FIRSTE(IOR0) = OGC%ICG2
@@ -1537,7 +1537,7 @@ ENDIF MULTI_LEVEL_IF
 ! Correct boundary types for cells adjacent to obstructions on ghost cells
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_GRID(NM, NLEVEL_MIN)                  ! sets level and grid pointers L and G
+   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)                  ! sets level and grid pointers L and G
    IF (IS_UNSTRUCTURED) THEN
       CALL SCARC_IDENTIFY_INTERNAL_NEUMANNS(L, G)
       IF (.NOT.HAS_AMG_LEVELS) THEN

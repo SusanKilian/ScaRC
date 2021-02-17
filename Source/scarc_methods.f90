@@ -463,7 +463,7 @@ END SUBROUTINE SCARC_METHOD_KRYLOV
 !> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
+USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM, SCARC_MGM_CHECK_OBSTRUCTIONS
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
@@ -835,9 +835,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_POINT_TO_MGM (NM, NL)   
    G => L%UNSTRUCTURED
 
-   A   => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LAPLACE)
-   LO  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_LOWER)
-   UP  => SCARC_POINT_TO_CMATRIX (G, NSCARC_MATRIX_UPPER)
+   A   => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
+   LO  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LOWER)
+   UP  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_UPPER)
 
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
@@ -907,7 +907,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM (NM, NL)                                    
    G   => L%UNSTRUCTURED
-   AS  => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE_SYM)
+   AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
    MKL => L%MKL
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
@@ -966,7 +966,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
        
       CASE (.TRUE.)
 
-         AS => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE_SYM)
+         AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
       
          MKL => L%MKL
          MKL%PHASE  = 33         ! only solving
@@ -2100,7 +2100,7 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-   AS => SCARC_POINT_TO_CMATRIX(G, NMATRIX)
+   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
 
    V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
    V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
@@ -2183,7 +2183,7 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-   AS => SCARC_POINT_TO_CMATRIX(G, NMATRIX)
+   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
 
    V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
    V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
@@ -3049,9 +3049,9 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: JACOBI'
             CASE (NSCARC_MATRIX_COMPACT)
 
                IF (IS_LAPLACE) THEN
-                  A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE)
+                  A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
                ELSE
-                  A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
+                  A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
                ENDIF
                !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
                DO IC = 1, G%NC
@@ -3066,7 +3066,7 @@ WRITE(MSG%LU_DEBUG,*) 'IC, A%ROW, A%VAL, V2:', IC, A%ROW(IC), A%VAL(A%ROW(IC)), 
  
             CASE (NSCARC_MATRIX_BANDWISE)
 
-               AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
+               AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
                !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
                DO IC = 1, G%NC
                   V2(IC) = V2(IC) / AB%VAL(IC, AB%POS(0))
@@ -3097,9 +3097,9 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
             CASE (NSCARC_MATRIX_COMPACT)
 
                IF (IS_LAPLACE) THEN
-                  A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE)
+                  A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
                ELSE
-                  A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
+                  A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
                ENDIF
 
                IF (NL == NLEVEL_MIN) THEN
@@ -3156,7 +3156,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
  
          CASE (NSCARC_MATRIX_BANDWISE)
 
-            AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
+            AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
 
  
             ! 2D version
@@ -3231,13 +3231,13 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
             ! ------------ Matrix in compact storage technique
 
             CASE (NSCARC_MATRIX_COMPACT)
-               A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
+               A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
                CALL SCARC_SCALING_VARIABLE(G%NC, A%RELAX, V1, V2)
 
             ! ------------ Matrix in bandwise storage technique
 
             CASE (NSCARC_MATRIX_BANDWISE)
-               AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
+               AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
                CALL SCARC_SCALING_VARIABLE(G%NC, AB%RELAXD, V1, V2)
 
          END SELECT
@@ -3269,7 +3269,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
 
             CASE (NSCARC_MATRIX_COMPACT)
 
-               A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
+               A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
       
                ! Forward solve:   Solve V2 = L^-1 V1
                ! Compute sol(i) = rhs(i) - sum L(i,j) x sol(j)
@@ -3309,7 +3309,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
  
             CASE (NSCARC_MATRIX_BANDWISE)
 
-               AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
+               AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
       
                IF (TWO_D) THEN
                   INCR = -2
@@ -3577,7 +3577,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: MKL'
 
             CALL SCARC_POINT_TO_GRID (NM, NL)                                    
             MKL => L%MKL
-            AS => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON_SYM)
+            AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
             MKL%PHASE  = 33                            ! only solving
 
@@ -3626,7 +3626,7 @@ CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
 
             CALL SCARC_POINT_TO_GRID (NM, NL)                                    
             MKL => L%MKL
-            AS => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON_SYM)
+            AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
             MKL%PHASE  = 33                            ! only solving
 

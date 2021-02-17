@@ -503,9 +503,9 @@ SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
    
          CALL SCARC_POINT_TO_GRID (NM, NL)                                    
          IF (IS_LAPLACE) THEN
-            A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_LAPLACE)
+            A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
          ELSE
-            A => SCARC_POINT_TO_CMATRIX(G, NSCARC_MATRIX_POISSON)
+            A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
          ENDIF
          
          V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)
@@ -553,7 +553,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
             MESHES_BANDWISE_VARIABLE_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          
                CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-               AB => SCARC_POINT_TO_BMATRIX(G, NSCARC_MATRIX_POISSON)
+               AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
          
                V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)               ! point to X-vector
                V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)               ! point to Y-vector
@@ -579,7 +579,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
                   F => L%FACE(IOR0)
                   DO INBR = 1, F%N_NEIGHBORS
                      NOM = F%NEIGHBORS(INBR)
-                     CALL SCARC_POINT_TO_OTHER_GRID(NM, NOM, NL)
+                     CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
                      DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
                         ICW = OG%ICG_TO_ICW(ICG, 1)
                         ICE = OG%ICG_TO_ICE(ICG, 1)
