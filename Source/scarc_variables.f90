@@ -131,8 +131,7 @@ LOGICAL :: HAS_MULTIPLE_LEVELS   = .FALSE.                       !< Flag for mul
 LOGICAL :: HAS_AMG_LEVELS        = .FALSE.                       !< Flag for AMG-based grid levels
 LOGICAL :: HAS_GMG_LEVELS        = .FALSE.                       !< Flag for GMG-based grid levels
 
- 
-! ---------- Globally used types for description of different solvers
+! ---------- Globally used types for different solvers parameters
   
 INTEGER :: TYPE_ACCURACY            = NSCARC_ACCURACY_ABSOLUTE   !< Type of requested accuracy
 INTEGER :: TYPE_COARSE              = NSCARC_COARSE_DIRECT       !< Type of coarse grid solver 
@@ -187,9 +186,8 @@ INTEGER :: FACE_ORIENTATION(6)  = (/1,-1,2,-2,3,-3/)        !< Coordinate direct
 
 CHARACTER(60) :: CNAME, CROUTINE
 
-! 
 ! ---------- Public variables
-! 
+  
 PUBLIC :: SCARC_ACCURACY                  !< Requested accuracy for ScaRC solver
 PUBLIC :: SCARC_CAPPA                     !< Resulting convergence rate of ScaRC solver
 PUBLIC :: SCARC_COARSENING                !< Selection parameter for AMG coarsening strategy (aggregation/cubic)
@@ -243,71 +241,27 @@ PUBLIC :: SCARC_SMOOTH_ITERATIONS         !< Maximum number of allowed iteration
 PUBLIC :: SCARC_SMOOTH_OMEGA              !< Relaxation parameter for smoother
 PUBLIC :: SCARC_SMOOTH_SCOPE              !< Scope of activity for smoother (global/local)
 
-! 
 ! ---------- Type declarations
-! 
-TYPE (SCARC_TYPE)       , SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: SCARC      !< Main ScaRC data structure
-TYPE (SCARC_STACK_TYPE) , SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: STACK      !< Stack of consecutive solvers
+  
+TYPE (SCARC_TYPE)      , SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: SCARC       !< Main ScaRC data structure
+TYPE (SCARC_STACK_TYPE), SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: STACK       !< Stack structure for consecutive solvers
+TYPE (SCARC_CPU_TYPE),   SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: CPU         !< Structure to handle CPU time measurements
 
-TYPE (SCARC_STORAGE_TYPE), SAVE, TARGET :: STORAGE                !< Storage administration for ScaRC arrays
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_SOLVER                       !< Poisson solver 
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_SOLVER_STRUCTURED            !< Structured Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_SOLVER_UNSTRUCTURED          !< Unstructured Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_PRECON                       !< Preconditioner for Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_PRECON_STRUCTURED            !< Preconditioner for structured Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_PRECON_UNSTRUCTURED          !< Preconditioner for unstructured Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: POISSON_SMOOTH                       !< Smoother for Poisson solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: LAPLACE_SOLVER_UNSTRUCTURED          !< Unstructured Laplace solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: LAPLACE_PRECON_UNSTRUCTURED          !< Preconditioner for unstructured Laplace solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: COARSE_SOLVER                        !< Coarse grid solver
+TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: COARSE_PRECON                        !< Preconditioner for coarse grid solver
 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG                 !< Solver structure for main Poisson: Krylov solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG_STRUCTURED      !< Solver structure for main Poisson: structured Krylov solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_CG_UNSTRUCTURED    !< Solver structure for main Poisson: unstructured Krylov solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_GMG                !< Solver structure for main Poisson: Multigrid solver 
-#ifdef WITH_MKL
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MAIN_LU                 !< Solver structure for LU-decomposition main solver 
-#endif
-
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_CG                  !< Solver structure for MGM second pass: CG solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_PRECON              !< Solver structure for MGM second pass: Preconditioner
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_FFT                 !< Solver structure for MGM second pass: FFT solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_LU                  !< Solver structure for MGM second pass: LU solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_LUPERM              !< Solver structure for MGM second pass: permuted LU solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_MKL                 !< Solver structure for MGM second pass: MKL solver
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: MGM_OPTIMIZED           !< Solver structure for MGM second pass: Optimized Pardiso/FFT
-
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_KRYLOV           !< Solver structure for coarse grid problem: Krylov solver 
-#ifdef WITH_MKL
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_CLUSTER     !< Solver structure for CLUSTER_SPARSE_SOLVER coarse grid solver 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: COARSE_PARDISO     !< Solver structure for PARDISO coarse grid solver
-#endif
-
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_JAC         !< Solver structure for preconditioner: Jacobi 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_SSOR        !< Solver structure for preconditioner: SSOR 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_LU          !< Solver structure for preconditioner: ILU 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_ILU         !< Solver structure for preconditioner: ILU 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_FFT         !< Solver structure for preconditioner: FFT 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_FFTO        !< Solver structure for preconditioner: FFTO (including overlap)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MG          !< Solver structure for preconditioner: Multigrid 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MJAC        !< Solver structure for preconditioner: Jacobi (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MGS         !< Solver structure for preconditioner: Gauss-Seidel (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MSGS        !< Solver structure for preconditioner: Sym. Gauss-Seidel (matrix vs.)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MSOR        !< Solver structure for preconditioner: SOR (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MSSOR       !< Solver structure for preconditioner: SSOR (matrix version)
-#ifdef WITH_MKL
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: PRECON_MKL         !< Solver structure for preconditioner: MKL 
-#endif
-
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_JAC         !< Solver structure for smoother: Jacobi 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_SSOR        !< Solver structure for smoother: SSOR 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_ILU         !< Solver structure for smoother: ILU 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_FFT         !< Solver structure for smoother: FFT 
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_FFTO        !< Solver structure for smoother: FFTO (including overlap)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MJAC        !< Solver structure for smoother: Jacobi (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MGS         !< Solver structure for smoother: Gauss-Seidel (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSGS        !< Solver structure for smoother: Sym. Gauss-Seidel (matrix vs.)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSOR        !< Solver structure for smoother: SOR (matrix version)
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MSSOR       !< Solver structure for smoother: SSOR (matrix version)
-#ifdef WITH_MKL
-TYPE (SCARC_SOLVER_TYPE), SAVE, TARGET :: SMOOTH_MKL         !< Solver structure for smoother: MKL 
-#endif
-
-TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG               !< Message structure to handle verbose and debug messages
-TYPE (SCARC_CPU_TYPE), SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: CPU  !< CPU structure to handle time measurements
-
-
-TYPE (SCARC_SUBDIVISION_TYPE), SAVE, TARGET :: SUBDIVISION   !< Structure to keep information about subdivision
+TYPE (SCARC_STORAGE_TYPE), SAVE, TARGET :: STORAGE                              !< Structure for ScaRC storage administration
+TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG                                  !< Structure for verbose and debug messages
+TYPE (SCARC_SUBDIVISION_TYPE), SAVE, TARGET :: SUBDIVISION                      !< Structure for information about subdivision
 
 END MODULE SCARC_VARIABLES
 

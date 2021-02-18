@@ -44,6 +44,7 @@ INTEGER  :: R                                   !< Handle for auxiliary one-dime
 INTEGER  :: V                                   !< Handle for auxiliary one-dimensional vector
 INTEGER  :: Y                                   !< Handle for auxiliary one-dimensional vector
 INTEGER  :: Z                                   !< Handle for auxiliary one-dimensional vector
+
 #ifdef WITH_SCARC_DEBUG
 INTEGER  :: E                                   !< Handle for one-dimensional error vector (debugging only)
 #endif

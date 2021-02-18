@@ -28,6 +28,7 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
 ! ------------------------------------------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
-STACK(NSTACK)%SOLVER => MAIN_LU
+STACK(NSTACK)%SOLVER => POISSON_SOLVER
 
 CALL SCARC_SETUP_MKL(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
 
@@ -48,6 +49,7 @@ ELSE
 ENDIF
 
 END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
+
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
@@ -63,7 +65,7 @@ CALL SCARC_SETUP_STACK(NSTACK)
 SV  => STACK(NSTACK)%SOLVER
 SELECT CASE (NSOLVER)
    CASE (NSCARC_SOLVER_MAIN)
-      SV%CNAME = 'SCARC_MAIN_LU'
+      SV%CNAME = 'SCARC_MAIN_SOLVER'
    CASE (NSCARC_SOLVER_COARSE)
       SV%CNAME = 'SCARC_COARSE_LU'
    CASE DEFAULT
@@ -89,6 +91,7 @@ CALL SCARC_SETUP_STACK_VECTORS(.TRUE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TR
 
 END SUBROUTINE SCARC_SETUP_MKL
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize CLUSTER_SPARSE_SOLVER from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
@@ -113,7 +116,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Allocate workspace for parameters and pointers needed in MKL-routine
  
-      CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
+      CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
 
       IF (.NOT.ALLOCATED(MKL%CT)) THEN
          ALLOCATE(MKL%CT(64), STAT=IERROR)
@@ -219,6 +222,7 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_CLUSTER
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
@@ -243,7 +247,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  
-      CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
+      CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
 
       IF (.NOT.ALLOCATED(MKL%PT)) THEN
          ALLOCATE(MKL%PT(64), STAT=IERROR)
@@ -324,6 +328,7 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_PARDISO
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
@@ -342,7 +347,7 @@ AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
 
 ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  
-CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
 
 IF (.NOT.ALLOCATED(MKL%PT)) THEN
    ALLOCATE(MKL%PT(64), STAT=IERROR)

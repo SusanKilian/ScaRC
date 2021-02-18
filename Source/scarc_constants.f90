@@ -237,7 +237,7 @@ INTEGER, PARAMETER :: NSCARC_RELAX_MKL               =  8        !< Type of prec
 INTEGER, PARAMETER :: NSCARC_RELAX_MSGS              =  9        !< Type of preconditioner: MSGS-methods (matrix form)
 INTEGER, PARAMETER :: NSCARC_RELAX_MSOR              = 10        !< Type of preconditioner: MSOR-methods (matrix form)
 INTEGER, PARAMETER :: NSCARC_RELAX_MSSOR             = 11        !< Type of preconditioner: MSSOR-methods (matrix form)
-INTEGER, PARAMETER :: NSCARC_RELAX_MULTIGRID         = 12        !< Type of preconditioner: multigrid methods
+INTEGER, PARAMETER :: NSCARC_RELAX_GMG         = 12        !< Type of preconditioner: multigrid methods
 INTEGER, PARAMETER :: NSCARC_RELAX_SSOR              = 13        !< Type of preconditioner: SSOR-methods
 
 INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL            =  0        !< Scope of current solver: global

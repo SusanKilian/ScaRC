@@ -678,9 +678,11 @@ TYPE SCARC_SOLVER_TYPE
    INTEGER :: E = NSCARC_UNDEF_INT                             !< Reference to local E-vector, double precision
 #endif
 
-   ! Converegence requirements for current solver
+   ! Convergence requirements for current solver
+
    INTEGER  :: NIT   = NSCARC_UNDEF_INT                        !< Maximum iteration number
    INTEGER  :: ITE   = NSCARC_UNDEF_INT                        !< Current iteration number
+
    REAL(EB) :: EPS   = NSCARC_UNDEF_REAL_EB                    !< Required accuracy
    REAL(EB) :: RES   = NSCARC_UNDEF_REAL_EB                    !< Current residual
    REAL(EB) :: RESIN = NSCARC_UNDEF_REAL_EB                    !< Initial residual
@@ -688,13 +690,16 @@ TYPE SCARC_SOLVER_TYPE
    REAL(EB) :: OMEGA = NSCARC_UNDEF_REAL_EB                    !< Relaxation parameter
    REAL(EB) :: CAPPA = NSCARC_UNDEF_REAL_EB                    !< Convergence rate
 
+   REAL(EB) :: VELOCITY_ERROR_GLOBAL = NSCARC_UNDEF_REAL_EB    !< Global velocity error
+   REAL(EB) :: VELOCITY_ERROR_MGM = NSCARC_UNDEF_REAL_EB       !< MGM velocity error
+
 END TYPE SCARC_SOLVER_TYPE
 
 !> \brief Stack type
   
 TYPE SCARC_STACK_TYPE
-   TYPE (SCARC_SOLVER_TYPE), POINTER :: SOLVER                     !< Type of current solver
-   INTEGER :: NSTAGE                                               !< Stage of current solver
+   TYPE (SCARC_SOLVER_TYPE), POINTER :: SOLVER                 !< Parameters for different solvers
+   INTEGER :: NSTAGE                                           !< Stage of current solver
 END TYPE SCARC_STACK_TYPE
 
 !> \brief Administration other mesh data needed for the coupling of adjacent neighbors

@@ -25,6 +25,7 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup system of equations (Poisson matrix + BC's) for different variants of ScaRC
 ! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
@@ -86,7 +87,6 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
    
 END SELECT SELECT_SCARC_METHOD_SIZES
 
-  
 ! ------ Assemble system matrices on requested grid levels and set boundary conditions
   
 MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -109,7 +109,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ! In case of multigrid as preconditioner:
             ! only build higher level structures in case of geometric multigrid (algebraic variant is done elsewhere)
 
-            CASE (NSCARC_RELAX_MULTIGRID)
+            CASE (NSCARC_RELAX_GMG)
 
                IF (IS_CG_GMG) THEN
                   DO NL = NLEVEL_MIN+1, NLEVEL_MAX
@@ -142,7 +142,6 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDIF
 
          END SELECT SELECT_KRYLOV_PRECON
-
 
       ! ---------- Multigrid as main solver
 
@@ -522,7 +521,7 @@ END SUBROUTINE SCARC_SETUP_GLOBAL_POISSON_COLUMNS
 !> \brief Make Poisson matrix global by exchanging adjacent overlaps
 ! -------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_GLOBAL_POISSON_OVERLAPS(NL)
-USE SCARC_POINTERS, ONLY: S, G, A, OA, SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
+USE SCARC_POINTERS, ONLY: S, A, OA, SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, INBR, NOM
@@ -539,13 +538,13 @@ MESHES_FINE_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)    
    A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
-   CALL SCARC_REDUCE_CMATRIX(A, 'G%POISSON', CROUTINE)
+   CALL SCARC_REDUCE_CMATRIX (A, 'G%POISSON', CROUTINE)
 
    OMESHES_FINE_LOOP: DO INBR = 1, S%N_NEIGHBORS
       NOM = S%NEIGHBORS(INBR)
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
       OA => SCARC_POINT_TO_OTHER_CMATRIX (NSCARC_MATRIX_POISSON)
-      CALL SCARC_REDUCE_CMATRIX(OA, 'OG%POISSON', CROUTINE)
+      CALL SCARC_REDUCE_CMATRIX (OA, 'OG%POISSON', CROUTINE)
    ENDDO OMESHES_FINE_LOOP
 
 ENDDO MESHES_FINE_LOOP
@@ -587,7 +586,7 @@ END FUNCTION SCARC_CELL_WITHIN_MESH
 !    explanation to come ...
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON (NM, NL)
-USE SCARC_POINTERS, ONLY: S, L, G, OG, A, AB, OA, OAB, &
+USE SCARC_POINTERS, ONLY: S, L, G, A, AB, OA, OAB, &
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
                           SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
@@ -619,7 +618,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
          NOM = S%NEIGHBORS(INBR)
          CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
          OA => SCARC_POINT_TO_OTHER_CMATRIX (NSCARC_MATRIX_POISSON)
-         CALL SCARC_ALLOCATE_CMATRIX(OA, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'OG%POISSON', CROUTINE)
+         CALL SCARC_ALLOCATE_CMATRIX (OA, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'OG%POISSON', CROUTINE)
       ENDDO
 
       IP = 1
@@ -667,7 +666,7 @@ CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
 
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
-      CALL SCARC_ALLOCATE_BMATRIX(AB, NL, 'G%POISSONB', CROUTINE)
+      CALL SCARC_ALLOCATE_BMATRIX (AB, NL, 'G%POISSONB', CROUTINE)
    
       ! For every neighbor allocate little matrix on overlapping part of mesh
 
@@ -675,7 +674,7 @@ CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
          NOM = S%NEIGHBORS(INBR)
          CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
          OAB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
-         CALL SCARC_ALLOCATE_BMATRIX(OAB, NL, 'OG%POISSONB', CROUTINE)
+         CALL SCARC_ALLOCATE_BMATRIX (OAB, NL, 'OG%POISSONB', CROUTINE)
       ENDDO
    
       IP  = 1
@@ -1319,6 +1318,7 @@ LOGICAL  :: IS_INTERNAL_CELL
 F => L%FACE(IOR0)
 
 ! Decide wheter cell is interior or exterior cell
+ 
 AB => G%POISSONB
 ID = AB%POS(IOR0)                                
 SELECT CASE (IOR0)
@@ -1336,7 +1336,6 @@ SELECT CASE (IOR0)
       IS_INTERNAL_CELL = IZ1 < F%NOP
 END SELECT
 
- 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
  
 IF (IS_INTERNAL_CELL) THEN
@@ -1499,8 +1498,8 @@ ENDIF
 ! If global MKL method is used, also allocate auxiliary space for computation of global numbering
 
 IF (IS_MKL_LEVEL(NL)) THEN
-   CALL SCARC_ALLOCATE_INT1(ICOL_AUX, 1, A%N_STENCIL_MAX, NSCARC_HUGE_INT, 'ICOL_AUX', CROUTINE)
-   CALL SCARC_ALLOCATE_INT1(IC_AUX  , 1, A%N_STENCIL_MAX, NSCARC_HUGE_INT, 'IC_AUX', CROUTINE)
+   CALL SCARC_ALLOCATE_INT1 (ICOL_AUX, 1, A%N_STENCIL_MAX, NSCARC_HUGE_INT, 'ICOL_AUX', CROUTINE)
+   CALL SCARC_ALLOCATE_INT1 (IC_AUX  , 1, A%N_STENCIL_MAX, NSCARC_HUGE_INT, 'IC_AUX', CROUTINE)
 ENDIF
   
 ! Subtract symmetric matrix part from usual system matrix
@@ -1808,7 +1807,6 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
    ENDDO
    ACO%N_COL = ICOL                                ! number of stored columns
 
- 
    ! Within last mesh: check which other cells have a connection to the last cell;
    ! in each corresponding matrix row store the column index and value of just that matrix entry
    ! for each direction only one value has to be stored
@@ -1924,6 +1922,7 @@ LAST_CELL_IN_LAST_MESH_BANDWISE_IF: IF (NM == NMESHES) THEN
 
    ! Store column indices and values of diagonal and all off-diagonal entries in last row
    ! index '1' corresponds to main diagonal entry
+
    ICO = ICO + 1
    ABCO => AB%CONDENSED(ICO)
 
@@ -2251,6 +2250,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO MESHES_LOOP
 
 ! If there are multiple meshes exchange diagonal matrix on overlapping parts
+
 IF (NMESHES > 1) CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MATRIX_DIAGS, NSCARC_NONE, NL)
 
 END SUBROUTINE SCARC_EXTRACT_MATRIX_DIAGONAL

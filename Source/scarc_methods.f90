@@ -37,9 +37,12 @@ IMPLICIT NONE
 CONTAINS
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief  Setup environment for Krylov methods
+!> \brief  Setup environment for global Krylov method to solve the overall Poisson problem
+! This includes 
+!  - environment for the global Krylov method 
+!  - environment for the (mostly) local or global preconditioners 
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_STACK_KRYLOV_ENVIRONMENT
+SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_CLUSTER
@@ -47,191 +50,92 @@ USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_CLUSTER
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
-STACK(NSTACK)%SOLVER => MAIN_CG
+STACK(NSTACK)%SOLVER => POISSON_SOLVER
 CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
 
- 
 ! Setup preconditioner for Krylov solver, all acting locally by default
  
 NSTACK = NSTACK + 1
+STACK(NSTACK)%SOLVER => POISSON_PRECON
 SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
-   ! Jacobi-preconditioning 
-
-   CASE (NSCARC_RELAX_JAC)
-      STACK(NSTACK)%SOLVER => PRECON_JAC
+   CASE (NSCARC_RELAX_JAC)                                          ! Jacobi preconditioning
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! SSOR-preconditioning 
-
-   CASE (NSCARC_RELAX_SSOR)
-      STACK(NSTACK)%SOLVER => PRECON_SSOR
+   CASE (NSCARC_RELAX_SSOR)                                         ! SSOR preconditioning
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! JACOBI-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MJAC)
-      STACK(NSTACK)%SOLVER => PRECON_MJAC
+   CASE (NSCARC_RELAX_MJAC)                                         ! Jacobi preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! GS-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MGS)
-      STACK(NSTACK)%SOLVER => PRECON_MGS
+   CASE (NSCARC_RELAX_MGS)                                          ! GS preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SGS-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSGS)
-      STACK(NSTACK)%SOLVER => PRECON_MSGS
+   CASE (NSCARC_RELAX_MSGS)                                         ! SGS preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SOR-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSOR)
-      STACK(NSTACK)%SOLVER => PRECON_MSOR
+   CASE (NSCARC_RELAX_MSOR)                                         ! SOR preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! SSOR-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSSOR)
-      STACK(NSTACK)%SOLVER => PRECON_MSSOR
+   CASE (NSCARC_RELAX_MSSOR)                                        ! SSOR preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! LU-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_LU)
-      STACK(NSTACK)%SOLVER => PRECON_LU
+   CASE (NSCARC_RELAX_LU)                                           ! LU preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_LU(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! ILU(0)-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_ILU)
-      STACK(NSTACK)%SOLVER => PRECON_ILU
+   CASE (NSCARC_RELAX_ILU)                                          ! ILU(0) preconditioning in matrix form
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_ILU(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! FFT-preconditioning 
-
-   CASE (NSCARC_RELAX_FFT)
-      STACK(NSTACK)%SOLVER => PRECON_FFT
+   CASE (NSCARC_RELAX_FFT)                                          ! FFT preconditioning
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
 
-   ! FFT-preconditioning 
-
-   CASE (NSCARC_RELAX_FFTO)
-      STACK(NSTACK)%SOLVER => PRECON_FFT
+   CASE (NSCARC_RELAX_FFTO)                                         ! FFT preconditioning with overlap
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MIN)
 
 #ifdef WITH_MKL
-   ! LU-preconditioning based on MKL (either locally or globally acting depending on user specification)
-
-   CASE (NSCARC_RELAX_MKL)
-      STACK(NSTACK)%SOLVER => PRECON_MKL
-
+   CASE (NSCARC_RELAX_MKL)                                          ! IntelMKL preconditioning
       SELECT CASE(TYPE_SCOPE(1))
-
-         ! acting globally - call global CLUSTER_SPARSE_SOLVER from MKL
-
-         CASE (NSCARC_SCOPE_GLOBAL)
+         CASE (NSCARC_SCOPE_GLOBAL)                                 ! by global CLUSTER_SPARSE_SOLVER
             CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_GLOBAL)
             CALL SCARC_SETUP_CLUSTER(NLEVEL_MIN, NLEVEL_MIN)
-
-         ! acting locally - call local PARDISO solvers from MKL
-
-         CASE (NSCARC_SCOPE_LOCAL)
+         CASE (NSCARC_SCOPE_LOCAL)                                  ! by local PARDISO solvers
             CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
-
       END SELECT
 #endif
-
  
-   ! Preconditioning by Geometric multigrid, smoothers act locally
- 
-   CASE (NSCARC_RELAX_MULTIGRID)
+   CASE (NSCARC_RELAX_GMG)                                          ! Preconditioning by complete GMG method
 
-      STACK(NSTACK)%SOLVER => PRECON_MG
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, TYPE_SCOPE(1))
       CALL SCARC_SETUP_STACK_MULTIGRID(NSCARC_SOLVER_PRECON, TYPE_SCOPE(1), NSCARC_STAGE_TWO, NSTACK, &
-                                 NLEVEL_MIN, NLEVEL_MAX)
+                                       NLEVEL_MIN, NLEVEL_MAX)
 
       NSTACK = NSTACK + 1
+      STACK(NSTACK)%SOLVER => POISSON_SMOOTH
       SELECT CASE (TYPE_SMOOTH)
 
-         ! Jacobi-smoothing 
-
-         CASE (NSCARC_RELAX_JAC)
-            STACK(NSTACK)%SOLVER => SMOOTH_JAC
+         CASE (NSCARC_RELAX_JAC)                                    ! Jacobi smoothing
             CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-         ! SSOR-smoothing 
-
-         CASE (NSCARC_RELAX_SSOR)
-            STACK(NSTACK)%SOLVER => SMOOTH_SSOR
+         CASE (NSCARC_RELAX_SSOR)                                   ! SSOR smoothing
             CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-         ! Jacobi-preconditioning in matrix form 
-
-         CASE (NSCARC_RELAX_MJAC)
-            STACK(NSTACK)%SOLVER => SMOOTH_MJAC
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX-1)
-
-         ! GS-preconditioning in matrix form 
-
-         CASE (NSCARC_RELAX_MGS)
-            STACK(NSTACK)%SOLVER => SMOOTH_MGS
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX-1)
-
-         ! SGS-preconditioning in matrix form 
-
-         CASE (NSCARC_RELAX_MSGS)
-            STACK(NSTACK)%SOLVER => SMOOTH_MSGS
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX-1)
-
-         ! SOR-preconditioning in matrix form 
-
-         CASE (NSCARC_RELAX_MSOR)
-            STACK(NSTACK)%SOLVER => SMOOTH_MSOR
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX-1, NSTACK)
-
-         ! SSOR-preconditioning in matrix form 
-
-         CASE (NSCARC_RELAX_MSSOR)
-            STACK(NSTACK)%SOLVER => SMOOTH_MSSOR
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX-1, NSTACK)
-
-         ! FFT-smoothing 
-
-         CASE (NSCARC_RELAX_FFT)
-            STACK(NSTACK)%SOLVER => SMOOTH_FFT
+         CASE (NSCARC_RELAX_FFT)                                    ! FFT smoothing
             CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MAX-1)
 
-         ! FFTO-smoothing 
-
-         CASE (NSCARC_RELAX_FFTO)
-            STACK(NSTACK)%SOLVER => SMOOTH_FFTO
-            CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
-            CALL SCARC_SETUP_FFTO(NLEVEL_MIN, NLEVEL_MAX-1)
 #ifdef WITH_MKL
-         ! LU-smoothing 
-
-         CASE (NSCARC_RELAX_MKL)
-            STACK(NSTACK)%SOLVER => SMOOTH_MKL
+         CASE (NSCARC_RELAX_MKL)                                    ! IntelMKL smoothing (local PARDISO's)
+            STACK(NSTACK)%SOLVER => POISSON_SMOOTH
             CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
 #endif
@@ -248,818 +152,24 @@ END SELECT SELECT_KRYLOV_PRECON
 ! If two-level Krylov, allocate intermediate structures for interpolation and workspace for global coarse solver
  
 IF (HAS_TWO_LEVELS) THEN
-
    IF (.NOT.IS_CG_AMG) CALL SCARC_SETUP_INTERPOLATION(NSCARC_STAGE_ONE, NLEVEL_MIN+1, NLEVEL_MAX)
-
    NSTACK = NSTACK + 1
    CALL SCARC_SETUP_COARSE_SOLVER(NSCARC_STAGE_ONE, NSCARC_SCOPE_GLOBAL, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
-
 ENDIF
 
 ! Store final number of stacks
 
-N_STACK_TOTAL = NSTACK
+N_STACK_TOTAL = NSTACK                                 
 
-END SUBROUTINE SCARC_SETUP_STACK_KRYLOV_ENVIRONMENT
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform global conjugate gradient method based on global Possion-matrix
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NLEVEL)
-USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-INTEGER :: NSTATE, NS, NP, NL, NG
-REAL (EB) :: ALPHA0, BETA0, SIGMA0, SIGMA1=0.0_EB
-REAL (EB) :: TNOW, TNOWI
-
-TNOW = CURRENT_TIME()
-ITE_CG = 0
-
-TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
-NS = NSTACK
-NP = NPARENT
-NL = NLEVEL
-NG = TYPE_GRID                              ! TODO: Why? Forgot the reason ...
-#ifdef WITH_SCARC_POSTPROCESSING
-IF (SCARC_DUMP .AND. ICYC == 1) THEN
-   CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_MESH)
-   CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_A)
-ENDIF
-#endif
-
-! ---------- Initialization
-!   - Get parameters for current scope (note: NL denotes the finest level)
-!   - Get right hand side vector and clear solution vectors
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-TYPE_GRID = NG                              ! TODO: Why? Forgot the reason ...
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
-WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
-WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
-WRITE(MSG%LU_DEBUG,*) 'NLEVEL  =', NLEVEL
-WRITE(MSG%LU_DEBUG,*) 'TYPE_GRID  =', TYPE_GRID
-WRITE(MSG%LU_DEBUG,*) 'TYPE_MATVEC  =', TYPE_MATVEC
-WRITE(MSG%LU_DEBUG,*) 'TYPE_PRECON  =', TYPE_PRECON
-WRITE(MSG%LU_DEBUG,*) 'ITYPE  =', STACK(NS)%SOLVER%TYPE_RELAX
-WRITE(MSG%LU_DEBUG,*) 'PRES_ON_WHOLE_DOMAIN =', PRES_ON_WHOLE_DOMAIN
-WRITE(MSG%LU_DEBUG,*) 'IS_STRUCTURED = ', IS_STRUCTURED
-WRITE(MSG%LU_DEBUG,*) 'IS_UNSTRUCTURED = ', IS_UNSTRUCTURED
-WRITE(MSG%LU_DEBUG,*) 'IS_LAPLACE = ', IS_LAPLACE
-WRITE(MSG%LU_DEBUG,*) 'IS_POISSON = ', IS_POISSON
-#endif
-
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-!CALL SCARC_PRESET_VECTOR(B, NL)
-
-! In case of pure Neumann boundary conditions setup condensed system
-
-IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
-   CALL SCARC_VECTOR_INIT (X, 0.0_EB, NL)                    
-   CALL SCARC_FILTER_MEANVALUE(B, NL)                       
-   CALL SCARC_SETUP_SYSTEM_CONDENSED (B, NL, 1)            
-ENDIF
-#ifdef WITH_SCARC_POSTPROCESSING
-IF (SCARC_DUMP) CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_B)
-#endif
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT0 ', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
-!CALL SCARC_DEBUG_METHOD('BEGIN OF KRYLOV METHOD ',7)                     
-#endif
-
-! Compute initial residual 
-
-IF (IS_MGM .AND. NSTACK == 3) THEN
-   TYPE_MATVEC = NSCARC_MATVEC_LOCAL
-ELSE
-   TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
-ENDIF
-CALL SCARC_MATVEC_PRODUCT (X, R, NL)                         !  r^0 := A*x^0
-CALL SCARC_VECTOR_SUM     (B, R, -1.0_EB, 1.0_EB, NL)        !  r^0 := r^0 - b     corresponds to  A*x^0 - b
-
-RES    = SCARC_L2NORM (R, NL)                                !  res   := ||r^0||
-RESIN  = RES                                                 !  resin := res
-NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                 !  res < tolerance ?
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT1 ', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
-#endif
-
-! Perform initial preconditioning
-
-IF (NSTATE /= NSCARC_STATE_CONV_INITIAL) THEN                !  if no convergence yet, call intial preconditioner
-   CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^0 := Precon(r^0)
-   SIGMA1 = SCARC_SCALAR_PRODUCT(R, V, NL)                   !  SIGMA1 := (r^0,v^0)
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
-CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
-WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
-#endif
-   CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
-ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'RESIN, RES, ITE, SIGMA1:', RESIN, RES, ITE, SIGMA1
-CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
-#endif
-
-! ---------- Perform conjugate gradient looping
-
-CG_LOOP: DO ITE = 1, NIT
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
-#endif
-   TNOWI = CURRENT_TIME()
-   CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
-
-   !TYPE_MATVEC = NSCARC_MATVEC_LOCAL
-   CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                        !  y^k := A*d^k
-
-   ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                    !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
-CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
-#endif
-   ALPHA0 = SIGMA1/ALPHA0                                      !  ALPHA0 := (r^k,v^k)/(d^k,A*d^k)
-
-   CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)            !  x^{k+1} := x^k + ALPHA0 * d^k
-   CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)            !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
-CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
-CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
-CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
-CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE ', NL)
-WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
-#endif
-
-   RES = SCARC_L2NORM (R, NL)                                  !  res := ||r^{k+1}||
-   NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                !  res < tolerance ??
-   IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT CG_LOOP
-
-   CALL SCARC_PRECONDITIONER(NS, NS, NL)                       !  v^{k+1} := Precon(r^{k+1})
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'after precon'
-#endif
-
-   SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                    !  SIGMA0 := (r^{k+1},v^{k+1})
-   BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
-   SIGMA1 = SIGMA0                                             !  save last SIGMA0
-
-   CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
-CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE2 ', NL)
-CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE2 ', NL)
-CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE2 ', NL)
-#endif
-
-   CPU(MY_RANK)%ITERATION=MAX(CPU(MY_RANK)%ITERATION,CURRENT_TIME()-TNOWI)
-
-ENDDO CG_LOOP
-
-! ---------- Determine convergence rate and print corresponding information
-! In case of CG as main solver:
-!   - Transfer ScaRC solution vector X to FDS pressure vector
-!   - Set ghost cell values along external boundaries
-!   - Exchange values along internal boundaries
-
-CALL SCARC_CONVERGENCE_RATE(NSTATE, NS, NL)
-
-IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
-   CALL SCARC_RESTORE_LAST_CELL(X, NL)
-   CALL SCARC_FILTER_MEANVALUE(X, NL)
-ENDIF
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X FINAL', NL)
-WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
-#endif
-
-IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
-   CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
-   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-#ifdef WITH_SCARC_POSTPROCESSING
-   IF (SCARC_DUMP) THEN
-      CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
-      CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_X)
-   ENDIF
-#endif
-ENDIF
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_METHOD('END OF KRYLOV METHOD ',6)                     
-#endif
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-
-END SUBROUTINE SCARC_METHOD_KRYLOV
-
+END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Setup environment needed for the use of the McKenney-Greengard-Mayo method
+!> \brief  Setup environment for global multigrid method to solve the overall Poisson problem
+! This includes 
+!  - environment for the global multigrid method 
+!  - environment for the (mostly) local or global smoothers 
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
-USE SCARC_MGM, ONLY: SCARC_SETUP_MGM, SCARC_MGM_CHECK_OBSTRUCTIONS
-#ifdef WITH_MKL
-USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
-#endif
-USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_MGM_FFT
-USE SCARC_MATRICES, ONLY: SCARC_SETUP_MATRIX_MKL
-INTEGER :: NSTACK, NM, TYPE_MATRIX_SAVE
-
-! Allocate workspace and define variables for the different boundary settings in MGM-method
-
-CALL SCARC_SETUP_MGM (NLEVEL_MIN)
-
-! ------- First pass: Setup solver for inhomogeneous Poisson global problem on structured discretization
-!         By default, a global CG-method with FFT-preconditioning is used
-!         Goal is, to use PFFT or CG with PFFT-preconditioning later
-
-TYPE_PRECON = NSCARC_RELAX_FFT
-CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
-
-NSTACK = NSCARC_STACK_ROOT
-STACK(NSTACK)%SOLVER => MAIN_CG_STRUCTURED
-CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
-
-NSTACK = NSTACK + 1
-STACK(NSTACK)%SOLVER => PRECON_FFT
-CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
-
-! If exact initialization or comparison versus exact solution (that is, the difference USCARC-SCARC) is required,
-! the global unstructured Poisson matrix was already assembled in SETUP_SYSTEMS, 
-! thus also initialize the related preconditioners 
-
-TYPE_MATRIX_SAVE = TYPE_MATRIX             
-TYPE_MATRIX = NSCARC_MATRIX_COMPACT        
-CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-
-IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
-
-   NSTACK = NSTACK + 1
-   STACK(NSTACK)%SOLVER => MAIN_CG_UNSTRUCTURED
-   CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
-
-   ! If IntelMKL-library is available, use local PARDISO preconditioners, otherwise local SSOR preconditioners 
-   ! for the global unstructured Poisson problem 
-
-   NSTACK = NSTACK + 1
-#ifdef WITH_MKL
-   TYPE_PRECON = NSCARC_RELAX_MKL
-   STACK(NSTACK)%SOLVER => PRECON_MKL
-   CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)        
-#else
-   TYPE_PRECON = NSCARC_RELAX_SSOR
-   STACK(NSTACK)%SOLVER => PRECON_SSOR
-   CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
-   CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
-#endif
-      
-ENDIF
-
-! ------- Second pass: Setup solvers for local homogeneous Laplace problems on unstructured discretization
-!         Different local solvers are available (CG, own LU, own permuted LU, PARDISO, even FFT if mesh happens to be structured)
-
-TYPE_MATRIX = NSCARC_MATRIX_COMPACT
-CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-
-NSTACK = NSTACK + 1
-N_STACK_LAPLACE = NSTACK
-
-CALL SCARC_MGM_CHECK_OBSTRUCTIONS (NLEVEL_MIN)
-#ifdef WITH_MKL
-TYPE_MKL (NLEVEL_MIN) = NSCARC_MKL_LOCAL
-#endif
-
-
-SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
-
-   ! Setup CG-solvers for the solution of the local Laplace problems 
-   ! If IntelMKL is available use PARDISO preconditioners by default, otherwise SSOR
-
-   CASE (NSCARC_MGM_LAPLACE_CG) 
-
-      STACK(NSTACK)%SOLVER => MGM_CG
-      CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MGM, NSCARC_SCOPE_LOCAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
-   
-      NSTACK = NSTACK + 1
-      STACK(NSTACK)%SOLVER => MGM_PRECON
-#ifdef WITH_MKL
-      TYPE_PRECON = NSCARC_RELAX_MKL
-      CALL SCARC_SETUP_STACK_MGM (NSTACK, NSCARC_SCOPE_LOCAL)
-      CALL SCARC_SETUP_PARDISO (NLEVEL_MIN, NLEVEL_MIN)        
-#else
-      TYPE_PRECON = NSCARC_RELAX_SSOR
-      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
-      CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
-#endif
-
-   ! Setup local IntelMKL-PARDISO solvers 
-
-   CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
-      STACK(NSTACK)%SOLVER => MGM_LU
-      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
-
-#ifdef WITH_MKL
-
-   ! Setup local IntelMKL-PARDISO solvers 
-
-   CASE (NSCARC_MGM_LAPLACE_PARDISO)
-
-      STACK(NSTACK)%SOLVER => MGM_MKL
-      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
-
-      STACK(NSTACK)%SOLVER => MGM_MKL
-      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)
-         CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
-      ENDDO
-
-   ! Setup mixture of local Crayfishpak-FFT or IntelMKL-PARDISO solvers, depending on wether the mesh is structured or not
-
-   CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
-
-      STACK(NSTACK)%SOLVER => MGM_OPTIMIZED
-      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
-
-      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)
-         IF (MGM%HAS_OBSTRUCTIONS) THEN
-            CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
-         ELSE
-            CALL SCARC_SETUP_MGM_FFT (NM, NLEVEL_MIN)
-         ENDIF
-
-      ENDDO
-#endif
-
-END SELECT SELECT_LAPLACE_SOLVER
-
-TYPE_MATRIX = TYPE_MATRIX_SAVE
-N_STACK_TOTAL = NSTACK       
-
-END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform McKeeney-Greengard-Mayo (MGM) method
-! Note that the MGM method only works on finest grid level NLEVEL_MIN
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM(NSTACK)
-USE SCARC_MGM
-USE SCARC_CONVERGENCE, ONLY: NIT_MGM
-INTEGER, INTENT(IN) :: NSTACK
-INTEGER :: ITE_MGM = 0, STATE_MGM
-LOGICAL :: USE_CORRECT_INITIALIZATION
-
-CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: START, TPI=', TOTAL_PRESSURE_ITERATIONS
-#endif
-
-! ------------- Pass 1: Compute global structured inhomogeneous Poisson solution SIP
-
-CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
-CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
-
-CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this structured inhomogeneous Poisson solution in MGM%SIP
-CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
-
-CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)                 ! Initialize unstructured inhomogeneous Poisson UIP with SIP
-
-CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)         ! update velocity based on SIP
-CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)  ! compute related velocity error
-#ifdef WITH_SCARC_DEBUG2
-CALL SCARC_MGM_DUMP('SIP',0)
-CALL SCARC_MGM_DUMP('UIP',0)
-#endif
-
-! Determine if correct initialization of interface boundary values is required
-! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
-
-USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
-                             ((TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
-                              (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
-
-! The upper computation of the structured inhomogeneous Poisson (SIP) solution corresponds to the usual ScaRC solution
-! (To this end the structured Poisson matrix was assembled during the setup phase)
-! If comparison with exact solution is required, also compute UScaRC solution
-! (In this case the unstructured Poisson matrix was also assembled during the setup phase)
-! In both cases inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
-! Compute the difference DScaRC of UScaRC and ScaRC 
-
-IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
-
-   CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                                 
-   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    
-
-   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
-   CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)             ! compute UScaRC with unstructured CG-method 
-
-   CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                
-   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                   
-
-   CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)                             ! build difference DSCARC of USCARC and SCARC
-#ifdef WITH_SCARC_DEBUG2
-   CALL SCARC_MGM_DUMP('HS',0)
-   CALL SCARC_MGM_DUMP('HU',0)
-   CALL SCARC_MGM_DUMP('HD',0)
-#endif
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER COMPARISON, TPI=', TOTAL_PRESSURE_ITERATIONS
-   CALL SCARC_DEBUG_METHOD('PART0 in MGM: DIFFERENCE SCARC VS USCARC',5)                 
-#endif
-
-ENDIF
-
-! Only if correct initialization is required:
-! In the very first pressure iteration ever, or - in case of extrapolated MGM BCs - in the two very first pressure iterations 
-!    - use UScaRC solution as unstructured inhomogeneous Poisson UIP solution of this MGM pass 
-!    - use difference DScaRC of UScaRC and ScaRC as unstructured homogeneous Laplace UHL solution of this MGM pass
-! Exchange the interface values of the local Laplace problems for the later BC setting in the next MGM call
-! In this case the requested velocity tolerance has been reached by default here and this MGM call can be left
-! Otherwise: Check if the requested velocity tolerance has already been reached by pass 1
-
-IF (USE_CORRECT_INITIALIZATION) THEN
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
-#endif
-
-   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)        
-   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)        
-
-   SELECT CASE (TYPE_MGM_BC)
-      CASE (NSCARC_MGM_BC_MEAN)
-          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
-      CASE (NSCARC_MGM_BC_EXPOL)
-          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
-          IF (TOTAL_PRESSURE_ITERATIONS == 1) THEN
-             CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)        ! store also second last values for UHL
-             CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)      ! store also second last values for other UHL
-          ENDIF
-      CASE (NSCARC_MGM_BC_TRUE)
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
-   END SELECT
-#ifdef WITH_SCARC_DEBUG2
-   CALL SCARC_MGM_DUMP('UHL',0)
-   CALL SCARC_MGM_DUMP('UIP',0)
-#endif
- 
-   STATE_MGM = NSCARC_MGM_SUCCESS
-
-ELSE
-
-   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0, 0)
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER POISSON ITE, CAPPA, TPI=', ITE, CAPPA, STATE_MGM, &
-                          TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
-   CALL SCARC_DEBUG_METHOD ('PART1 of MGM: AFTER POISSON SOLUTION', 2)                     
-#endif
-
-ENDIF
-
-! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
-! This is only necessary if the requested accuracy has not already been achieved by pass 1
-
-IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
-#endif
-
-   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
-
-   MGM_CORRECTION_LOOP: DO ITE_MGM = 1, NIT_MGM
-
-      ! Compute local Laplace problems either by (permuted) LU- or CG-method
-      ! In both cases the following is done within the solver:
-      ! - definition of  BC's along obstructions according to MGM-algorithm 
-      ! - definition of  BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
-
-      SELECT CASE (TYPE_MGM_LAPLACE)
-         CASE (NSCARC_MGM_LAPLACE_CG)
-            CALL SCARC_METHOD_KRYLOV (N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
-         CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
-            CALL SCARC_METHOD_MGM_LU(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
-         CASE (NSCARC_MGM_LAPLACE_PARDISO)
-            CALL SCARC_METHOD_MGM_PARDISO(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
-         CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
-            CALL SCARC_METHOD_MGM_OPTIMIZED(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
-      END SELECT
-   
-      CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
-
-      ! Exchange interface data between neighboring meshes according to chosen boundary method
-       
-      SELECT CASE (TYPE_MGM_BC)
-         CASE (NSCARC_MGM_BC_MEAN)
-            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
-         CASE (NSCARC_MGM_BC_TRUE)
-            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
-         CASE (NSCARC_MGM_BC_EXPOL)
-            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
-            CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)                            ! store second time level
-            CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)
-      END SELECT
-
-      CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
-      CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
-#ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
-      CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
-#endif
-#ifdef WITH_SCARC_DEBUG2
-      CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
-      CALL SCARC_MGM_DUMP('UIP',ITE_MGM)
-#endif
-   
-      ! Get new velocities based on local Laplace solutions and compute corresponding velocity error
-
-      CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
-      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
-      CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
-
-#ifdef WITH_SCARC_DEBUG
-      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER VELOCITY-ERROR, TPI=', TOTAL_PRESSURE_ITERATIONS, ITE_MGM, VELOCITY_ERROR_GLOBAL
-      CALL SCARC_DEBUG_METHOD('PART4 of MGM: AFTER MERGE ',2)                            
-#endif
-      IF (SCARC_MGM_CHECK_LAPLACE) THEN
-         CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
-         CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
-      ENDIF
-
-      STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM, 1)
-      IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
-
-      IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)   ! also 2. layer of interface adjacent cells
-      ELSE 
-         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)   ! only 1. layer of interface adjacent cells
-      ENDIF
-
-   ENDDO MGM_CORRECTION_LOOP
-      
-   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM-1, -1)
-   
-ENDIF
-
-! Reset method type (which has been changed during Krylov method) to MGM
-TYPE_METHOD = NSCARC_METHOD_MGM
-CALL SCARC_MGM_STORE (NSCARC_MGM_TERMINATE)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD FINISHED: TYPE_METHOD, TPI = ', TYPE_METHOD, TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
-CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)                         
-#endif
-
-END SUBROUTINE SCARC_METHOD_MGM
-
-
-! -------------------------------------------------------------------------------------------------------------
-!> \brief Perform LU-decompositions for local unstructured Laplace matrices 
-! -------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_LU(NS, NP, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, A, LO, UP, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN):: NS, NP, NL
-INTEGER:: IC, JC, NM
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_MGM (NM, NL)   
-   G => L%UNSTRUCTURED
-
-   A   => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
-   LO  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LOWER)
-   UP  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_UPPER)
-
-   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
-
-   !DO IC = 1, G%NC
-   !   MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
-   !ENDDO
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
-   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
-   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%Y'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(G%PERM_BW(IC)), IC = 1, G%NC)
-#endif
-#ifdef WITH_SCARC_DEBUG2
-   CALL SCARC_DEBUG_CMATRIX (LO, 'MGM%LOWER', 'METHOD_MGM_LU ')
-   CALL SCARC_DEBUG_CMATRIX (UP, 'MGM%UPPER', 'METHOD_MGM_LU ')
-#endif
-
-   DO IC = G%NONZERO, G%NC
-      MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
-      DO JC = 1, IC-1
-         MGM%Y(IC) = MGM%Y(IC) - SCARC_EVALUATE_CMATRIX(LO, IC, JC) * MGM%Y(JC)
-      ENDDO
-   ENDDO
-
-   DO IC = G%NC, 1, -1
-      MGM%X(IC) = MGM%Y(IC)
-      DO JC = IC+1, G%NC
-         MGM%X(IC) = MGM%X(IC) - SCARC_EVALUATE_CMATRIX(UP, IC, JC) * MGM%X(JC)
-      ENDDO
-      MGM%X(IC) = MGM%X(IC)/SCARC_EVALUATE_CMATRIX(UP, IC, IC)
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_LU: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
-#endif
-
-ENDDO
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-END SUBROUTINE SCARC_METHOD_MGM_LU
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform global Pardiso-method based on MKL
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_PARDISO(NS, NP, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NS, NP, NL
-INTEGER :: NM
-#ifdef WITH_SCARC_DEBUG
-INTEGER :: IC
-#endif
-REAL (EB) :: TNOW
-
-TNOW = CURRENT_TIME()
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
-   G   => L%UNSTRUCTURED
-   AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
-   MKL => L%MKL
-   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
-WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%B:', G%NC, SIZE(MGM%B)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%X:', G%NC, SIZE(MGM%X)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
-#endif
-   MKL%PHASE  = 33                    ! only solving
-   MGM%X = 0.0_EB
-   CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                  AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                  MKL%MSGLVL, MGM%B, MGM%X, MKL%ERROR)
-
-   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
-
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
-#endif
-
-ENDDO MESHES_LOOP
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-END SUBROUTINE SCARC_METHOD_MGM_PARDISO
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform global Pardiso-method based on MKL
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED (NS, NP, NL)
-USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, FFT, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
-USE POIS, ONLY: H2CZSS, H3CZSS
-INTEGER, INTENT(IN) :: NS, NP, NL
-INTEGER :: NM, IC
-REAL (EB) :: TNOW
-
-TNOW = CURRENT_TIME()
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
-   G => L%UNSTRUCTURED
-   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
-
-   SELECT CASE (MGM%HAS_OBSTRUCTIONS)
-
-      ! If mesh contains obstructions, then the grid is really unstructured and PARDISO from IntelMKL is used
-       
-      CASE (.TRUE.)
-
-         AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
-      
-         MKL => L%MKL
-         MKL%PHASE  = 33         ! only solving
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: PARDISO, PRE, MGM%B:', G%NC, SIZE(MGM%B)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: PARDISO, PRE, MGM%X:', G%NC, SIZE(MGM%X)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
-CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
-#endif
-
-         MGM%X = 0.0_EB
-         CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                        AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                        MKL%MSGLVL, MGM%B, MGM%X, MKL%ERROR)
-   
-         IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
-
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:PARDISO: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:PARDISO: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
-#endif
-
-      ! If mesh contains obstructions, then the grid is structured and the FFT from Crayfishpak is used 
-       
-      CASE (.FALSE.)
-
-         FFT => L%FFT
-
-         FFT%PRHS = 0.0_EB
-         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-         DO IC = 1, G%NC
-            FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = MGM%B(IC)
-         ENDDO
-         !$OMP END PARALLEL DO
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%B:', G%NC, SIZE(MGM%B)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%X:', G%NC, SIZE(MGM%X)
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BXS:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BXF
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BXF:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BYS
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BYS:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BYF
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BYF:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BZS
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BZS:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BZF
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, MGM%BZF:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') FFT%HX
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, FFT%HX:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') FFT%PRHS
-WRITE(MSG%LU_DEBUG,*) 'MGM_OPTIMIZED: FFT: PRE, FFT%PRHS:'
-#endif
-         IF (TWO_D) THEN
-            CALL H2CZSS (MGM%BXS,  MGM%BXF, MGM%BZS, MGM%BZF, FFT%ITRN, &
-                         FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
-         ELSE
-            CALL H3CZSS (MGM%BXS,  MGM%BXF, MGM%BYS, MGM%BYF, MGM%BZS, MGM%BZF, FFT%ITRN, FFT%JTRN, &
-                         FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
-         ENDIF
-
-         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-         DO IC = 1, G%NC
-            MGM%X(IC) = FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) 
-         ENDDO
-         !$OMP END PARALLEL DO 
-
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:FFT: FINAL B'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
-   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_OPTIMIZED:FFT: FINAL X'
-   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
-#endif
-
-   END SELECT
-
-ENDDO MESHES_LOOP
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-END SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Setup environment for multigrid method
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_STACK_MULTIGRID_ENVIRONMENT
+SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_FFTO
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_CLUSTER, SCARC_SETUP_PARDISO
@@ -1067,76 +177,50 @@ USE SCARC_MKL, ONLY: SCARC_SETUP_CLUSTER, SCARC_SETUP_PARDISO
 INTEGER :: NSTACK
 
 NSTACK = NSCARC_STACK_ROOT
-STACK(NSTACK)%SOLVER => MAIN_GMG
+STACK(NSTACK)%SOLVER => POISSON_SOLVER
 CALL SCARC_SETUP_STACK_MULTIGRID(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MAX)
 
 NSTACK = NSTACK + 1
+STACK(NSTACK)%SOLVER => POISSON_SMOOTH
 SELECT CASE(TYPE_SMOOTH)
 
-   ! Jacobi-smoothing 
-
-   CASE (NSCARC_RELAX_JAC)
-      STACK(NSTACK)%SOLVER => SMOOTH_JAC
+   CASE (NSCARC_RELAX_JAC)                                       ! Jacobi smoothing
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! SSOR-smoothing 
-
-   CASE (NSCARC_RELAX_SSOR)
-      STACK(NSTACK)%SOLVER => SMOOTH_SSOR
+   CASE (NSCARC_RELAX_SSOR)                                      ! SSOR smoothing
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
 
-   ! Jacobi-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MJAC)
-      STACK(NSTACK)%SOLVER => SMOOTH_MJAC
+   CASE (NSCARC_RELAX_MJAC)                                      ! Jacobi smoothing in matrix form
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MJAC(NLEVEL_MIN, NLEVEL_MAX)
 
-    ! GS-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MGS)
-      STACK(NSTACK)%SOLVER => SMOOTH_MGS
+   CASE (NSCARC_RELAX_MGS)                                       ! GS smoothing in matrix form
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SGS-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSGS)
-      STACK(NSTACK)%SOLVER => SMOOTH_MSGS
+   CASE (NSCARC_RELAX_MSGS)                                      ! SGS smoothing in matrix form
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSGS(NLEVEL_MIN, NLEVEL_MAX)
 
-   ! SOR-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSOR)
-      STACK(NSTACK)%SOLVER => SMOOTH_MSOR
+   CASE (NSCARC_RELAX_MSOR)                                      ! SOR smoothing in matrix form
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! SSOR-preconditioning in matrix form 
-
-   CASE (NSCARC_RELAX_MSSOR)
-      STACK(NSTACK)%SOLVER => SMOOTH_MSSOR
+   CASE (NSCARC_RELAX_MSSOR)                                     ! SSOR smoothing in matrix form
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_MSSOR(NLEVEL_MIN, NLEVEL_MAX, NSTACK)
 
-   ! FFT-smoothing 
-
-   CASE (NSCARC_RELAX_FFT)
-      STACK(NSTACK)%SOLVER => SMOOTH_FFT
+   CASE (NSCARC_RELAX_FFT)                                       ! FFT smoothing
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MAX-1)
 
 #ifdef WITH_MKL
-   ! Smoothing by LU-decomposition
-
-   CASE (NSCARC_RELAX_MKL)
+   CASE (NSCARC_RELAX_MKL)                                       ! IntelMKL smoothing
       CALL SCARC_SETUP_STACK_SMOOTH(NSTACK, TYPE_SCOPE(2))
-      STACK(NSTACK)%SOLVER => SMOOTH_MKL
       SELECT CASE(TYPE_SCOPE(2))
-         CASE (NSCARC_SCOPE_GLOBAL)                                     ! Globally acting - global CLUSTER_SPARSE_SOLVER on MKL
+         CASE (NSCARC_SCOPE_GLOBAL)                              ! Globally acting:  Use global CLUSTER_SPARSE_SOLVER
             CALL SCARC_SETUP_CLUSTER(NLEVEL_MIN, NLEVEL_MIN)
-         CASE (NSCARC_SCOPE_LOCAL)                                      ! Locally acting  - local PARDISO solvers based on MKL
+         CASE (NSCARC_SCOPE_LOCAL)                               ! Locally acting: Use local PARDISO solvers
             CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
       END SELECT
 #endif
@@ -1152,8 +236,155 @@ CALL SCARC_SETUP_COARSE_SOLVER(NSCARC_STAGE_ONE, NSCARC_SCOPE_GLOBAL, NSTACK, NL
 
 N_STACK_TOTAL = NSTACK
 
-END SUBROUTINE SCARC_SETUP_STACK_MULTIGRID_ENVIRONMENT
+END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Setup environment needed for the McKenney-Greengard-Mayo method to solve the overall Poisson problem
+! This includes
+!  - environment for structured global solver in pass 1 of MGM (global structured Krylov & preconditioners)
+!  - if required, environment for unstructured global solver in pass 1 of MGM (global unstructured Krylov & preconditioners)
+!  - environment for unstructured local solvers in pass 2 of MGM
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
+USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM, SCARC_MGM_CHECK_OBSTRUCTIONS
+#ifdef WITH_MKL
+USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
+#endif
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_MGM_PASS2
+USE SCARC_MATRICES, ONLY: SCARC_SETUP_MATRIX_MKL
+INTEGER :: NSTACK, NM, TYPE_MATRIX_SAVE
+
+! Allocate workspace and define variables for the different boundary settings in MGM-method
+
+CALL SCARC_SETUP_MGM (NLEVEL_MIN)
+
+! ------- First pass: Setup solver for inhomogeneous Poisson global problem on structured discretization
+!         By default, a global CG-method with FFT-preconditioning is used
+!         Goal is, to use PFFT or CG with PFFT-preconditioning later
+
+TYPE_PRECON = NSCARC_RELAX_FFT
+CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_STRUCTURED)
+
+NSTACK = NSCARC_STACK_ROOT
+STACK(NSTACK)%SOLVER => POISSON_SOLVER_STRUCTURED
+CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
+
+NSTACK = NSTACK + 1
+STACK(NSTACK)%SOLVER => POISSON_PRECON_STRUCTURED
+CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
+CALL SCARC_SETUP_FFT(NLEVEL_MIN, NLEVEL_MIN)
+
+! If exact initialization or comparison versus exact solution (that is, the difference USCARC-SCARC) is required,
+! the global unstructured Poisson matrix was already assembled in SETUP_SYSTEMS, 
+! thus also initialize the related preconditioners 
+
+TYPE_MATRIX_SAVE = TYPE_MATRIX             
+TYPE_MATRIX = NSCARC_MATRIX_COMPACT        
+CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+
+IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
+
+   NSTACK = NSTACK + 1
+   STACK(NSTACK)%SOLVER => POISSON_SOLVER_UNSTRUCTURED
+   CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
+
+   ! If IntelMKL-library is available, use local PARDISO preconditioners, otherwise local SSOR preconditioners 
+   ! for the global unstructured Poisson problem 
+
+   NSTACK = NSTACK + 1
+   STACK(NSTACK)%SOLVER => POISSON_PRECON_UNSTRUCTURED
+#ifdef WITH_MKL
+   TYPE_PRECON = NSCARC_RELAX_MKL
+   CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
+   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)        
+#else
+   TYPE_PRECON = NSCARC_RELAX_SSOR
+   CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
+   CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
+#endif
+      
+ENDIF
+
+! ------- Second pass: Setup solvers for local homogeneous Laplace problems on unstructured discretization
+!         Different local solvers are available (CG, own LU, own permuted LU, PARDISO, even FFT if mesh happens to be structured)
+
+TYPE_MATRIX = NSCARC_MATRIX_COMPACT
+CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+
+NSTACK = NSTACK + 1
+STACK(NSTACK)%SOLVER => LAPLACE_SOLVER_UNSTRUCTURED
+N_STACK_LAPLACE = NSTACK
+
+CALL SCARC_MGM_CHECK_OBSTRUCTIONS (NLEVEL_MIN)
+#ifdef WITH_MKL
+TYPE_MKL (NLEVEL_MIN) = NSCARC_MKL_LOCAL
+#endif
+
+SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
+
+   ! Setup CG-solvers for the solution of the local Laplace problems 
+   ! If IntelMKL is available use PARDISO preconditioners by default, otherwise SSOR
+
+   CASE (NSCARC_MGM_LAPLACE_CG) 
+
+      CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_MGM, NSCARC_SCOPE_LOCAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
+   
+      NSTACK = NSTACK + 1
+      STACK(NSTACK)%SOLVER => LAPLACE_PRECON_UNSTRUCTURED
+#ifdef WITH_MKL
+      TYPE_PRECON = NSCARC_RELAX_MKL
+      CALL SCARC_SETUP_STACK_MGM (NSTACK, NSCARC_SCOPE_LOCAL)
+      CALL SCARC_SETUP_PARDISO (NLEVEL_MIN, NLEVEL_MIN)        
+#else
+      TYPE_PRECON = NSCARC_RELAX_SSOR
+      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
+      CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
+#endif
+
+   ! Setup local IntelMKL-PARDISO solvers 
+
+   CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
+      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
+
+#ifdef WITH_MKL
+
+   ! Setup local IntelMKL-PARDISO solvers 
+
+   CASE (NSCARC_MGM_LAPLACE_PARDISO)
+
+      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
+      ENDDO
+
+   ! Setup mixture of local Crayfishpak-FFT or IntelMKL-PARDISO solvers, depending on wether the mesh is structured or not
+
+   CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
+
+      CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)
+         IF (MGM%HAS_OBSTRUCTIONS) THEN
+            CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
+         ELSE
+            CALL SCARC_SETUP_MGM_PASS2 (NM, NLEVEL_MIN)
+         ENDIF
+
+      ENDDO
+#endif
+
+END SELECT SELECT_LAPLACE_SOLVER
+
+TYPE_MATRIX = TYPE_MATRIX_SAVE
+
+! Store final number of stacks
+
+N_STACK_TOTAL = NSTACK       
+
+END SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Store Jacobi preconditioner in matrix form
@@ -1177,13 +408,13 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       SELECT CASE(TYPE_MATRIX)
          CASE (NSCARC_MATRIX_COMPACT)
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, G%NC, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, G%NC, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
             DO IC = 1, G%NC
                A%RELAX(IC) = 1.0_EB/A%VAL(A%ROW(IC))
             ENDDO 
          CASE (NSCARC_MATRIX_BANDWISE)
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL1(AB%RELAXD, 1, AB%N_DIAG,  NSCARC_INIT_ZERO, 'G%POISSON%RELAXD', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (AB%RELAXD, 1, AB%N_DIAG,  NSCARC_INIT_ZERO, 'G%POISSON%RELAXD', CROUTINE)
             DO IC = 1, G%NC
                AB%RELAXD(IC) = 1.0_EB/AB%VAL(IC, AB%POS(0))
             ENDDO 
@@ -1223,7 +454,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_MATRIX_COMPACT)
 
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
 
             DO IC = 1, G%NC
                DO IPTR = A%ROW(IC), A%ROW(IC+1)-1
@@ -1239,7 +470,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_MATRIX_BANDWISE)
 
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL2(AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL2 (AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
             WRITE(*,*) 'SCARC_SETUP_MGS: BANDWISE: NOT FINISHED YET'
 
       END SELECT
@@ -1277,7 +508,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_MATRIX_COMPACT)
 
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
             A%RELAX = A%VAL
 
             DO IC = 1, G%NC
@@ -1293,7 +524,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_MATRIX_BANDWISE)
 
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL2(AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%AB%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL2 (AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%AB%RELAX', CROUTINE)
             AB%RELAX = AB%VAL
             DO IOR0 = 3, 1, -1
                IS = AB%TARGET(IOR0)
@@ -1341,7 +572,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_MATRIX_COMPACT)
 
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
       
             DO IC = 1, G%NC
       
@@ -1363,13 +594,12 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       
             ENDDO 
 
- 
          ! ---------- Matrix in bandwise storage technique
  
          CASE (NSCARC_MATRIX_BANDWISE)
 
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL2(AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL2 (AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
             WRITE(*,*) 'SCARC_SETUP_MSOR: BANDWISE: NOT FINISHED YET'
       
       END SELECT
@@ -1416,13 +646,12 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       SELECT CASE(TYPE_MATRIX)
 
- 
          ! ---------- Matrix in compact storage technique
  
          CASE (NSCARC_MATRIX_COMPACT)
 
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
       
             DO IC = 1, G%NC
       
@@ -1439,13 +668,12 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
             ENDDO 
 
- 
          ! ---------- Matrix in bandwise storage technique
  
          CASE (NSCARC_MATRIX_BANDWISE)
 
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL2(AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL2 (AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
 
             IF (TWO_D) THEN
                INCR = -2
@@ -1514,7 +742,7 @@ WRITE(MSG%LU_DEBUG,*) '===============>> SETTING UP LU: ', NM, NL
 #endif
 
       A => G%POISSON
-      CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
       A%RELAX = A%VAL
     
       CELL_LOOP: DO IC = 2, G%NC
@@ -1560,6 +788,7 @@ ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_LU
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize LU decomposition of Poisson matrix
 ! L- and U-parts are stored in the same array, diagonal elements of L are supposed to be 1
@@ -1587,13 +816,12 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       SELECT CASE(TYPE_MATRIX)
 
- 
          ! ---------- Matrix in compact storage technique
  
          CASE (NSCARC_MATRIX_COMPACT)
 
             A => G%POISSON
-            CALL SCARC_ALLOCATE_REAL1(A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL1 (A%RELAX, 1, A%N_VAL, NSCARC_INIT_ZERO, 'G%POISSON%RELAX', CROUTINE)
             A%RELAX = A%VAL
       
             CELL_LOOP: DO IC = 2, G%NC
@@ -1625,14 +853,13 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       
                ENDDO COLUMN_LOOP
             ENDDO CELL_LOOP
-      
  
          ! ---------- Matrix in bandwise storage technique
  
          CASE (NSCARC_MATRIX_BANDWISE)
 
             AB => G%POISSONB
-            CALL SCARC_ALLOCATE_REAL2(AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
+            CALL SCARC_ALLOCATE_REAL2 (AB%RELAX, 1, AB%N_DIAG, 1, AB%N_STENCIL, NSCARC_INIT_ZERO, 'G%POISSONB%RELAX', CROUTINE)
             AB%RELAX = AB%VAL
       
             CELL_BANDWISE_LOOP: DO IC = 2, G%NC
@@ -1693,45 +920,31 @@ INTEGER, INTENT(INOUT) :: NSTACK
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP COARSE_SOLVER: START'
 #endif
+STACK(NSTACK)%SOLVER => COARSE_SOLVER         
+
 SELECT_COARSE: SELECT CASE (TYPE_COARSE)
 
    ! -------------- CG-method is used as iterative coarse grid solver
+
    CASE (NSCARC_COARSE_ITERATIVE)
 
-      ! initialize current stack position as CG-method
-      STACK(NSTACK)%SOLVER => COARSE_KRYLOV
       CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 
-      ! and next stack position as its SSOR-preconditioner
       NSTACK = NSTACK + 1
       TYPE_PRECON = NSCARC_RELAX_SSOR
-      STACK(NSTACK)%SOLVER => PRECON_SSOR
+      STACK(NSTACK)%SOLVER => COARSE_PRECON
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCOPE)
 
    ! -------------- LU-decomposition (from MKL) for coarse Poisson matrix is used as direct coarse grid solver
+
 #ifdef WITH_MKL 
    CASE (NSCARC_COARSE_DIRECT)
 
-      ! Global scope in the multi-mesh case:
-      ! initialize current stack position as global CLUSTER_SPARSE_SOLVER
-      !IF (NSCOPE == NSCARC_SCOPE_GLOBAL .AND. NMESHES > 1) THEN
+      CALL SCARC_SETUP_MKL(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
       IF (NMESHES > 1) THEN
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'SETUP COARSE_SOLVER: CLUSTER'
-#endif
-         STACK(NSTACK)%SOLVER => COARSE_CLUSTER
-         CALL SCARC_SETUP_MKL(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
-         CALL SCARC_SETUP_CLUSTER(NLMIN, NLMAX)
-
-      ! Local scope:
-      ! initialize current stack position as PARDISO solver
+         CALL SCARC_SETUP_CLUSTER(NLMIN, NLMAX)                ! Use CLUSTER_SPARSE_SOLVER from IntelMKL
       ELSE
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'SETUP COARSE_SOLVER: PARDISO'
-#endif
-         STACK(NSTACK)%SOLVER => COARSE_PARDISO
-         CALL SCARC_SETUP_MKL(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
-         CALL SCARC_SETUP_PARDISO(NLMIN, NLMAX)
+         CALL SCARC_SETUP_PARDISO(NLMIN, NLMAX)                ! Use PARDISO solver from IntelMKL
       ENDIF
 #endif
 
@@ -1760,493 +973,18 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       ST => SCARC(NM)%LEVEL(NL)%STAGE(NSTAGE)
 
-      CALL SCARC_ALLOCATE_REAL1(ST%X, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%X', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(ST%B, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%B', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(ST%V, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Q', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(ST%R, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%W', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(ST%Y, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Y', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1(ST%Z, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Z', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%X, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%X', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%B, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%B', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%V, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Q', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%R, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%W', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%Y, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Y', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (ST%Z, 1, G%NCE, NSCARC_INIT_ZERO, 'ST%Z', CROUTINE)
 
    ENDDO LEVEL_LOOP
 ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_INTERPOLATION
 
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform geometric multigrid method based on global possion-matrix
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NLEVEL)
-USE SCARC_UTILITIES, ONLY: SCARC_CYCLING_CONTROL
-USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-INTEGER :: NS, NP, NL
-INTEGER :: NSTATE, ICYCLE
-REAL (EB) :: TNOW, TNOW_COARSE
-
-TNOW = CURRENT_TIME()
-ITE_MG = 0
-
-! Store current and parent stack position and current level
-
-TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
-NS = NSTACK
-NP = NPARENT
-NL = NLEVEL
-
- 
-! ---------- Initialization:
-!   - Save SETTING (in case that subsequent solvers with different SETTING are called)
-!   - Define parameters for current scope (note: NL denotes the finest level)
-!   - Initialize solution, right hand side vector
-  
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-  
-! ---------- Compute initial defect:  
-!            RESIN := || B - A*X ||
-!   - Initialize cycle counts for MG-iteration
-!   - Perform initial matrix-vector product on finest level
-!   - calculate norm of initial residual on finest level
-  
-#ifdef WITH_SCARC_DEBUG
-!CALL SCARC_PRESET_VECTOR(B, NL)
-CALL SCARC_DEBUG_LEVEL (X, 'MG INIT: X', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'MG INIT: B', NL)
-#endif
-
-CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                  !  V := A*X
-CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !  V := B - V
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (V, 'MG INIT: V', NL)
-#endif
-
-RES    = SCARC_L2NORM (V, NL)                                         !  RESIN := ||V||
-RESIN  = RES
-NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                          !  RES < TOL already ??
-
-IF (TYPE_SOLVER == NSCARC_SOLVER_PRECON .AND. RESIN <= 1E-6_EB) THEN
-   CALL SCARC_VECTOR_SUM (V, X, 1.0_EB, 1.0_EB, NL)                    !  x := omega * v + x
-   CALL SCARC_UPDATE_PRECONDITIONER(NLEVEL_MIN)
-   CALL SCARC_RELEASE_SCOPE(NS, NP)
-   RETURN
-ENDIF
-
-ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_SETUP, NL)
-
-  
-! ---------- Perform multigrid-looping (start each iteration on finest level)
-  
-MULTIGRID_LOOP: DO ITE = 1, NIT
-
-   CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
-
-   NL = NLEVEL_MIN
-   ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_RESET, NL)
-
-   CYCLE_LOOP: DO WHILE (ICYCLE /= NSCARC_CYCLING_EXIT)
-
-      ! Presmoothing  (smoothing/restriction till coarsest level is reached)
-      ! initial and final residual are passed via vector V by default
- 
-      PRESMOOTHING_LOOP: DO WHILE (NL < NLEVEL_MAX)
-         !IF (ITE /= 1) CALL SCARC_SMOOTHER (NSCARC_CYCLING_PRESMOOTH, NS+1, NS, NL)         ! D_fine   := Smooth(defect)
-         CALL SCARC_SMOOTHER (NSCARC_CYCLING_PRESMOOTH, NS+1, NS, NL)         ! D_fine   := Smooth(defect)
-         CALL SCARC_RESTRICTION (V, B, NL, NL+1)                              ! B_coarse := Rest(D_fine)
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (V, 'MG PRE: V', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'MG PRE: B', NL+1)
-#endif
-         CALL SCARC_VECTOR_CLEAR (X, NL+1)                                    ! use zero initial guess on coarse level
-         NL = NL + 1                                                          ! set coarser level
-      ENDDO PRESMOOTHING_LOOP
-
- 
-      ! Coarse grid solver
- 
-      TNOW_COARSE = CURRENT_TIME()
-      CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)                          ! X_coarse := exact_sol(.)
-      CPU(MY_RANK)%COARSE =CPU(MY_RANK)%COARSE+CURRENT_TIME()-TNOW_COARSE
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '==================> AFTER SCARC_METHOD_COARSE'
-CALL SCARC_DEBUG_LEVEL (X, 'MG COA: X', NLEVEL_MAX)
-CALL SCARC_DEBUG_LEVEL (B, 'MG COA: B', NLEVEL_MAX)
-#endif
- 
-      ! Postsmoothing (smoothing/restriction till finest level is reached again)
- 
-      POSTSMOOTHING_LOOP: DO WHILE (NL > NLEVEL_MIN)
-         NL=NL-1
-         CALL SCARC_PROLONGATION (X, V, NL+1, NL)                             ! V_fine := Prol(X_coarse)
-         CALL SCARC_VECTOR_SUM (V, X, 1.0_EB, 1.0_EB, NL)                     ! X_fine := V_fine + X_fine
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (V, 'MG after PROL: V', NL)
-CALL SCARC_DEBUG_LEVEL (X, 'MG new X', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'MG before POST: B', NL)
-#endif
-         CALL SCARC_SMOOTHER (NSCARC_CYCLING_POSTSMOOTH, NS+1, NS, NL)        ! V_fine := Smooth(defect)
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (V, 'MG POST: V', NL)
-CALL SCARC_DEBUG_LEVEL (X, 'MG POST: X', NL)
-#endif
-         ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_PROCEED, NL)           ! perform requested cycle
-         IF (ICYCLE /= NSCARC_CYCLING_POSTSMOOTH) CYCLE CYCLE_LOOP
-      ENDDO POSTSMOOTHING_LOOP
-
-   ENDDO CYCLE_LOOP
-
-   IF (NL /= NLEVEL_MIN) CALL SCARC_ERROR(NSCARC_ERROR_MULTIGRID_LEVEL, SCARC_NONE, NL)
-
- 
-   ! Compute norm of new residual on finest level and  leave loop correspondingly
- 
-   CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                       ! V := A*X
-   CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                          ! V := F - V
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'MG ITE X', NL)
-CALL SCARC_DEBUG_LEVEL (V, 'MG RES V', NL)
-#endif
-   RES = SCARC_L2NORM (V, NL)                                                 ! RES := ||V||
-   NSTATE = SCARC_CONVERGENCE_STATE(0, NS, NL)                                ! convergence ?
-   IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT MULTIGRID_LOOP
-
-ENDDO MULTIGRID_LOOP
-
-  
-! ---------- Determine convergence rate and print corresponding information:
-! In case of MG as main solver:
-!   - Transfer ScaRC solution vector X to FDS pressure vector
-!   - Set ghost cell values along external boundaries
-!   - Exchange values along internal boundaries (consistency!)
-  
-CALL SCARC_CONVERGENCE_RATE(NSTATE, NS, NL)
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'MG method: FINAL X', NL)
-#endif
-
-SELECT CASE (TYPE_SOLVER)
-   CASE (NSCARC_SOLVER_MAIN)
-      CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
-      CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-#ifdef WITH_SCARC_POSTPROCESSING
-      IF (SCARC_DUMP) CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
-#endif
-   CASE (NSCARC_SOLVER_PRECON)
-      CALL SCARC_UPDATE_PRECONDITIONER(NLEVEL_MIN)
-END SELECT
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-
-END SUBROUTINE SCARC_METHOD_MULTIGRID
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform requested MKL solver (global/local)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MKL(NSTACK, NPARENT, NLEVEL)
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-
-#ifdef WITH_MKL
-SELECT_MKL: SELECT CASE (TYPE_MKL(0))
-   CASE (NSCARC_MKL_GLOBAL)
-      CALL SCARC_METHOD_CLUSTER(NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
-   CASE (NSCARC_MKL_LOCAL)
-      CALL SCARC_METHOD_PARDISO(NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
-END SELECT SELECT_MKL
-#else
-WRITE(*,*) 'MKL not defined on stack position ', NSTACK, ' for parent ', NPARENT, ' on level ', NLEVEL
-#endif
-
-END SUBROUTINE SCARC_METHOD_MKL
-
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform requested coarse grid solver (iterative/direct)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_COARSE(NSTACK, NPARENT, NLEVEL)
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-
-SELECT CASE (TYPE_COARSE)
-
-   CASE (NSCARC_COARSE_ITERATIVE)
-      CALL SCARC_METHOD_KRYLOV (NSTACK, NPARENT, NLEVEL)
-
-   CASE (NSCARC_COARSE_DIRECT)
-#ifdef WITH_MKL
-      !IF (STACK(NPARENT)%SOLVER%TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. NMESHES > 1) THEN
-      IF (NMESHES > 1) THEN
-         CALL SCARC_METHOD_CLUSTER (NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
-      ELSE
-         CALL SCARC_METHOD_PARDISO (NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
-      ENDIF
-#else
-      CALL SCARC_ERROR(NSCARC_ERROR_DIRECT_NOMKL, SCARC_NONE, NLEVEL)
-#endif
-
-END SELECT
-
-END SUBROUTINE SCARC_METHOD_COARSE
-
-! --------------------------------------------------------------------------------------------------------------------
-!> \brief Perform preceding FFT method to improve start solution for ScaRC
-! --------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_FFT
-USE MESH_POINTERS
-USE POIS, ONLY: H2CZSS, H3CZSS
-REAL(EB), POINTER, DIMENSION(:,:,:) :: HP
-INTEGER :: NM, I, J, K
-LOGICAL :: WITH_BDRY = .FALSE.
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   !CALL POINT_TO_MESH(NM)
-   
-   IF (PREDICTOR) THEN
-      HP => H
-   ELSE
-      HP => HS
-   ENDIF
-   
-   ! Call the Poisson solver
- 
-   IF (.NOT.TWO_D) CALL H3CZSS(BXS,BXF,BYS,BYF,BZS,BZF,ITRN,JTRN,PRHS,POIS_PTB,SAVE1,WORK,HX)
-   IF (TWO_D .AND. .NOT.CYLINDRICAL) CALL H2CZSS(BXS,BXF,BZS,BZF,ITRN,PRHS,POIS_PTB,SAVE1,WORK,HX)
-   
-   DO K=1,KBAR
-     DO J=1,JBAR
-        DO I=1,IBAR
-            HP(I,J,K) = PRHS(I,J,K)
-        ENDDO
-      ENDDO
-   ENDDO
-   
-   ! Apply boundary conditions to H
- 
-   IF (WITH_BDRY) THEN
-      DO K=1,KBAR
-         DO J=1,JBAR
-            IF (LBC==3 .OR. LBC==4)             HP(0,J,K)    = HP(1,J,K)    - DXI*BXS(J,K)
-            IF (LBC==3 .OR. LBC==2 .OR. LBC==6) HP(IBP1,J,K) = HP(IBAR,J,K) + DXI*BXF(J,K)
-            IF (LBC==1 .OR. LBC==2)             HP(0,J,K)    =-HP(1,J,K)    + 2._EB*BXS(J,K)
-            IF (LBC==1 .OR. LBC==4 .OR. LBC==5) HP(IBP1,J,K) =-HP(IBAR,J,K) + 2._EB*BXF(J,K)
-            IF (LBC==5 .OR. LBC==6)             HP(0,J,K)    = HP(1,J,K)
-            IF (LBC==0) THEN
-               HP(0,J,K) = HP(IBAR,J,K)
-               HP(IBP1,J,K) = HP(1,J,K)
-            ENDIF
-         ENDDO
-      ENDDO
-      
-      DO K=1,KBAR
-         DO I=1,IBAR
-            IF (MBC==3 .OR. MBC==4) HP(I,0,K)    = HP(I,1,K)    - DETA*BYS(I,K)
-            IF (MBC==3 .OR. MBC==2) HP(I,JBP1,K) = HP(I,JBAR,K) + DETA*BYF(I,K)
-            IF (MBC==1 .OR. MBC==2) HP(I,0,K)    =-HP(I,1,K)    + 2._EB*BYS(I,K)
-            IF (MBC==1 .OR. MBC==4) HP(I,JBP1,K) =-HP(I,JBAR,K) + 2._EB*BYF(I,K)
-            IF (MBC==0) THEN
-               HP(I,0,K) = HP(I,JBAR,K)
-               HP(I,JBP1,K) = HP(I,1,K)
-            ENDIF
-         ENDDO
-      ENDDO
-      
-      DO J=1,JBAR
-         DO I=1,IBAR
-            IF (NBC==3 .OR. NBC==4)  HP(I,J,0)    = HP(I,J,1)    - DZETA*BZS(I,J)
-            IF (NBC==3 .OR. NBC==2)  HP(I,J,KBP1) = HP(I,J,KBAR) + DZETA*BZF(I,J)
-            IF (NBC==1 .OR. NBC==2)  HP(I,J,0)    =-HP(I,J,1)    + 2._EB*BZS(I,J)
-            IF (NBC==1 .OR. NBC==4)  HP(I,J,KBP1) =-HP(I,J,KBAR) + 2._EB*BZF(I,J)
-            IF (NBC==0) THEN
-               HP(I,J,0) = HP(I,J,KBAR)
-               HP(I,J,KBP1) = HP(I,J,1)
-            ENDIF
-         ENDDO
-      ENDDO
-   ENDIF
-
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_METHOD_FFT
-
-
-
-
-#ifdef WITH_MKL
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform global Pardiso-method based on MKL
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_CLUSTER(NMATRIX, NSTACK, NPARENT, NLEVEL)
-USE SCARC_POINTERS, ONLY: L, G, MKL, V1, V2, AS, V1_FB, V2_FB, &
-                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
-                          SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NMATRIX, NSTACK, NPARENT, NLEVEL
-INTEGER ::  NM, NS, NP, NL
-REAL (EB) :: TNOW
-
-NS = NSTACK
-NP = NPARENT
-NL = NLEVEL
-
-TNOW = CURRENT_TIME()
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
-
-   V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
-   V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
-
-   MKL => L%MKL
-   MKL%PHASE  = 33                                ! only solving
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'G%NC_GLOBAL=', G%NC_GLOBAL
-WRITE(MSG%LU_DEBUG,*) 'CLUSTER, PRE, V1:'
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
-WRITE(MSG%LU_DEBUG,*) 'CLUSTER, PRE, V2:'
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
-CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
-#endif
-
-   IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
-
-      V1_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, B)
-      V2_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, X)
-
-      V1_FB = REAL(V1, FB)
-      V2_FB = 0.0_FB
-      CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                   AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                   MKL%MSGLVL, V1_FB, V2_FB, MPI_COMM_WORLD, MKL%ERROR)
-      V2 = REAL(V2_FB, EB)
-
-   ELSE
-
-      CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                   AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                   MKL%MSGLVL, V1, V2, MPI_COMM_WORLD, MKL%ERROR)
-   ENDIF
-
-   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V1:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') V1
-WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V2:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') V2
-#endif
-ENDDO MESHES_LOOP
-
-CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR_PLAIN, X, NL)
-
-IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) THEN
-   CALL SCARC_UPDATE_MAINCELLS (NLEVEL_MIN)
-   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-ENDIF
-
-CALL SCARC_RELEASE_SCOPE(NS, NP)
-
-END SUBROUTINE SCARC_METHOD_CLUSTER
-#endif
-
-
-#ifdef WITH_MKL
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Perform global Pardiso-method based on MKL
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_PARDISO(NMATRIX, NSTACK, NPARENT, NLEVEL)
-USE SCARC_POINTERS, ONLY: L, G, MKL, AS, V1, V2, V1_FB, V2_FB, &
-                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
-                          SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NMATRIX, NSTACK, NPARENT, NLEVEL
-INTEGER ::  NM, NS, NP, NL
-REAL (EB) :: TNOW
-
-TNOW = CURRENT_TIME()
-
-NS = NSTACK
-NP = NPARENT
-NL = NLEVEL
-
-CALL SCARC_SETUP_SCOPE(NS, NP)
-CALL SCARC_SETUP_WORKSPACE(NS, NL)
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
-
-   V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
-   V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
-
-   MKL => L%MKL
-   MKL%PHASE  = 33         ! only solving
-
-   IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PARDISO SINGLE, PRE, V1:', G%NC, SIZE(V1)
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
-WRITE(MSG%LU_DEBUG,*) 'PARDISO SINGLE, PRE, V2:', G%NC, SIZE(V2)
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
-!CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO')
-#endif
-
-      V1_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, B)
-      V2_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, X)
-
-      V1_FB = REAL(V1, FB)
-      V2_FB = 0.0_FB
-      CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                     AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                     MKL%MSGLVL, V1_FB, V2_FB, MKL%ERROR)
-
-      V2 = REAL(V2_FB, EB)
-
-   ELSE
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PARDISO DOUBLE, PRE, V1:', G%NC, SIZE(V1)
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
-WRITE(MSG%LU_DEBUG,*) 'PARDISO DOUBLE, PRE, V2:', G%NC, SIZE(V2)
-WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
-!CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO')
-#endif
-
-      V2 = 0.0_EB
-      CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                     AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                     MKL%MSGLVL, V1, V2, MKL%ERROR)
-   ENDIF
-
-   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PARDISO, POST, V1:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') V1
-WRITE(MSG%LU_DEBUG,*) 'PARDISO, POST, V2:'
-WRITE(MSG%LU_DEBUG,'(2E14.6)') V2
-#endif
-ENDDO MESHES_LOOP
-
-IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) THEN
-   CALL SCARC_UPDATE_MAINCELLS (NLEVEL_MIN)
-   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-ENDIF
-
-CALL SCARC_RELEASE_SCOPE(NSTACK, NPARENT)
-
-END SUBROUTINE SCARC_METHOD_PARDISO
-#endif
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Set initial solution corresponding to boundary data in BXS, BXF, ...
@@ -2606,6 +1344,1125 @@ END SELECT SELECT_SOLVER_TYPE
 WRITE(MSG%LU_DEBUG,*) 'LEAVING SETUP_WORKSPACE ', NS, NL
 #endif
 END SUBROUTINE SCARC_SETUP_WORKSPACE
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform global conjugate gradient method based on global Possion-matrix
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NLEVEL)
+USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+INTEGER :: NSTATE, NS, NP, NL, NG
+REAL (EB) :: ALPHA0, BETA0, SIGMA0, SIGMA1=0.0_EB
+REAL (EB) :: TNOW, TNOWI
+
+TNOW = CURRENT_TIME()
+ITE_CG = 0
+
+TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
+NG = TYPE_GRID                              ! TODO: Why? Forgot the reason ...
+#ifdef WITH_SCARC_POSTPROCESSING
+IF (SCARC_DUMP .AND. ICYC == 1) THEN
+   CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_MESH)
+   CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_A)
+ENDIF
+#endif
+
+! ---------- Initialization
+!   - Get parameters for current scope (note: NL denotes the finest level)
+!   - Get right hand side vector and clear solution vectors
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+TYPE_GRID = NG                              ! TODO: Why? Forgot the reason ...
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
+WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
+WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
+WRITE(MSG%LU_DEBUG,*) 'NLEVEL  =', NLEVEL
+WRITE(MSG%LU_DEBUG,*) 'TYPE_GRID  =', TYPE_GRID
+WRITE(MSG%LU_DEBUG,*) 'TYPE_MATVEC  =', TYPE_MATVEC
+WRITE(MSG%LU_DEBUG,*) 'TYPE_PRECON  =', TYPE_PRECON
+WRITE(MSG%LU_DEBUG,*) 'ITYPE  =', STACK(NS)%SOLVER%TYPE_RELAX
+WRITE(MSG%LU_DEBUG,*) 'PRES_ON_WHOLE_DOMAIN =', PRES_ON_WHOLE_DOMAIN
+WRITE(MSG%LU_DEBUG,*) 'IS_STRUCTURED = ', IS_STRUCTURED
+WRITE(MSG%LU_DEBUG,*) 'IS_UNSTRUCTURED = ', IS_UNSTRUCTURED
+WRITE(MSG%LU_DEBUG,*) 'IS_LAPLACE = ', IS_LAPLACE
+WRITE(MSG%LU_DEBUG,*) 'IS_POISSON = ', IS_POISSON
+#endif
+
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+!CALL SCARC_PRESET_VECTOR(B, NL)
+
+! In case of pure Neumann boundary conditions setup condensed system
+
+IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
+   CALL SCARC_VECTOR_INIT (X, 0.0_EB, NL)                    
+   CALL SCARC_FILTER_MEANVALUE(B, NL)                       
+   CALL SCARC_SETUP_SYSTEM_CONDENSED (B, NL, 1)            
+ENDIF
+#ifdef WITH_SCARC_POSTPROCESSING
+IF (SCARC_DUMP) CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_B)
+#endif
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT0 ', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
+!CALL SCARC_DEBUG_METHOD('BEGIN OF KRYLOV METHOD ',7)                     
+#endif
+
+! Compute initial residual 
+
+IF (IS_MGM .AND. NSTACK == 3) THEN
+   TYPE_MATVEC = NSCARC_MATVEC_LOCAL
+ELSE
+   TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
+ENDIF
+CALL SCARC_MATVEC_PRODUCT (X, R, NL)                         !  r^0 := A*x^0
+CALL SCARC_VECTOR_SUM     (B, R, -1.0_EB, 1.0_EB, NL)        !  r^0 := r^0 - b     corresponds to  A*x^0 - b
+
+RES    = SCARC_L2NORM (R, NL)                                !  res   := ||r^0||
+RESIN  = RES                                                 !  resin := res
+NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                 !  res < tolerance ?
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X INIT1 ', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT1 ', NL)
+#endif
+
+! Perform initial preconditioning
+
+IF (NSTATE /= NSCARC_STATE_CONV_INITIAL) THEN                !  if no convergence yet, call intial preconditioner
+   CALL SCARC_PRECONDITIONER(NS, NS, NL)                     !  v^0 := Precon(r^0)
+   SIGMA1 = SCARC_SCALAR_PRODUCT(R, V, NL)                   !  SIGMA1 := (r^0,v^0)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
+CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
+WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
+#endif
+   CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
+ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'RESIN, RES, ITE, SIGMA1:', RESIN, RES, ITE, SIGMA1
+CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D INIT1 ', NL)
+#endif
+
+! ---------- Perform conjugate gradient looping
+
+CG_LOOP: DO ITE = 1, NIT
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
+#endif
+   TNOWI = CURRENT_TIME()
+   CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
+
+   !TYPE_MATVEC = NSCARC_MATVEC_LOCAL
+   CALL SCARC_MATVEC_PRODUCT (D, Y, NL)                        !  y^k := A*d^k
+
+   ALPHA0 = SCARC_SCALAR_PRODUCT (D, Y, NL)                    !  ALPHA0 := (d^k,y^k)     corresponds to   (d^k,A*d^k)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
+CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
+#endif
+   ALPHA0 = SIGMA1/ALPHA0                                      !  ALPHA0 := (r^k,v^k)/(d^k,A*d^k)
+
+   CALL SCARC_VECTOR_SUM (D, X, ALPHA0, 1.0_EB, NL)            !  x^{k+1} := x^k + ALPHA0 * d^k
+   CALL SCARC_VECTOR_SUM (Y, R, ALPHA0, 1.0_EB, NL)            !  r^{k+1} := r^k + ALPHA0 * y^k   ~  r^k + ALPHA0 * A * d^k
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'ITE, ITE_CG=', ITE, ITE_CG
+CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE ', NL)
+CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X ITE ', NL)
+CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y ITE ', NL)
+CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE ', NL)
+WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE2 =', ITE
+#endif
+
+   RES = SCARC_L2NORM (R, NL)                                  !  res := ||r^{k+1}||
+   NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                !  res < tolerance ??
+   IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT CG_LOOP
+
+   CALL SCARC_PRECONDITIONER(NS, NS, NL)                       !  v^{k+1} := Precon(r^{k+1})
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'after precon'
+#endif
+
+   SIGMA0 = SCARC_SCALAR_PRODUCT (R, V, NL)                    !  SIGMA0 := (r^{k+1},v^{k+1})
+   BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
+   SIGMA1 = SIGMA0                                             !  save last SIGMA0
+
+   CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
+CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R ITE2 ', NL)
+CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V ITE2 ', NL)
+CALL SCARC_DEBUG_LEVEL (D, 'CG-METHOD: D ITE2 ', NL)
+#endif
+
+   CPU(MY_RANK)%ITERATION=MAX(CPU(MY_RANK)%ITERATION,CURRENT_TIME()-TNOWI)
+
+ENDDO CG_LOOP
+
+! ---------- Determine convergence rate and print corresponding information
+! In case of CG as main solver:
+!   - Transfer ScaRC solution vector X to FDS pressure vector
+!   - Set ghost cell values along external boundaries
+!   - Exchange values along internal boundaries
+
+CALL SCARC_CONVERGENCE_RATE(NSTATE, NS, NL)
+
+IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
+   CALL SCARC_RESTORE_LAST_CELL(X, NL)
+   CALL SCARC_FILTER_MEANVALUE(X, NL)
+ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'CG-METHOD: X FINAL', NL)
+WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
+#endif
+
+IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
+   CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+#ifdef WITH_SCARC_POSTPROCESSING
+   IF (SCARC_DUMP) THEN
+      CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
+      CALL SCARC_DUMP_SYSTEM(NS, NSCARC_DUMP_X)
+   ENDIF
+#endif
+ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_METHOD('END OF KRYLOV METHOD ',6)                     
+#endif
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+
+END SUBROUTINE SCARC_METHOD_KRYLOV
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform McKeeney-Greengard-Mayo (MGM) method
+! Note that the MGM method only works on finest grid level NLEVEL_MIN by default
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MGM(NSTACK)
+USE SCARC_MGM
+USE SCARC_CONVERGENCE, ONLY: NIT_MGM
+INTEGER, INTENT(IN) :: NSTACK
+INTEGER :: ITE_MGM = 0, STATE_MGM
+LOGICAL :: USE_CORRECT_INITIALIZATION
+
+CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: START, TPI=', TOTAL_PRESSURE_ITERATIONS
+#endif
+
+! ------------- Pass 1: Compute global structured inhomogeneous Poisson solution SIP
+
+CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
+CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
+
+CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this structured inhomogeneous Poisson solution in MGM%SIP
+CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
+
+CALL SCARC_MGM_COPY (NSCARC_MGM_SIP_TO_UIP)                 ! Initialize unstructured inhomogeneous Poisson UIP with SIP
+
+CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_POISSON)         ! update velocity based on SIP
+CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_POISSON)  ! compute related velocity error
+#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_MGM_DUMP('SIP',0)
+CALL SCARC_MGM_DUMP('UIP',0)
+#endif
+
+! Determine if correct initialization of interface boundary values is required
+! This is only needed in the multi-mesh case and only in the first or first two (in case of extrapolated BCs) pressure iterations 
+
+USE_CORRECT_INITIALIZATION = NMESHES > 1 .AND. SCARC_MGM_EXACT_INITIAL .AND. &
+                             ((TOTAL_PRESSURE_ITERATIONS <= 1) .OR. &
+                              (TOTAL_PRESSURE_ITERATIONS <= 2  .AND.TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL))
+
+! The upper computation of the structured inhomogeneous Poisson (SIP) solution corresponds to the usual ScaRC solution
+! (To this end the structured Poisson matrix was assembled during the setup phase)
+! If comparison with exact solution is required, also compute UScaRC solution
+! (In this case the unstructured Poisson matrix was also assembled during the setup phase)
+! In both cases inhomogeneous external BC's are used and the ghost cells are set correspondingly (both are global solutions)
+! Compute the difference DScaRC of UScaRC and ScaRC 
+
+IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
+
+   CALL SCARC_MGM_STORE (NSCARC_MGM_SCARC)                                 
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_SCARC)    
+
+   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
+   CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)             ! compute UScaRC with unstructured CG-method 
+
+   CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                
+   CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                   
+
+   CALL SCARC_MGM_DIFF (NSCARC_MGM_USCARC_VS_SCARC)                             ! build difference DSCARC of USCARC and SCARC
+#ifdef WITH_SCARC_DEBUG2
+   CALL SCARC_MGM_DUMP('HS',0)
+   CALL SCARC_MGM_DUMP('HU',0)
+   CALL SCARC_MGM_DUMP('HD',0)
+#endif
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER COMPARISON, TPI=', TOTAL_PRESSURE_ITERATIONS
+   CALL SCARC_DEBUG_METHOD('PART0 in MGM: DIFFERENCE SCARC VS USCARC',5)                 
+#endif
+
+ENDIF
+
+! Only if correct initialization is required:
+! In the very first pressure iteration ever, or - in case of extrapolated MGM BCs - in the two very first pressure iterations 
+!    - use UScaRC solution as unstructured inhomogeneous Poisson UIP solution of this MGM pass 
+!    - use difference DScaRC of UScaRC and ScaRC as unstructured homogeneous Laplace UHL solution of this MGM pass
+! Exchange the interface values of the local Laplace problems for the later BC setting in the next MGM call
+! In this case the requested velocity tolerance has been reached by default here and this MGM call can be left
+! Otherwise: Check if the requested velocity tolerance has already been reached by pass 1
+
+IF (USE_CORRECT_INITIALIZATION) THEN
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: VERY FIRST ITERATION, TPI=', TOTAL_PRESSURE_ITERATIONS, TYPE_MGM_BC
+#endif
+
+   CALL SCARC_MGM_COPY (NSCARC_MGM_USCARC_TO_UIP)        
+   CALL SCARC_MGM_COPY (NSCARC_MGM_DSCARC_TO_UHL)        
+
+   SELECT CASE (TYPE_MGM_BC)
+      CASE (NSCARC_MGM_BC_MEAN)
+          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+      CASE (NSCARC_MGM_BC_EXPOL)
+          CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+          IF (TOTAL_PRESSURE_ITERATIONS == 1) THEN
+             CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)        ! store also second last values for UHL
+             CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)      ! store also second last values for other UHL
+          ENDIF
+      CASE (NSCARC_MGM_BC_TRUE)
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
+   END SELECT
+#ifdef WITH_SCARC_DEBUG2
+   CALL SCARC_MGM_DUMP('UHL',0)
+   CALL SCARC_MGM_DUMP('UIP',0)
+#endif
+ 
+   STATE_MGM = NSCARC_MGM_SUCCESS
+
+ELSE
+
+   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0, 0)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: AFTER POISSON ITE, CAPPA, TPI=', ITE, CAPPA, STATE_MGM, &
+                          TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
+   CALL SCARC_DEBUG_METHOD ('PART1 of MGM: AFTER POISSON SOLUTION', 2)                     
+#endif
+
+ENDIF
+
+! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
+! This is only necessary if the requested accuracy has not already been achieved by pass 1
+
+IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD: REST OF ITERATIONS, TPI=', TOTAL_PRESSURE_ITERATIONS
+#endif
+
+   CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_LAPLACE)
+
+   MGM_CORRECTION_LOOP: DO ITE_MGM = 1, NIT_MGM
+
+      ! Compute local Laplace problems either by (permuted) LU- or CG-method
+      ! In both cases the following is done within the solver:
+      ! - definition of  BC's along obstructions according to MGM-algorithm 
+      ! - definition of  BC's along interfaces by 'MEAN', 'EXTRAPOLATION' or 'TRUE' based on previous Laplace solutions
+
+      SELECT CASE (TYPE_MGM_LAPLACE)
+         CASE (NSCARC_MGM_LAPLACE_CG)
+            CALL SCARC_METHOD_KRYLOV (N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+         CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
+            CALL SCARC_METHOD_MGM_LU(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+         CASE (NSCARC_MGM_LAPLACE_PARDISO)
+            CALL SCARC_METHOD_MGM_PARDISO(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+         CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
+            CALL SCARC_METHOD_MGM_OPTIMIZED(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+      END SELECT
+   
+      CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
+
+      ! Exchange interface data between neighboring meshes according to chosen boundary method
+       
+      SELECT CASE (TYPE_MGM_BC)
+         CASE (NSCARC_MGM_BC_MEAN)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+         CASE (NSCARC_MGM_BC_TRUE)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)
+         CASE (NSCARC_MGM_BC_EXPOL)
+            CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)
+            CALL SCARC_MGM_COPY (NSCARC_MGM_UHL_TO_UHL2)                            ! store second time level
+            CALL SCARC_MGM_COPY (NSCARC_MGM_OUHL_TO_OUHL2)
+      END SELECT
+
+      CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_LAPLACE)
+      CALL SCARC_MGM_STORE (NSCARC_MGM_MERGE)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER LAPLACE, TPI=', TOTAL_PRESSURE_ITERATIONS
+      CALL SCARC_DEBUG_METHOD('PART3 of MGM: AFTER LAPLACE SOLUTION',2)                 
+#endif
+#ifdef WITH_SCARC_DEBUG2
+      CALL SCARC_MGM_DUMP('UHL',ITE_MGM)
+      CALL SCARC_MGM_DUMP('UIP',ITE_MGM)
+#endif
+   
+      ! Get new velocities based on local Laplace solutions and compute corresponding velocity error
+
+      CALL SCARC_MGM_UPDATE_VELOCITY (NSCARC_MGM_LAPLACE)
+      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
+      CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD AFTER VELOCITY-ERROR, TPI=', TOTAL_PRESSURE_ITERATIONS, ITE_MGM, VELOCITY_ERROR_GLOBAL
+      CALL SCARC_DEBUG_METHOD('PART4 of MGM: AFTER MERGE ',2)                            
+#endif
+      IF (SCARC_MGM_CHECK_LAPLACE) THEN
+         CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
+         CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
+      ENDIF
+
+      STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM, 1)
+      IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
+
+      IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_DOUBLE, NSCARC_NONE, NLEVEL_MIN)   ! also 2. layer of interface adjacent cells
+      ELSE 
+         CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_SINGLE, NSCARC_NONE, NLEVEL_MIN)   ! only 1. layer of interface adjacent cells
+      ENDIF
+
+   ENDDO MGM_CORRECTION_LOOP
+      
+   STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM-1, -1)
+   
+ENDIF
+
+! Reset method type (which has been changed during Krylov method) to MGM
+TYPE_METHOD = NSCARC_METHOD_MGM
+CALL SCARC_MGM_STORE (NSCARC_MGM_TERMINATE)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'MGM-METHOD FINISHED: TYPE_METHOD, TPI = ', TYPE_METHOD, TOTAL_PRESSURE_ITERATIONS, VELOCITY_ERROR_GLOBAL
+CALL SCARC_DEBUG_METHOD('PART6 of MGM: LEAVING SCARC ',1)                         
+#endif
+
+END SUBROUTINE SCARC_METHOD_MGM
+
+
+! -------------------------------------------------------------------------------------------------------------
+!> \brief Perform LU-decompositions for local unstructured Laplace matrices 
+! Two different variants are available:
+! - 'LU'     : self-coded LU decomposition 
+! - 'LUPERM' : self-coded LU decomposition with additional grid permutation (non-zero RHS entries at the end)
+! Note: in both cases, L and U are stored as compact matrices
+! -------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MGM_LU(NS, NP, NL)
+USE SCARC_POINTERS, ONLY: L, G, MGM, A, LO, UP, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN):: NS, NP, NL
+INTEGER:: IC, JC, NM
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_MGM (NM, NL)   
+   G => L%UNSTRUCTURED
+
+   A   => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
+   LO  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LOWER)
+   UP  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_UPPER)
+
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
+
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_FW'
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_FW(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== G%PERM_BW'
+   WRITE(MSG%LU_DEBUG, '(16I4)') (G%PERM_BW(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== ST%B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM%Y'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(G%PERM_BW(IC)), IC = 1, G%NC)
+#endif
+#ifdef WITH_SCARC_DEBUG2
+   CALL SCARC_DEBUG_CMATRIX (LO, 'MGM%LOWER', 'METHOD_MGM_LU')
+   CALL SCARC_DEBUG_CMATRIX (UP, 'MGM%UPPER', 'METHOD_MGM_LU')
+#endif
+
+   DO IC = G%NONZERO, G%NC
+      MGM%Y(IC) = MGM%B(G%PERM_BW(IC))
+      DO JC = 1, IC-1
+         MGM%Y(IC) = MGM%Y(IC) - SCARC_EVALUATE_CMATRIX(LO, IC, JC) * MGM%Y(JC)
+      ENDDO
+   ENDDO
+
+   DO IC = G%NC, 1, -1
+      MGM%X(IC) = MGM%Y(IC)
+      DO JC = IC+1, G%NC
+         MGM%X(IC) = MGM%X(IC) - SCARC_EVALUATE_CMATRIX(UP, IC, JC) * MGM%X(JC)
+      ENDDO
+      MGM%X(IC) = MGM%X(IC)/SCARC_EVALUATE_CMATRIX(UP, IC, IC)
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
+#endif
+
+ENDDO
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+END SUBROUTINE SCARC_METHOD_MGM_LU
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform solution of local Laplace problems by IntelMKL Pardiso methods on each mesh
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MGM_PARDISO(NS, NP, NL)
+USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NS, NP, NL
+INTEGER :: NM
+#ifdef WITH_SCARC_DEBUG
+INTEGER :: IC
+#endif
+REAL (EB) :: TNOW
+
+TNOW = CURRENT_TIME()
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
+   G   => L%UNSTRUCTURED
+   AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
+   MKL => L%MKL
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
+WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%B:', G%NC, SIZE(MGM%B)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
+WRITE(MSG%LU_DEBUG,*) 'MGM_PARDISO, PRE, MGM%X:', G%NC, SIZE(MGM%X)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
+#endif
+   MKL%PHASE  = 33                    ! only solving
+   MGM%X = 0.0_EB
+   CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                  AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                  MKL%MSGLVL, MGM%B, MGM%X, MKL%ERROR)
+
+   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PARDISO: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
+#endif
+
+ENDDO MESHES_LOOP
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+END SUBROUTINE SCARC_METHOD_MGM_PARDISO
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform solution of local Laplace problems with Pardiso or FFT, depending on grid type:
+!- if mesh happens to be unstructured : Use IntelMKL Pardiso
+!- if mesh happens to be structured   : Use Crayfishpak FFT
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED (NS, NP, NL)
+USE SCARC_POINTERS, ONLY: L, G, MGM, MKL, FFT, AS, ST, SCARC_POINT_TO_MGM, SCARC_POINT_TO_CMATRIX
+USE POIS, ONLY: H2CZSS, H3CZSS
+INTEGER, INTENT(IN) :: NS, NP, NL
+INTEGER :: NM, IC
+REAL (EB) :: TNOW
+
+TNOW = CURRENT_TIME()
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
+   G => L%UNSTRUCTURED
+   ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
+
+   SELECT CASE (MGM%HAS_OBSTRUCTIONS)
+
+      ! If mesh contains obstructions, then the grid is really unstructured and PARDISO from IntelMKL is used
+       
+      CASE (.TRUE.)
+
+         AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
+      
+         MKL => L%MKL
+         MKL%PHASE  = 33         ! only solving
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: PARDISO, PRE, MGM%B:', G%NC, SIZE(MGM%B)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: PARDISO, PRE, MGM%X:', G%NC, SIZE(MGM%X)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
+CALL SCARC_DEBUG_CMATRIX(AS, 'MGM%LAPLACE_SYM','PARDISO')
+#endif
+         MGM%X = 0.0_EB
+         CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                        AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                        MKL%MSGLVL, MGM%B, MGM%X, MKL%ERROR)
+   
+         IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2:PARDISO: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2:PARDISO: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
+#endif
+
+      ! If mesh contains obstructions, then the grid is structured and the FFT from Crayfishpak is used 
+       
+      CASE (.FALSE.)
+
+         FFT => L%FFT
+
+         FFT%PRHS = 0.0_EB
+         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+         DO IC = 1, G%NC
+            FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = MGM%B(IC)
+         ENDDO
+         !$OMP END PARALLEL DO
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%B:', G%NC, SIZE(MGM%B)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%B
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%X:', G%NC, SIZE(MGM%X)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%X
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BXS:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BXF
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BXF:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BYS
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BYS:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BYF
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BYF:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BZS
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BZS:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') MGM%BZF
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, MGM%BZF:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') FFT%HX
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, FFT%HX:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') FFT%PRHS
+WRITE(MSG%LU_DEBUG,*) 'MGM_PASS2: FFT: PRE, FFT%PRHS:'
+#endif
+         IF (TWO_D) THEN
+            CALL H2CZSS (MGM%BXS,  MGM%BXF, MGM%BZS, MGM%BZF, FFT%ITRN, &
+                         FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
+         ELSE
+            CALL H3CZSS (MGM%BXS,  MGM%BXF, MGM%BYS, MGM%BYF, MGM%BZS, MGM%BZF, FFT%ITRN, FFT%JTRN, &
+                         FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
+         ENDIF
+
+         !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+         DO IC = 1, G%NC
+            MGM%X(IC) = FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) 
+         ENDDO
+         !$OMP END PARALLEL DO 
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2:FFT: FINAL B'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%B(IC), IC = 1, G%NC)
+   WRITE(MSG%LU_DEBUG, *) '=============================== MGM_PASS2:FFT: FINAL X'
+   WRITE(MSG%LU_DEBUG, '(8E14.6)') (MGM%X(IC), IC = 1, G%NC)
+#endif
+
+   END SELECT
+
+ENDDO MESHES_LOOP
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+END SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform geometric multigrid method based on global possion-matrix
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NLEVEL)
+USE SCARC_UTILITIES, ONLY: SCARC_CYCLING_CONTROL
+USE SCARC_GMG, ONLY: SCARC_RESTRICTION, SCARC_PROLONGATION
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+INTEGER :: NS, NP, NL
+INTEGER :: NSTATE, ICYCLE
+REAL (EB) :: TNOW, TNOW_COARSE
+
+TNOW = CURRENT_TIME()
+ITE_MG = 0
+
+! Store current and parent stack position and current level
+
+TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
+
+ 
+! ---------- Initialization:
+!   - Save SETTING (in case that subsequent solvers with different SETTING are called)
+!   - Define parameters for current scope (note: NL denotes the finest level)
+!   - Initialize solution, right hand side vector
+  
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+  
+! ---------- Compute initial defect:  
+!            RESIN := || B - A*X ||
+!   - Initialize cycle counts for MG-iteration
+!   - Perform initial matrix-vector product on finest level
+!   - calculate norm of initial residual on finest level
+  
+#ifdef WITH_SCARC_DEBUG
+!CALL SCARC_PRESET_VECTOR(B, NL)
+CALL SCARC_DEBUG_LEVEL (X, 'MG INIT: X', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'MG INIT: B', NL)
+#endif
+
+CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                  !  V := A*X
+CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !  V := B - V
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'MG INIT: V', NL)
+#endif
+
+RES    = SCARC_L2NORM (V, NL)                                         !  RESIN := ||V||
+RESIN  = RES
+NSTATE = SCARC_CONVERGENCE_STATE (0, NS, NL)                          !  RES < TOL already ??
+
+IF (TYPE_SOLVER == NSCARC_SOLVER_PRECON .AND. RESIN <= 1E-6_EB) THEN
+   CALL SCARC_VECTOR_SUM (V, X, 1.0_EB, 1.0_EB, NL)                    !  x := omega * v + x
+   CALL SCARC_UPDATE_PRECONDITIONER(NLEVEL_MIN)
+   CALL SCARC_RELEASE_SCOPE(NS, NP)
+   RETURN
+ENDIF
+
+ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_SETUP, NL)
+
+  
+! ---------- Perform multigrid-looping (start each iteration on finest level)
+  
+MULTIGRID_LOOP: DO ITE = 1, NIT
+
+   CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
+
+   NL = NLEVEL_MIN
+   ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_RESET, NL)
+
+   CYCLE_LOOP: DO WHILE (ICYCLE /= NSCARC_CYCLING_EXIT)
+
+      ! Presmoothing  (smoothing/restriction till coarsest level is reached)
+      ! initial and final residual are passed via vector V by default
+ 
+      PRESMOOTHING_LOOP: DO WHILE (NL < NLEVEL_MAX)
+         !IF (ITE /= 1) CALL SCARC_SMOOTHER (NSCARC_CYCLING_PRESMOOTH, NS+1, NS, NL)         ! D_fine   := Smooth(defect)
+         CALL SCARC_SMOOTHER (NSCARC_CYCLING_PRESMOOTH, NS+1, NS, NL)         ! D_fine   := Smooth(defect)
+         CALL SCARC_RESTRICTION (V, B, NL, NL+1)                              ! B_coarse := Rest(D_fine)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'MG PRE: V', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'MG PRE: B', NL+1)
+#endif
+         CALL SCARC_VECTOR_CLEAR (X, NL+1)                                    ! use zero initial guess on coarse level
+         NL = NL + 1                                                          ! set coarser level
+      ENDDO PRESMOOTHING_LOOP
+
+ 
+      ! Coarse grid solver
+ 
+      TNOW_COARSE = CURRENT_TIME()
+      CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)                          ! X_coarse := exact_sol(.)
+      CPU(MY_RANK)%COARSE =CPU(MY_RANK)%COARSE+CURRENT_TIME()-TNOW_COARSE
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '==================> AFTER SCARC_METHOD_COARSE'
+CALL SCARC_DEBUG_LEVEL (X, 'MG COA: X', NLEVEL_MAX)
+CALL SCARC_DEBUG_LEVEL (B, 'MG COA: B', NLEVEL_MAX)
+#endif
+ 
+      ! Postsmoothing (smoothing/restriction till finest level is reached again)
+ 
+      POSTSMOOTHING_LOOP: DO WHILE (NL > NLEVEL_MIN)
+         NL=NL-1
+         CALL SCARC_PROLONGATION (X, V, NL+1, NL)                             ! V_fine := Prol(X_coarse)
+         CALL SCARC_VECTOR_SUM (V, X, 1.0_EB, 1.0_EB, NL)                     ! X_fine := V_fine + X_fine
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'MG after PROL: V', NL)
+CALL SCARC_DEBUG_LEVEL (X, 'MG new X', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'MG before POST: B', NL)
+#endif
+         CALL SCARC_SMOOTHER (NSCARC_CYCLING_POSTSMOOTH, NS+1, NS, NL)        ! V_fine := Smooth(defect)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'MG POST: V', NL)
+CALL SCARC_DEBUG_LEVEL (X, 'MG POST: X', NL)
+#endif
+         ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_PROCEED, NL)           ! perform requested cycle
+         IF (ICYCLE /= NSCARC_CYCLING_POSTSMOOTH) CYCLE CYCLE_LOOP
+      ENDDO POSTSMOOTHING_LOOP
+
+   ENDDO CYCLE_LOOP
+
+   IF (NL /= NLEVEL_MIN) CALL SCARC_ERROR(NSCARC_ERROR_MULTIGRID_LEVEL, SCARC_NONE, NL)
+
+ 
+   ! Compute norm of new residual on finest level and  leave loop correspondingly
+ 
+   CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                       ! V := A*X
+   CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                          ! V := F - V
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'MG ITE X', NL)
+CALL SCARC_DEBUG_LEVEL (V, 'MG RES V', NL)
+#endif
+   RES = SCARC_L2NORM (V, NL)                                                 ! RES := ||V||
+   NSTATE = SCARC_CONVERGENCE_STATE(0, NS, NL)                                ! convergence ?
+   IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT MULTIGRID_LOOP
+
+ENDDO MULTIGRID_LOOP
+
+  
+! ---------- Determine convergence rate and print corresponding information:
+! In case of MG as main solver:
+!   - Transfer ScaRC solution vector X to FDS pressure vector
+!   - Set ghost cell values along external boundaries
+!   - Exchange values along internal boundaries (consistency!)
+  
+CALL SCARC_CONVERGENCE_RATE(NSTATE, NS, NL)
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'MG method: FINAL X', NL)
+#endif
+
+SELECT CASE (TYPE_SOLVER)
+   CASE (NSCARC_SOLVER_MAIN)
+      CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+      CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+#ifdef WITH_SCARC_POSTPROCESSING
+      IF (SCARC_DUMP) CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
+#endif
+   CASE (NSCARC_SOLVER_PRECON)
+      CALL SCARC_UPDATE_PRECONDITIONER(NLEVEL_MIN)
+END SELECT
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+
+END SUBROUTINE SCARC_METHOD_MULTIGRID
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform requested MKL solver (global/local)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_MKL(NSTACK, NPARENT, NLEVEL)
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+
+#ifdef WITH_MKL
+SELECT_MKL: SELECT CASE (TYPE_MKL(0))
+   CASE (NSCARC_MKL_GLOBAL)
+      CALL SCARC_METHOD_CLUSTER(NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
+   CASE (NSCARC_MKL_LOCAL)
+      CALL SCARC_METHOD_PARDISO(NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
+END SELECT SELECT_MKL
+#else
+WRITE(*,*) 'MKL not defined on stack position ', NSTACK, ' for parent ', NPARENT, ' on level ', NLEVEL
+#endif
+
+END SUBROUTINE SCARC_METHOD_MKL
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform requested coarse grid solver (iterative/direct)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_COARSE(NSTACK, NPARENT, NLEVEL)
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+
+SELECT CASE (TYPE_COARSE)
+
+   CASE (NSCARC_COARSE_ITERATIVE)
+      CALL SCARC_METHOD_KRYLOV (NSTACK, NPARENT, NLEVEL)
+
+   CASE (NSCARC_COARSE_DIRECT)
+#ifdef WITH_MKL
+      !IF (STACK(NPARENT)%SOLVER%TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. NMESHES > 1) THEN
+      IF (NMESHES > 1) THEN
+         CALL SCARC_METHOD_CLUSTER (NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
+      ELSE
+         CALL SCARC_METHOD_PARDISO (NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
+      ENDIF
+#else
+      CALL SCARC_ERROR(NSCARC_ERROR_DIRECT_NOMKL, SCARC_NONE, NLEVEL)
+#endif
+
+END SELECT
+
+END SUBROUTINE SCARC_METHOD_COARSE
+
+
+! --------------------------------------------------------------------------------------------------------------------
+!> \brief Perform preceding FFT method to improve start solution for ScaRC
+! --------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_FFT
+USE MESH_POINTERS
+USE POIS, ONLY: H2CZSS, H3CZSS
+REAL(EB), POINTER, DIMENSION(:,:,:) :: HP
+INTEGER :: NM, I, J, K
+LOGICAL :: WITH_BDRY = .FALSE.
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   !CALL POINT_TO_MESH(NM)
+   
+   IF (PREDICTOR) THEN
+      HP => H
+   ELSE
+      HP => HS
+   ENDIF
+   
+   ! Call the Poisson solver
+ 
+   IF (.NOT.TWO_D) CALL H3CZSS(BXS,BXF,BYS,BYF,BZS,BZF,ITRN,JTRN,PRHS,POIS_PTB,SAVE1,WORK,HX)
+   IF (TWO_D .AND. .NOT.CYLINDRICAL) CALL H2CZSS(BXS,BXF,BZS,BZF,ITRN,PRHS,POIS_PTB,SAVE1,WORK,HX)
+   
+   DO K=1,KBAR
+     DO J=1,JBAR
+        DO I=1,IBAR
+            HP(I,J,K) = PRHS(I,J,K)
+        ENDDO
+      ENDDO
+   ENDDO
+   
+   ! Apply boundary conditions to H
+ 
+   IF (WITH_BDRY) THEN
+      DO K=1,KBAR
+         DO J=1,JBAR
+            IF (LBC==3 .OR. LBC==4)             HP(0,J,K)    = HP(1,J,K)    - DXI*BXS(J,K)
+            IF (LBC==3 .OR. LBC==2 .OR. LBC==6) HP(IBP1,J,K) = HP(IBAR,J,K) + DXI*BXF(J,K)
+            IF (LBC==1 .OR. LBC==2)             HP(0,J,K)    =-HP(1,J,K)    + 2._EB*BXS(J,K)
+            IF (LBC==1 .OR. LBC==4 .OR. LBC==5) HP(IBP1,J,K) =-HP(IBAR,J,K) + 2._EB*BXF(J,K)
+            IF (LBC==5 .OR. LBC==6)             HP(0,J,K)    = HP(1,J,K)
+            IF (LBC==0) THEN
+               HP(0,J,K) = HP(IBAR,J,K)
+               HP(IBP1,J,K) = HP(1,J,K)
+            ENDIF
+         ENDDO
+      ENDDO
+      
+      DO K=1,KBAR
+         DO I=1,IBAR
+            IF (MBC==3 .OR. MBC==4) HP(I,0,K)    = HP(I,1,K)    - DETA*BYS(I,K)
+            IF (MBC==3 .OR. MBC==2) HP(I,JBP1,K) = HP(I,JBAR,K) + DETA*BYF(I,K)
+            IF (MBC==1 .OR. MBC==2) HP(I,0,K)    =-HP(I,1,K)    + 2._EB*BYS(I,K)
+            IF (MBC==1 .OR. MBC==4) HP(I,JBP1,K) =-HP(I,JBAR,K) + 2._EB*BYF(I,K)
+            IF (MBC==0) THEN
+               HP(I,0,K) = HP(I,JBAR,K)
+               HP(I,JBP1,K) = HP(I,1,K)
+            ENDIF
+         ENDDO
+      ENDDO
+      
+      DO J=1,JBAR
+         DO I=1,IBAR
+            IF (NBC==3 .OR. NBC==4)  HP(I,J,0)    = HP(I,J,1)    - DZETA*BZS(I,J)
+            IF (NBC==3 .OR. NBC==2)  HP(I,J,KBP1) = HP(I,J,KBAR) + DZETA*BZF(I,J)
+            IF (NBC==1 .OR. NBC==2)  HP(I,J,0)    =-HP(I,J,1)    + 2._EB*BZS(I,J)
+            IF (NBC==1 .OR. NBC==4)  HP(I,J,KBP1) =-HP(I,J,KBAR) + 2._EB*BZF(I,J)
+            IF (NBC==0) THEN
+               HP(I,J,0) = HP(I,J,KBAR)
+               HP(I,J,KBP1) = HP(I,J,1)
+            ENDIF
+         ENDDO
+      ENDDO
+   ENDIF
+
+ENDDO MESHES_LOOP
+
+END SUBROUTINE SCARC_METHOD_FFT
+
+
+#ifdef WITH_MKL
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform global Pardiso-method based on MKL
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_CLUSTER(NMATRIX, NSTACK, NPARENT, NLEVEL)
+USE SCARC_POINTERS, ONLY: L, G, MKL, V1, V2, AS, V1_FB, V2_FB, &
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
+                          SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX, NSTACK, NPARENT, NLEVEL
+INTEGER ::  NM, NS, NP, NL
+REAL (EB) :: TNOW
+
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
+
+TNOW = CURRENT_TIME()
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
+
+   V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
+   V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
+
+   MKL => L%MKL
+   MKL%PHASE  = 33                                ! only solving
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'G%NC_GLOBAL=', G%NC_GLOBAL
+WRITE(MSG%LU_DEBUG,*) 'CLUSTER, PRE, V1:'
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'CLUSTER, PRE, V2:'
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
+CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
+#endif
+
+   IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+
+      V1_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, B)
+      V2_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, X)
+
+      V1_FB = REAL(V1, FB)
+      V2_FB = 0.0_FB
+      CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                   AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                   MKL%MSGLVL, V1_FB, V2_FB, MPI_COMM_WORLD, MKL%ERROR)
+      V2 = REAL(V2_FB, EB)
+
+   ELSE
+
+      CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                   AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                   MKL%MSGLVL, V1, V2, MPI_COMM_WORLD, MKL%ERROR)
+   ENDIF
+
+   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V1:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'CLUSTER, POST, V2:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') V2
+#endif
+ENDDO MESHES_LOOP
+
+CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR_PLAIN, X, NL)
+
+IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) THEN
+   CALL SCARC_UPDATE_MAINCELLS (NLEVEL_MIN)
+   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+ENDIF
+
+CALL SCARC_RELEASE_SCOPE(NS, NP)
+
+END SUBROUTINE SCARC_METHOD_CLUSTER
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform global Pardiso-method based on MKL
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_METHOD_PARDISO(NMATRIX, NSTACK, NPARENT, NLEVEL)
+USE SCARC_POINTERS, ONLY: L, G, MKL, AS, V1, V2, V1_FB, V2_FB, &
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_VECTOR_FB, &
+                          SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX, NSTACK, NPARENT, NLEVEL
+INTEGER ::  NM, NS, NP, NL
+REAL (EB) :: TNOW
+
+TNOW = CURRENT_TIME()
+
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
+
+CALL SCARC_SETUP_SCOPE(NS, NP)
+CALL SCARC_SETUP_WORKSPACE(NS, NL)
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   AS => SCARC_POINT_TO_CMATRIX (NMATRIX)
+
+   V1 => SCARC_POINT_TO_VECTOR (NM, NL, B)
+   V2 => SCARC_POINT_TO_VECTOR (NM, NL, X)
+
+   MKL => L%MKL
+   MKL%PHASE  = 33         ! only solving
+
+   IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PARDISO SINGLE, PRE, V1:', G%NC, SIZE(V1)
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'PARDISO SINGLE, PRE, V2:', G%NC, SIZE(V2)
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
+!CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO')
+#endif
+
+      V1_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, B)
+      V2_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, X)
+
+      V1_FB = REAL(V1, FB)
+      V2_FB = 0.0_FB
+      CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                     AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                     MKL%MSGLVL, V1_FB, V2_FB, MKL%ERROR)
+
+      V2 = REAL(V2_FB, EB)
+
+   ELSE
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PARDISO DOUBLE, PRE, V1:', G%NC, SIZE(V1)
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'PARDISO DOUBLE, PRE, V2:', G%NC, SIZE(V2)
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
+!CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO')
+#endif
+
+      V2 = 0.0_EB
+      CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                     AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                     MKL%MSGLVL, V1, V2, MKL%ERROR)
+   ENDIF
+
+   IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, POST, V1:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, POST, V2:'
+WRITE(MSG%LU_DEBUG,'(2E14.6)') V2
+#endif
+ENDDO MESHES_LOOP
+
+IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) THEN
+   CALL SCARC_UPDATE_MAINCELLS (NLEVEL_MIN)
+   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+ENDIF
+
+CALL SCARC_RELEASE_SCOPE(NSTACK, NPARENT)
+
+END SUBROUTINE SCARC_METHOD_PARDISO
+#endif
 
 
 ! ----------------------------------------------------------------------------------------------------------------------
@@ -3360,7 +3217,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
  
    ! --------- Preconditioning by blockwise Geometric Multigrid
  
-   CASE (NSCARC_RELAX_MULTIGRID)
+   CASE (NSCARC_RELAX_GMG)
 
       NP0 = NP               ! Only dummy command until multigrid is used again
       CALL SCARC_METHOD_MULTIGRID (NS, NP, NLEVEL_MIN)
