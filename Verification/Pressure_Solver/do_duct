@@ -1,0 +1,8 @@
+dis 8 duct_flow
+dis 8 duct_flow_amg
+dis 8 duct_flow_mgm_mean_cg
+dis 8 duct_flow_mgm_mean_lu
+dis 8 duct_flow_mgm_mean_luperm
+dis 8 duct_flow_scarc
+dis 8 duct_flow_uglmat
+dis 8 duct_flow_uscarc
