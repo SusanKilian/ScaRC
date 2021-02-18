@@ -3,7 +3,7 @@
 	<Configurations>
 		<Configuration Name="Debug|Win32"/>
 		<Configuration Name="Release|Win32"/>
-		<Configuration Name="Debug|x64" CommandArguments="mgm1.fds" WorkingDirectory="$(ProjectDir)..\..\Verification\MGM"/>
+		<Configuration Name="Debug|x64" CommandArguments="mgm_mean_opt_2mesh.fds" WorkingDirectory="$(ProjectDir)..\..\Verification\Pressure_Solver"/>
 		<Configuration Name="Release|x64"/>
 		<Configuration Name="Release_Qipo|Win32"/>
 		<Configuration Name="Release_Qipo|x64"/></Configurations></VisualStudioUserFile>
