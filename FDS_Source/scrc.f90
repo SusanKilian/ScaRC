@@ -5087,7 +5087,7 @@ USE MPI
 USE SCARC_CONSTANTS
 USE SCARC_TYPES, ONLY: SCARC_GRID_TYPE
 USE SCARC_VARIABLES
-USE SCARC_UTILITIES, ONLY: ARE_FACE_NEIGHBORS, ARE_NEIGHBORS, SET_MATRIX_TYPE, SCARC_SET_GRID_TYPE
+USE SCARC_UTILITIES, ONLY: ARE_FACE_NEIGHBORS, ARE_FACE_NEIGHBORS, SET_MATRIX_TYPE, SCARC_SET_GRID_TYPE
 USE SCARC_TROUBLESHOOTING, ONLY: SCARC_ERROR
 USE SCARC_STORAGE, ONLY: SCARC_ALLOCATE_INT1, SCARC_ALLOCATE_REAL1
 USE SCARC_MESSAGES, ONLY: MSG
@@ -5718,7 +5718,7 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       RNODE = PROCESS(NM)
       SNODE = PROCESS(NOM)
 
-      IF (RNODE==SNODE .OR. .NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE RECEIVE_OMESHES_LOOP
+      IF (RNODE==SNODE .OR. .NOT. ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE RECEIVE_OMESHES_LOOP
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 
       SELECT_EXCHANGE_TYPE: SELECT CASE (NTYPE)
@@ -5744,7 +5744,7 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SEND_PACK_OMESHES_LOOP: DO NOM = 1, NMESHES
 
-      IF (.NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE SEND_PACK_OMESHES_LOOP
+      IF (.NOT. ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE SEND_PACK_OMESHES_LOOP
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 
       SNODE = PROCESS(NOM)
@@ -5780,7 +5780,7 @@ SEND_UNPACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       SNODE  = PROCESS(NM)
       RNODE  = PROCESS(NOM)
 
-      IF (.NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE SEND_UNPACK_OMESHES_LOOP
+      IF (.NOT. ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE SEND_UNPACK_OMESHES_LOOP
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 
       SEND_UNPACK_OMESHES_SELECT: SELECT CASE (NTYPE)
@@ -16599,6 +16599,12 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NL)
 
+   ! Check whether the individual meshes contain obstructions or not
+   ! If the optimized Laplace solver is chosen and there are no obstructions in the mesh, a faster FFT solver 
+   ! can be used for the local MGM Laplace problems instead of the PARDISO solver
+
+   IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) MGM%HAS_OBSTRUCTIONS = .TRUE.
+
    ! Store number of cells and external/internal boundary cells for simpler use in MGM method
 
    MGM%NCS = L%STRUCTURED%NC
@@ -16697,30 +16703,30 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    ENDIF
 
-   ! The following code is still experimental and addresses the solution of the LU method with fully stored matrices
+   ! Allocate workspace for MGM solution, RHS and auxiliary vectors if not solver by CG
 
    IF (TYPE_MGM_LAPLACE /= NSCARC_MGM_LAPLACE_CG) THEN
 
-      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-      CALL SCARC_POINT_TO_MGM(NM, NL)
-      G => L%UNSTRUCTURED
+      CALL SCARC_ALLOCATE_REAL1 (MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
 
+   ENDIF
+
+   ! The following code is still experimental and addresses the solution of the LU method compactly stored matrices
+
+   IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LU .OR. TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
+
+      G => L%UNSTRUCTURED
       LO => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LOWER)
       UP => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_UPPER)
 
-      ! First assume dense settings and reduce later once the real sizes are known, TODO
-       
-      CALL SCARC_SETUP_MGM_PASS2_SIZES(NM, NLEVEL_MIN)
+      CALL SCARC_ALLOCATE_REAL1 (MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
 
+      CALL SCARC_SETUP_MGM_PASS2_SIZES(NM, NLEVEL_MIN)             ! TODO
       CALL SCARC_ALLOCATE_CMATRIX (LO, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'LO', CROUTINE)
       CALL SCARC_ALLOCATE_CMATRIX (UP, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UP', CROUTINE)
-      
-      CALL SCARC_ALLOCATE_REAL1 (MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1 (MGM%Y, 1, G%NC, NSCARC_INIT_ZERO, 'Y', CROUTINE)
-      CALL SCARC_ALLOCATE_REAL1 (MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
-
+   
       CALL SCARC_SETUP_MGM_PASS2(NM, NLEVEL_MIN)
-
    ENDIF
 
 ENDDO
@@ -16858,11 +16864,7 @@ TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
 CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 CALL SCARC_POINT_TO_GRID (NM, NL)
 
-! Use pointers just for better readability
-
-
 A  => G%LAPLACE
-
 
 ! Preset pointers for LM and UM with one-value rows (corresponding to initialization with diagonal element)
 !
@@ -16906,6 +16908,7 @@ ROW_LOOP: DO IC0 = 1, G%NC
       IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX (LO, VAL, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
+   IF (MY_RANK == 0 .AND. MOD(IC0,10) == 0) WRITE(*, *) '==================================> IC0=', IC0, ' IC=',IC
 
 ENDDO ROW_LOOP
 
@@ -17802,23 +17805,6 @@ END SUBROUTINE SCARC_MGM_SET_OBSTRUCTIONS
 
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Check whether the individual meshes contain obstructions or not
-! If there are no obstructions, a faster FFT solution can be used for the local MGM Laplace problems
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS (NL)
-USE SCARC_POINTERS, ONLY: L, MGM, SCARC_POINT_TO_MGM
-INTEGER, INTENT(IN) :: NL
-INTEGER :: NM
-
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   CALL SCARC_POINT_TO_MGM (NM, NL)                                    
-   IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) MGM%HAS_OBSTRUCTIONS = .TRUE.
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_MGM_CHECK_OBSTRUCTIONS
-
-
-! --------------------------------------------------------------------------------------------------------------
 !> \brief Update velocities after either the first or second pass of the MGM method
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MGM_UPDATE_VELOCITY(NTYPE)
@@ -18419,7 +18405,7 @@ END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
 USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
-USE SCARC_MGM, ONLY: SCARC_SETUP_MGM, SCARC_MGM_CHECK_OBSTRUCTIONS
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
 #endif
@@ -18488,7 +18474,6 @@ NSTACK = NSTACK + 1
 STACK(NSTACK)%SOLVER => LAPLACE_SOLVER_UNSTRUCTURED
 N_STACK_LAPLACE = NSTACK
 
-CALL SCARC_MGM_CHECK_OBSTRUCTIONS (NLEVEL_MIN)
 #ifdef WITH_MKL
 TYPE_MKL (NLEVEL_MIN) = NSCARC_MKL_LOCAL
 #endif
