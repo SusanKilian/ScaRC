@@ -1,6 +1,6 @@
 &HEAD CHID='mgm_mean_opt_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and LU as Laplace solver on 1 mesh' /
 
-&MESH IJK=16,1,8  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
+&MESH IJK=32,1,16  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./

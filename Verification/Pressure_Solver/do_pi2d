@@ -1,14 +1,14 @@
-dis 1 pressure_iteration2d_1mesh
-dis 8 pressure_iteration2d_default
-dis 8 pressure_iteration2d_mgm_mean_cg
-dis 8 pressure_iteration2d_mgm_mean_lu
-dis 8 pressure_iteration2d_mgm_mean_luperm
-dis 8 pressure_iteration2d_scarc
-dis 8 pressure_iteration2d_scarc_cggmg
-dis 8 pressure_iteration2d_scarc_gmg
-dis 8 pressure_iteration2d_scarc_tight
-dis 8 pressure_iteration2d_scarc_twolevel
-dis 8 pressure_iteration2d_tight
-dis 8 pressure_iteration2d_uglmat
-dis 8 pressure_iteration2d_uscarc
+dif 1 pressure_iteration2d_1mesh
+dif 8 pressure_iteration2d_default
+dif 8 pressure_iteration2d_mgm_mean_cg
+dif 8 pressure_iteration2d_mgm_mean_lu
+dif 8 pressure_iteration2d_mgm_mean_luperm
+dif 8 pressure_iteration2d_scarc
+dif 8 pressure_iteration2d_scarc_cggmg
+dif 8 pressure_iteration2d_scarc_gmg
+dif 8 pressure_iteration2d_scarc_tight
+dif 8 pressure_iteration2d_scarc_twolevel
+dif 8 pressure_iteration2d_tight
+dif 8 pressure_iteration2d_uglmat
+dif 8 pressure_iteration2d_uscarc
 

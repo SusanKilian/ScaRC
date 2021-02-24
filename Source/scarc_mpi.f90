@@ -16,7 +16,7 @@ USE MPI
 USE SCARC_CONSTANTS
 USE SCARC_TYPES, ONLY: SCARC_GRID_TYPE
 USE SCARC_VARIABLES
-USE SCARC_UTILITIES, ONLY: ARE_NEIGHBORS, SET_MATRIX_TYPE, SCARC_SET_GRID_TYPE
+USE SCARC_UTILITIES, ONLY: ARE_FACE_NEIGHBORS, ARE_NEIGHBORS, SET_MATRIX_TYPE, SCARC_SET_GRID_TYPE
 USE SCARC_TROUBLESHOOTING, ONLY: SCARC_ERROR
 USE SCARC_STORAGE, ONLY: SCARC_ALLOCATE_INT1, SCARC_ALLOCATE_REAL1
 USE SCARC_MESSAGES, ONLY: MSG
@@ -24,6 +24,7 @@ USE SCARC_MESSAGES, ONLY: MSG
 IMPLICIT NONE
 
 CONTAINS
+
 
 ! ---------------------------------------------------------------------------------------------------------------
 !> \brief Setup dimensions for data exchanges
@@ -74,6 +75,7 @@ N_EXCHANGES = N_EXCHANGES+1
 
 END SUBROUTINE SCARC_SETUP_EXCHANGE_DIMENSIONS
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate several global structures for data exchange
 ! ------------------------------------------------------------------------------------------------------------------
@@ -106,6 +108,7 @@ CALL SCARC_ALLOCATE_INT1 (MESH_INT , 1, NMESHES, NSCARC_INIT_ZERO, 'MESH_INT', C
 CALL SCARC_ALLOCATE_REAL1 (MESH_REAL, 1, NMESHES, NSCARC_INIT_ZERO, 'MESH_REAL', CROUTINE)
 
 END SUBROUTINE SCARC_SETUP_GLOBALS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Allocate workspace for data exchanges of different data types and sizes and perform basic exchanges
@@ -276,22 +279,30 @@ ENDIF
 
 END SUBROUTINE SCARC_SETUP_EXCHANGES
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform data exchange corresponding to requested exchange type 
 ! 
+! NSCARC_EXCHANGE_AUXILIARY       :  exchange various auxiliary information (AMG only)
 ! NSCARC_EXCHANGE_BASIC_SIZES     :  exchange initial information about interface sizes
-! NSCARC_EXCHANGE_CELL_NEIGHBORS  :  exchange neighboring cell numbers on overlap
-! NSCARC_EXCHANGE_CELL_NUMBERS    :  exchange neighboring grid widths on overlap
-! NSCARC_EXCHANGE_CELL_SIZES      :  exchange neighboring grid widths on overlap
-! NSCARC_EXCHANGE_MATRIX_COLS     :  exchange columns of neighboring matrix on overlap
-! NSCARC_EXCHANGE_MATRIX_COLSG    :  exchange columns of neighboring matrix on overlap
-! NSCARC_EXCHANGE_MATRIX_DIAGS    :  exchange size of neighboring matrix 
-! NSCARC_EXCHANGE_MATRIX_SIZES    :  exchange size of neighboring matrix 
-! NSCARC_EXCHANGE_MATRIX_VALS     :  exchange values of neighboring matrix on overlap
-! NSCARC_EXCHANGE_NULLSPACE       :  exchange sum of nullspace entries
-! NSCARC_EXCHANGE_PRESSURE        :  exchange vector values along internal boundaries
-! NSCARC_EXCHANGE_VECTOR_MEAN     :  exchange vector and build mean values with own data
-! NSCARC_EXCHANGE_VECTOR_PLAIN    :  exchange plain vector (just use data from neighbor)
+! NSCARC_EXCHANGE_CELL_NEIGHBORS  :  exchange neighboring cell numbers 
+! NSCARC_EXCHANGE_CELL_NUMBERS    :  exchange neighboring grid widths 
+! NSCARC_EXCHANGE_CELL_SIZES      :  exchange neighboring grid widths 
+! NSCARC_EXCHANGE_LAYER2_NUMS     :  exchange number of second layer cells (AMG only)
+! NSCARC_EXCHANGE_LAYER2_VALS     :  exchange values of second layer cells (AMG only)
+! NSCARC_EXCHANGE_MATRIX_COLS     :  exchange columns of neighboring matrices 
+! NSCARC_EXCHANGE_MATRIX_COLSG    :  exchange global columns of neighboring matrices 
+! NSCARC_EXCHANGE_MATRIX_DIAGS    :  exchange diagonal entries of neighboring matrices
+! NSCARC_EXCHANGE_MATRIX_SIZES    :  exchange sizes of neighboring matrices 
+! NSCARC_EXCHANGE_MATRIX_VALS     :  exchange values of neighboring matrices 
+! NSCARC_EXCHANGE_MGM_DOUBLE      :  exchange double neighbouring layers for true BC setting of MGM method
+! NSCARC_EXCHANGE_MGM_SINGLE      :  exchange single neighbouring layer for all other BC settings of MGM method
+! NSCARC_EXCHANGE_MGM_VELO        :  exchange neighboring velocity entries in MGM method
+! NSCARC_EXCHANGE_NULLSPACE       :  exchange sum of nullspace entries (AMG only)
+! NSCARC_EXCHANGE_PRESSURE        :  exchange pressure values (3d-vector) along internal boundaries 
+! NSCARC_EXCHANGE_SOLIDS          :  exchange information about adjacent solids
+! NSCARC_EXCHANGE_VECTOR_MEAN     :  exchange vector and build mean of neighboring and own data
+! NSCARC_EXCHANGE_VECTOR_PLAIN    :  exchange plain vector and only use neighboring data
 ! NSCARC_EXCHANGE_ZONE_NEIGHBORS  :  exchange number of aggregation zones (AMG only)
 ! NSCARC_EXCHANGE_ZONE_TYPES      :  exchange aggregation zone types (AMG only)
 ! 
@@ -316,14 +327,16 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       RNODE = PROCESS(NM)
       SNODE = PROCESS(NOM)
 
-      IF (RNODE==SNODE .OR.  .NOT.ARE_NEIGHBORS(NM, NOM)) CYCLE RECEIVE_OMESHES_LOOP
+      IF (RNODE==SNODE .OR. .NOT.ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE RECEIVE_OMESHES_LOOP
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 
       SELECT_EXCHANGE_TYPE: SELECT CASE (NTYPE)
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_AUXILIARY)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'AUXILIARY')
 
+#endif
          CASE (NSCARC_EXCHANGE_BASIC_SIZES)
             CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_BASIC, 'BASIC SIZES')
 
@@ -336,11 +349,13 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_EXCHANGE_CELL_SIZES)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_BASIC, 'CELL SIZES')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_LAYER2_NUMS)
             CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'LAYER2_NUMS')
 
          CASE (NSCARC_EXCHANGE_LAYER2_VALS)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'LAYER2_VALS')
+#endif
 
          CASE (NSCARC_EXCHANGE_MATRIX_COLS)
             CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_FULL, 'POISSON COLS')
@@ -366,8 +381,10 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_EXCHANGE_MGM_VELO)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'MGM_VELO')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_NULLSPACE)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'NULLSPACE')
+#endif
 
          CASE (NSCARC_EXCHANGE_PRESSURE)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'PRESSURE')
@@ -381,11 +398,13 @@ RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_EXCHANGE_VECTOR_PLAIN)
             CALL SCARC_RECV_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'VECTOR PLAIN')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_ZONE_NEIGHBORS)
             CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER4, 'ZONE NEIGHBORS')
 
          CASE (NSCARC_EXCHANGE_ZONE_TYPES)
             CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'ZONE TYPES')
+#endif
 
          CASE DEFAULT
             CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_RECV, SCARC_NONE, TYPE_EXCHANGE)
@@ -405,7 +424,7 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SEND_PACK_OMESHES_LOOP: DO NOM = 1, NMESHES
 
-      IF (.NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE SEND_PACK_OMESHES_LOOP
+      IF (.NOT. ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE SEND_PACK_OMESHES_LOOP
       CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
 
       SNODE = PROCESS(NOM)
@@ -413,9 +432,11 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       SEND_PACK_OMESHES_SELECT: SELECT CASE (NTYPE)
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_AUXILIARY)
             CALL SCARC_PACK_AUXILIARY(NL)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'AUXILIARY')
+#endif
 
          CASE (NSCARC_EXCHANGE_BASIC_SIZES)
             CALL SCARC_PACK_BASIC_SIZES
@@ -433,6 +454,7 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             CALL SCARC_PACK_CELL_SIZES
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_BASIC, 'CELL SIZES')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_LAYER2_NUMS)
             CALL SCARC_PACK_LAYER2_NUMS
             CALL SCARC_SEND_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'LAYER2_NUMS')
@@ -440,6 +462,7 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_EXCHANGE_LAYER2_VALS)
             CALL SCARC_PACK_LAYER2_VALS
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'LAYER2_VALS')
+#endif
 
          CASE (NSCARC_EXCHANGE_MATRIX_SIZES)
             CALL SCARC_PACK_MATRIX_SIZES(NL)
@@ -473,9 +496,11 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             CALL SCARC_PACK_MGM_VELO(NM)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'MGM_VELO')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_NULLSPACE)
             CALL SCARC_PACK_NULLSPACE(NL)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'NULLSPACE')
+#endif
 
          CASE (NSCARC_EXCHANGE_PRESSURE)
             CALL SCARC_PACK_PRESSURE(NM)
@@ -493,6 +518,7 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             CALL SCARC_PACK_VECTOR_PLAIN(NM, NL, NPARAM)
             CALL SCARC_SEND_MESSAGE_REAL (NM, NOM, NL, NSCARC_BUFFER_LAYER1, 'VECTOR PLAIN')
 
+#ifdef WITH_SCARC_AMG
          CASE (NSCARC_EXCHANGE_ZONE_NEIGHBORS)
             CALL SCARC_PACK_ZONE_NEIGHBORS(NL)
             CALL SCARC_SEND_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER4, 'ZONE NEIGHBORS')
@@ -500,9 +526,186 @@ SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CASE (NSCARC_EXCHANGE_ZONE_TYPES)
             CALL SCARC_PACK_ZONE_TYPES
             CALL SCARC_SEND_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'ZONE TYPES')
+#endif
 
          CASE DEFAULT
             CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_SEND, SCARC_NONE, TYPE_EXCHANGE)
+
+      END SELECT SEND_PACK_OMESHES_SELECT
+   ENDDO SEND_PACK_OMESHES_LOOP
+ENDDO SEND_PACK_MESHES_LOOP
+
+
+! ---------- Wait for all meshes to have sent and received their data
+ 
+IF (N_MPI_PROCESSES > 1 .AND. N_REQ /= 0) CALL MPI_WAITALL(N_REQ,REQ(1:N_REQ),MPI_STATUSES_IGNORE,IERROR)
+
+! ---------- Unpack received data from corresponding RECEIVE-buffers
+ 
+TNOW = CURRENT_TIME()
+SEND_UNPACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                   
+
+   SEND_UNPACK_OMESHES_LOOP: DO NOM = 1, NMESHES
+
+      SNODE  = PROCESS(NM)
+      RNODE  = PROCESS(NOM)
+
+      IF (.NOT. ARE_FACE_NEIGHBORS(NM, NOM)) CYCLE SEND_UNPACK_OMESHES_LOOP
+      CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
+
+      SEND_UNPACK_OMESHES_SELECT: SELECT CASE (NTYPE)
+
+#ifdef WITH_SCARC_AMG
+         CASE (NSCARC_EXCHANGE_AUXILIARY)
+            CALL SCARC_UNPACK_AUXILIARY (NM, NOM, NL)
+#endif
+
+         CASE (NSCARC_EXCHANGE_BASIC_SIZES)
+            CALL SCARC_UNPACK_BASIC_SIZES (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_CELL_NEIGHBORS)
+            CALL SCARC_UNPACK_CELL_NEIGHBORS (NM, NOM, NL)
+
+         CASE (NSCARC_EXCHANGE_CELL_NUMBERS)
+            CALL SCARC_UNPACK_CELL_NUMBERS (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_CELL_SIZES)
+            CALL SCARC_UNPACK_CELL_SIZES(NM, NOM)
+
+#ifdef WITH_SCARC_AMG
+         CASE (NSCARC_EXCHANGE_LAYER2_NUMS)
+            CALL SCARC_UNPACK_LAYER2_NUMS (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_LAYER2_VALS)
+            CALL SCARC_UNPACK_LAYER2_VALS (NM, NOM)
+#endif
+
+         CASE (NSCARC_EXCHANGE_MATRIX_COLS)
+            CALL SCARC_UNPACK_MATRIX_COLS (NM, NOM, NPARAM)
+
+         CASE (NSCARC_EXCHANGE_MATRIX_COLSG)
+            CALL SCARC_UNPACK_MATRIX_COLSG (NM, NOM, NPARAM)
+
+         CASE (NSCARC_EXCHANGE_MATRIX_SIZES)
+            CALL SCARC_UNPACK_MATRIX_SIZES (NM, NOM, NL)
+
+         CASE (NSCARC_EXCHANGE_MATRIX_DIAGS)
+            CALL SCARC_UNPACK_MATRIX_DIAGS (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_MATRIX_VALS)
+            CALL SCARC_UNPACK_MATRIX_VALS (NM, NOM, NL, NPARAM)
+
+         CASE (NSCARC_EXCHANGE_MGM_SINGLE)
+            CALL SCARC_UNPACK_MGM_SINGLE (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_MGM_DOUBLE)
+            CALL SCARC_UNPACK_MGM_DOUBLE (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_MGM_VELO)
+            CALL SCARC_UNPACK_MGM_VELO (NM, NOM)
+
+#ifdef WITH_SCARC_AMG
+         CASE (NSCARC_EXCHANGE_NULLSPACE)
+            CALL SCARC_UNPACK_NULLSPACE (NM, NOM, NL)
+#endif
+         CASE (NSCARC_EXCHANGE_PRESSURE)
+            CALL SCARC_UNPACK_PRESSURE (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_SOLIDS)
+            CALL SCARC_UNPACK_SOLIDS (NM, NOM)
+
+         CASE (NSCARC_EXCHANGE_VECTOR_MEAN)
+            CALL SCARC_UNPACK_VECTOR_MEAN (NM, NOM, NL, NPARAM)
+
+         CASE (NSCARC_EXCHANGE_VECTOR_PLAIN)
+            CALL SCARC_UNPACK_VECTOR_PLAIN (NM, NOM, NL, NPARAM)
+
+#ifdef WITH_SCARC_AMG
+         CASE (NSCARC_EXCHANGE_ZONE_NEIGHBORS)
+            CALL SCARC_UNPACK_ZONE_NEIGHBORS (NM, NOM, NL)
+
+         CASE (NSCARC_EXCHANGE_ZONE_TYPES)
+            CALL SCARC_UNPACK_ZONE_TYPES (NM, NOM)
+#endif
+
+         CASE DEFAULT
+            CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_SEND, SCARC_NONE, TYPE_EXCHANGE)
+
+      END SELECT SEND_UNPACK_OMESHES_SELECT
+   ENDDO SEND_UNPACK_OMESHES_LOOP
+ENDDO SEND_UNPACK_MESHES_LOOP
+
+END SUBROUTINE SCARC_EXCHANGE
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Perform data exchange including diagonal neighbors
+! 
+! NSCARC_EXCHANGE_MGM_TRUE   :  exchange information for MGM true BC settings 
+! 
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_EXCHANGE_WITH_DIAG (NTYPE, NL)
+USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID
+INTEGER, INTENT(IN) :: NTYPE, NL
+REAL(EB) :: TNOW
+INTEGER :: NM, NOM
+
+N_REQ = 0
+TYPE_EXCHANGE = NTYPE
+
+! ---------- Receive data from neighbors 
+ 
+RECEIVE_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)             
+
+   RECEIVE_OMESHES_LOOP: DO NOM = 1, NMESHES
+
+      RNODE = PROCESS(NM)
+      SNODE = PROCESS(NOM)
+
+      IF (RNODE==SNODE .OR. .NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE RECEIVE_OMESHES_LOOP
+      CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
+
+      SELECT_EXCHANGE_TYPE: SELECT CASE (NTYPE)
+
+         CASE (NSCARC_EXCHANGE_MGM_TRUE)
+            CALL SCARC_RECV_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_BASIC, 'BASIC SIZES')
+
+         CASE DEFAULT
+            CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_DIAG, SCARC_NONE, TYPE_EXCHANGE)
+
+      END SELECT SELECT_EXCHANGE_TYPE
+
+   ENDDO RECEIVE_OMESHES_LOOP
+ENDDO RECEIVE_MESHES_LOOP
+
+! ---------- Pack data for requested exchange type in corresponding SEND-buffer
+  
+TNOW = CURRENT_TIME()
+
+SEND_PACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)      
+
+   SEND_PACK_OMESHES_LOOP: DO NOM = 1, NMESHES
+
+      IF (.NOT. ARE_NEIGHBORS(NM, NOM)) CYCLE SEND_PACK_OMESHES_LOOP
+      CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
+
+      SNODE = PROCESS(NOM)
+      RNODE = PROCESS(NM)
+
+      SEND_PACK_OMESHES_SELECT: SELECT CASE (NTYPE)
+
+         CASE (NSCARC_EXCHANGE_MGM_TRUE)
+            CALL SCARC_PACK_MGM_TRUE (NM)
+            CALL SCARC_SEND_MESSAGE_INT (NM, NOM, NL, NSCARC_BUFFER_LAYER2, 'BASIC SIZES')
+
+         CASE DEFAULT
+            CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_DIAG, SCARC_NONE, TYPE_EXCHANGE)
 
       END SELECT SEND_PACK_OMESHES_SELECT
    ENDDO SEND_PACK_OMESHES_LOOP
@@ -530,80 +733,18 @@ SEND_UNPACK_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       SEND_UNPACK_OMESHES_SELECT: SELECT CASE (NTYPE)
 
-         CASE (NSCARC_EXCHANGE_AUXILIARY)
-            CALL SCARC_UNPACK_AUXILIARY (NM, NOM, NL)
-
-         CASE (NSCARC_EXCHANGE_BASIC_SIZES)
-            CALL SCARC_UNPACK_BASIC_SIZES (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_CELL_NEIGHBORS)
-            CALL SCARC_UNPACK_CELL_NEIGHBORS (NM, NOM, NL)
-
-         CASE (NSCARC_EXCHANGE_CELL_NUMBERS)
-            CALL SCARC_UNPACK_CELL_NUMBERS (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_CELL_SIZES)
-            CALL SCARC_UNPACK_CELL_SIZES(NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_LAYER2_NUMS)
-            CALL SCARC_UNPACK_LAYER2_NUMS (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_LAYER2_VALS)
-            CALL SCARC_UNPACK_LAYER2_VALS (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_NULLSPACE)
-            CALL SCARC_UNPACK_NULLSPACE (NM, NOM, NL)
-
-         CASE (NSCARC_EXCHANGE_MATRIX_COLS)
-            CALL SCARC_UNPACK_MATRIX_COLS (NM, NOM, NPARAM)
-
-         CASE (NSCARC_EXCHANGE_MATRIX_COLSG)
-            CALL SCARC_UNPACK_MATRIX_COLSG (NM, NOM, NPARAM)
-
-         CASE (NSCARC_EXCHANGE_MATRIX_SIZES)
-            CALL SCARC_UNPACK_MATRIX_SIZES (NM, NOM, NL)
-
-         CASE (NSCARC_EXCHANGE_MATRIX_DIAGS)
-            CALL SCARC_UNPACK_MATRIX_DIAGS (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_MATRIX_VALS)
-            CALL SCARC_UNPACK_MATRIX_VALS (NM, NOM, NL, NPARAM)
-
-         CASE (NSCARC_EXCHANGE_MGM_SINGLE)
-            CALL SCARC_UNPACK_MGM_SINGLE (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_MGM_DOUBLE)
-            CALL SCARC_UNPACK_MGM_DOUBLE (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_MGM_VELO)
-            CALL SCARC_UNPACK_MGM_VELO (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_PRESSURE)
-            CALL SCARC_UNPACK_PRESSURE (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_SOLIDS)
-            CALL SCARC_UNPACK_SOLIDS (NM, NOM)
-
-         CASE (NSCARC_EXCHANGE_VECTOR_MEAN)
-            CALL SCARC_UNPACK_VECTOR_MEAN (NM, NOM, NL, NPARAM)
-
-         CASE (NSCARC_EXCHANGE_VECTOR_PLAIN)
-            CALL SCARC_UNPACK_VECTOR_PLAIN (NM, NOM, NL, NPARAM)
-
-         CASE (NSCARC_EXCHANGE_ZONE_NEIGHBORS)
-            CALL SCARC_UNPACK_ZONE_NEIGHBORS (NM, NOM, NL)
-
-         CASE (NSCARC_EXCHANGE_ZONE_TYPES)
-            CALL SCARC_UNPACK_ZONE_TYPES (NM, NOM)
+         CASE (NSCARC_EXCHANGE_MGM_TRUE)
+            CALL SCARC_UNPACK_MGM_TRUE (NM, NOM)
 
          CASE DEFAULT
-            CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_SEND, SCARC_NONE, TYPE_EXCHANGE)
+            CALL SCARC_ERROR(NSCARC_ERROR_EXCHANGE_DIAG, SCARC_NONE, TYPE_EXCHANGE)
 
       END SELECT SEND_UNPACK_OMESHES_SELECT
    ENDDO SEND_UNPACK_OMESHES_LOOP
 ENDDO SEND_UNPACK_MESHES_LOOP
 
-END SUBROUTINE SCARC_EXCHANGE
+END SUBROUTINE SCARC_EXCHANGE_WITH_DIAG
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Receive data of type integer
@@ -650,6 +791,7 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_INT
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Receive data of type real
 ! --------------------------------------------------------------------------------------------------------------
@@ -695,6 +837,7 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_RECV_MESSAGE_REAL
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Send data of integer type
 ! --------------------------------------------------------------------------------------------------------------
@@ -735,6 +878,7 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 1000 FORMAT('SCARC_SEND_MESSAGE_INT  : Sending   ',A20, ' in length =', I8,' from ',I8, ' to ', I8, ' on level ', I4)
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_INT
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Send data of real type
@@ -777,6 +921,29 @@ WRITE(MSG%LU_VERBOSE,*) ' ...  done'
 #endif
 END SUBROUTINE SCARC_SEND_MESSAGE_REAL
 
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack initial exchange sizes along interfaces
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_BASIC_SIZES
+USE SCARC_POINTERS, ONLY: OS, OG
+OS%SEND_BUFFER_INT0(1)=OG%NCG
+OS%SEND_BUFFER_INT0(2)=OG%NZG
+END SUBROUTINE SCARC_PACK_BASIC_SIZES
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack initial exchange sizes along interfaces
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_BASIC_SIZES (NM, NOM)
+USE SCARC_POINTERS, ONLY: OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
+INTEGER, INTENT(IN) :: NM, NOM
+RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 0)
+OG%NCG = RECV_BUFFER_INT(1)
+OG%NZG = RECV_BUFFER_INT(2)
+END SUBROUTINE SCARC_UNPACK_BASIC_SIZES
+
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack numbers of cells which are overlapped by neighbor
 ! --------------------------------------------------------------------------------------------------------------
@@ -800,6 +967,7 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_CELL_NUMBERS: OL%GHOST_FIRSTE(',IOR0,')=', OL%GHOST_
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_CELL_NUMBERS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack numbers of cells which are overlapped by neighbor
@@ -834,6 +1002,7 @@ WRITE(MSG%LU_DEBUG,*) 'ICE_TO_ICN(',ICE,')=', G%ICE_TO_ICN(ICE), TYPE_GRID
 ENDDO
 END SUBROUTINE SCARC_UNPACK_CELL_NUMBERS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack cell width information 
 ! --------------------------------------------------------------------------------------------------------------
@@ -848,6 +1017,7 @@ OS%SEND_BUFFER_REAL0(5) = L%DZL(0)
 OS%SEND_BUFFER_REAL0(6) = L%DZL(L%NZ)
 
 END SUBROUTINE SCARC_PACK_CELL_SIZES
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack cell width information 
@@ -867,30 +1037,418 @@ IF (OL%GHOST_LASTW( 3) /= 0) L%DZL(L%NZ) = 0.5_EB*(RECV_BUFFER_REAL(6) + L%DZL(L
 
 END SUBROUTINE SCARC_UNPACK_CELL_SIZES
 
+
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack initial exchange sizes along interfaces
+!> \brief Pack zones numbers along interfaces
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_BASIC_SIZES
+SUBROUTINE SCARC_PACK_CELL_NEIGHBORS(NL)
+USE SCARC_POINTERS, ONLY: L, G, OS, OL, OG, A, F, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NL
+INTEGER :: IOR0, ICG, ICW, ICWG, LL, IWG, IXW, IYW, IZW
+
+A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
+OS%SEND_BUFFER_INT = NSCARC_HUGE_INT
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      ICW  = OG%ICG_TO_ICW(ICG, 1)                                 ! local cell number adjacent to interface
+      ICWG = G%LOCAL_TO_GLOBAL(ICW)                                ! global cell number adjacent to interface
+      OS%SEND_BUFFER_INT(LL)   = ICW
+      OS%SEND_BUFFER_INT(LL+1) = ICWG
+      LL = LL + 2
+   ENDDO
+   IF (NL /= NLEVEL_MIN) CYCLE
+   F => L%FACE(IOR0)
+   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      IWG = OG%ICG_TO_IWG(ICG)
+      IXW = G%WALL(IWG)%IXW + F%INCRX
+      IYW = G%WALL(IWG)%IYW + F%INCRY
+      IZW = G%WALL(IWG)%IZW + F%INCRZ
+      ICW = G%CELL_NUMBER(IXW, IYW, IZW)
+      OG%ICG_TO_ICW(ICG, 2) = ICW                              
+      ICWG = G%LOCAL_TO_GLOBAL(ICW)
+      OS%SEND_BUFFER_INT(LL)   = ICW
+      OS%SEND_BUFFER_INT(LL+1) = ICWG
+      LL = LL + 2
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_PACK_CELL_NEIGHBORS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack zones numbers along interfaces
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS(NM, NOM, NL)
+USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
+INTEGER, INTENT(IN) :: NM, NOM, NL
+INTEGER :: ICG, IOR0, LL, IOFF
+
+CROUTINE = 'SCARC_UNPACK_CELL_NEIGHBORS'
+
+RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
+
+CALL SCARC_ALLOCATE_INT1 (OG%ICG_TO_OCELL, 1, 2*OG%NCG, NSCARC_INIT_ZERO, 'G%ICG_TO_OCELL', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (OG%ICG_TO_GCELL, 1, 2*OG%NCG, NSCARC_INIT_ZERO, 'G%ICG_TO_GCELL', CROUTINE)
+
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      OG%ICG_TO_OCELL(ICG) = RECV_BUFFER_INT(LL)
+      OG%ICG_TO_GCELL(ICG) = RECV_BUFFER_INT(LL+1)
+      LL = LL + 2
+   ENDDO
+   IF (NL /= NLEVEL_MIN) CYCLE
+   IOFF = OL%GHOST_LASTW(IOR0)
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      G%ICE2 = G%ICE2 + 1
+      OG%ICG_TO_OCELL(ICG + IOFF) = RECV_BUFFER_INT(LL)
+      OG%ICG_TO_GCELL(ICG + IOFF) = RECV_BUFFER_INT(LL+1)
+      OG%ICG_TO_ICE(ICG, 2) = G%ICE2
+      LL = LL + 2
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack overlapping information about matrix columns (compact storage technique only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MATRIX_COLS(NM, NOM, NMATRIX)
+USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
+INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
+INTEGER :: IOR0, ICG, LL, ICP
+
+RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
+OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
+
+LL = 1                                 
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS: FIRSTW, LASTW:', OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+#endif
+   ICP = OL%GHOST_FIRSTE(IOR0)
+   OAC%ROW(ICP) = LL
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                          ! skip solid cells
+      OAC%COL(LL) = ABS(RECV_BUFFER_INT(LL))
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:A: IOR0, ICP, ICG, LL, COL:', IOR0, ICP, ICG, LL, OAC%COL(LL)
+#endif
+      DO WHILE (RECV_BUFFER_INT(LL+1) >= 0)
+         LL = LL + 1
+         OAC%COL(LL) = ABS(RECV_BUFFER_INT(LL))
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:B: IOR0, ICP, ICG, LL, COL:', IOR0, ICP, ICG, LL, OAC%COL(LL)
+#endif
+      ENDDO
+      LL = LL + 1
+      ICP = ICP + 1
+      OAC%ROW(ICP) = LL
+   ENDDO
+   OAC%N_ROW = ICP  
+   OAC%N_VAL = LL - 1
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
+#endif
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_MATRIX_COLS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack overlapping information about matrix columns (compact storage technique only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MATRIX_COLSG(NMATRIX)                
+USE SCARC_POINTERS, ONLY: OS, OL, OG, AC, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX
+INTEGER :: IOR0, ICG, ICW, LL, ICOL
+INTEGER, POINTER, DIMENSION(:) :: COLG
+
+AC => SCARC_POINT_TO_CMATRIX (NMATRIX)
+IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
+   COLG => AC%COL
+ELSE
+   COLG => AC%COLG
+ENDIF
+
+LL = 1
+OS%SEND_BUFFER_INT = NSCARC_HUGE_INT
+
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+
+   DO ICG= OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      ICW = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW < 0) CYCLE                               ! skip solid cells
+      ICOL = AC%ROW(ICW)
+      OS%SEND_BUFFER_INT(LL) = -COLG(ICOL)          ! send first element with negative sign (thus, mark beginning)
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLSG:A: IOR0, ICG, ICW, ICOL, COLG:', IOR0, ICG, ICW, ICOL, -COLG(ICOL)
+#endif
+      LL = LL + 1                              
+      DO ICOL = AC%ROW(ICW)+1, AC%ROW(ICW+1)-1
+         OS%SEND_BUFFER_INT(LL) = COLG(ICOL)   
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLSG:B: IOR0, ICG, ICW, ICOL, COLG:', IOR0, ICG, ICW, ICOL, COLG(ICOL)
+#endif
+         LL = LL + 1
+      ENDDO
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_PACK_MATRIX_COLSG
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack overlapping information about matrix columns (compact storage technique only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MATRIX_COLSG(NM, NOM, NMATRIX)
+USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
+INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
+INTEGER :: IOR0, ICG, LL, ICP
+INTEGER, POINTER, DIMENSION(:) :: COLG
+
+RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
+OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
+IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
+   COLG => OAC%COL
+ELSE
+   COLG => OAC%COLG
+ENDIF
+
+LL = 1                                 
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
+   ICP = OL%GHOST_FIRSTE(IOR0)
+   OAC%ROW(ICP) = LL
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                     ! skip solid cells
+      COLG(LL) = ABS(RECV_BUFFER_INT(LL))
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:A:  IOR0, ICP, ICG, LL, COLG:', IOR0, ICP, ICG, LL, COLG(LL)
+#endif
+      DO WHILE (RECV_BUFFER_INT(LL+1) > 0)
+         LL = LL + 1
+         COLG(LL) = ABS(RECV_BUFFER_INT(LL))
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:B:  IOR0, ICP, ICG, LL, COLG:', IOR0, ICP, ICG, LL, COLG(LL)
+#endif
+      ENDDO
+      LL = LL + 1
+      ICP = ICP + 1
+      OAC%ROW(ICP) = LL
+   ENDDO
+   OAC%N_ROW = ICP  
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
+#endif
+   OAC%N_VAL = LL - 1
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_MATRIX_COLSG
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack overlapping information about matrix values (both storage techniques)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MATRIX_VALS(NMATRIX, NL)
+USE SCARC_POINTERS, ONLY: AB, AC, OS, OL, OG, SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NMATRIX, NL
+INTEGER :: IOR0, ICG, ICW, LL, ID, ICOL
+
+LL = 1
+OS%SEND_BUFFER_INT = NSCARC_ZERO_REAL_EB
+SELECT CASE (SET_MATRIX_TYPE(NL))
+
+   CASE (NSCARC_MATRIX_BANDWISE)                
+
+      AB => SCARC_POINT_TO_BMATRIX (NMATRIX)
+      DO IOR0 = -3, 3
+         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+         DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+            ICW = OG%ICG_TO_ICW(ICG, 1)
+            DO ID = 1, AB%N_STENCIL
+               OS%SEND_BUFFER_REAL(LL) = AB%VAL(ICW, ID)
+               LL = LL + 1
+            ENDDO
+         ENDDO
+      ENDDO
+
+   CASE (NSCARC_MATRIX_COMPACT)
+
+      AC => SCARC_POINT_TO_CMATRIX (NMATRIX)
+      DO IOR0 = -3, 3
+         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+         DO ICG= OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+            ICW = OG%ICG_TO_ICW(ICG, 1)
+            IF (ICW < 0) CYCLE                                ! skip solid cells
+            DO ICOL = AC%ROW(ICW), AC%ROW(ICW+1)-1
+               OS%SEND_BUFFER_REAL(LL) = AC%VAL(ICOL)
+               LL = LL + 1
+            ENDDO
+         ENDDO
+      ENDDO
+
+END SELECT
+
+END SUBROUTINE SCARC_PACK_MATRIX_VALS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack overlapping information about matrix values (both storage techniques)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MATRIX_VALS(NM, NOM, NL, NMATRIX)
+USE SCARC_POINTERS, ONLY: OL, OG, OAB, OAC, RECV_BUFFER_REAL, &
+                          SCARC_POINT_TO_OTHER_BMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_REAL
+INTEGER, INTENT(IN) :: NM, NOM, NL, NMATRIX
+INTEGER :: IOR0, ICG, ICOL, ID, LL
+
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
+
+SELECT CASE (SET_MATRIX_TYPE(NL))
+
+   ! Bandwise matrix on level NL
+   CASE (NSCARC_MATRIX_BANDWISE)              
+
+      OAB => SCARC_POINT_TO_OTHER_BMATRIX (NMATRIX)
+      LL = 1
+      DO IOR0 = -3, 3
+         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+         DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+            DO ID = 1, OAB%N_STENCIL
+               OAB%VAL(ICG, ID) = RECV_BUFFER_REAL(LL)
+               LL = LL + 1
+            ENDDO
+         ENDDO
+      ENDDO
+
+   ! Compact matrix on level NL
+   CASE (NSCARC_MATRIX_COMPACT)
+
+      OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_VALS:OAC%ROW:', NM, NOM, NL, NMATRIX
+WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_VALS:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
+#endif
+      LL = 1
+      DO IOR0 = -3, 3
+         IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
+         DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+            IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                     ! skip solid cells
+            DO ICOL = OAC%ROW(ICG), OAC%ROW(ICG+1)-1
+               OAC%VAL(ICOL) = RECV_BUFFER_REAL(LL)
+               LL = LL + 1
+            ENDDO
+         ENDDO
+      ENDDO
+
+END SELECT
+
+END SUBROUTINE SCARC_UNPACK_MATRIX_VALS
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack information about matrix sizes into send vector
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MATRIX_SIZES(NL)
 USE SCARC_POINTERS, ONLY: OS, OG
+INTEGER, INTENT(IN) :: NL
 
-OS%SEND_BUFFER_INT0(1)=OG%NCG
-OS%SEND_BUFFER_INT0(2)=OG%NZG
+SELECT CASE (SET_MATRIX_TYPE(NL))
+   CASE (NSCARC_MATRIX_BANDWISE)
+      OS%SEND_BUFFER_INT0(1) = OG%POISSONB%N_VAL
+      OS%SEND_BUFFER_INT0(2) = OG%POISSONB%N_DIAG
+      OS%SEND_BUFFER_INT0(3) = OG%POISSONB%N_STENCIL
+   CASE (NSCARC_MATRIX_COMPACT)
+      OS%SEND_BUFFER_INT0(1) = OG%POISSON%N_VAL
+      OS%SEND_BUFFER_INT0(2) = OG%POISSON%N_ROW
+      OS%SEND_BUFFER_INT0(3) = OG%POISSON%N_STENCIL
+END SELECT
 
-END SUBROUTINE SCARC_PACK_BASIC_SIZES
+END SUBROUTINE SCARC_PACK_MATRIX_SIZES
+   
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack initial exchange sizes along interfaces
+!> \brief Unpack information about matrix sizes into send vector
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_BASIC_SIZES (NM, NOM)
+SUBROUTINE SCARC_UNPACK_MATRIX_SIZES(NM, NOM, NL)
 USE SCARC_POINTERS, ONLY: OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
-INTEGER, INTENT(IN) :: NM, NOM
+INTEGER, INTENT(IN) :: NM, NOM, NL
 
 RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 0)
+SELECT CASE (SET_MATRIX_TYPE(NL))
+   CASE (NSCARC_MATRIX_BANDWISE)
+      OG%POISSONB%N_VAL     = RECV_BUFFER_INT(1)
+      OG%POISSONB%N_DIAG    = RECV_BUFFER_INT(2)
+      OG%POISSONB%N_STENCIL = RECV_BUFFER_INT(3)
+   CASE (NSCARC_MATRIX_COMPACT)
+      OG%POISSON%N_VAL     = RECV_BUFFER_INT(1)
+      OG%POISSON%N_ROW     = RECV_BUFFER_INT(2)
+      OG%POISSON%N_STENCIL = RECV_BUFFER_INT(3)
+END SELECT
 
-OG%NCG = RECV_BUFFER_INT(1)
-OG%NZG = RECV_BUFFER_INT(2)
+END SUBROUTINE SCARC_UNPACK_MATRIX_SIZES
 
-END SUBROUTINE SCARC_UNPACK_BASIC_SIZES
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack overlapping information about matrix diagonals (compact storage technique only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MATRIX_DIAGS(NTYPE)
+USE SCARC_POINTERS, ONLY: AC, OS, OL, OG, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NTYPE
+INTEGER :: IOR0, ICG, ICW, ICOL
+
+AC => SCARC_POINT_TO_CMATRIX (NTYPE)
+
+OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      ICW = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW < 0) CYCLE                                   ! skip solid cells
+      ICOL = AC%ROW(ICW)
+      OS%SEND_BUFFER_REAL(ICG) = AC%VAL(ICOL)
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A,4I8,E14.6)') 'PACK_MATRIX_DIAGS: IOR0, ICG, ICW, ICOL, VAL:', &
+                                     IOR0, ICG, ICW, ICOL, AC%VAL(ICOL)
+#endif
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_PACK_MATRIX_DIAGS
+      
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack overlapping information about matrix diagonals (compact storage technique only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS(NM, NOM)
+USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
+INTEGER, INTENT(IN) :: NM, NOM
+INTEGER :: IOR0, ICG, ICE, LL
+
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      ICE = OG%ICG_TO_ICE(ICG, 1)
+      IF (ICE < 0) CYCLE                                   ! skip solid cells
+      G%DIAG(ICE) = RECV_BUFFER_REAL(LL)
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A, 3I8,E14.6)') 'UNPACK_MATRIX_DIAGS: NOM, IOR0, ICG, ICE, DIAG:', &
+                                      IOR0, ICG, ICE, G%DIAG(ICE)
+#endif
+      LL = LL + 1
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -916,6 +1474,7 @@ DO IOR0 = -3, 3
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_PRESSURE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
@@ -946,6 +1505,7 @@ DO IOR0 = -3, 3
    ENDDO UNPACK_PRESSURE
 ENDDO
 END SUBROUTINE SCARC_UNPACK_PRESSURE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
@@ -981,6 +1541,7 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 
 END SUBROUTINE SCARC_PACK_MGM_SINGLE
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
 ! --------------------------------------------------------------------------------------------------------------
@@ -1011,6 +1572,73 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, E14.6)') 'UNPACK_MGM_SINGLE: NM, NOM, ICG, IWG, OUH
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_MGM_SINGLE
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_MGM_TRUE (NM)
+USE SCARC_POINTERS, ONLY: G, OL, OG, OS, UHL
+INTEGER, INTENT(IN) :: NM
+INTEGER :: IOR0, ICG, ICW, IWG, IXW, IYW, IZW
+
+UHL => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%UHL
+OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
+
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   PACK_MGM_TRUE: DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+      ICW = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW < 0) CYCLE                                  ! skip solid cells
+      IWG = OG%ICG_TO_IWG(ICG)
+      IXW=G%WALL(IWG)%IXW
+      IYW=G%WALL(IWG)%IYW
+      IZW=G%WALL(IWG)%IZW
+      OS%SEND_BUFFER_REAL(ICG) = UHL(IXW, IYW, IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK_MGM_TRUE: IOR0, ICG, ICW, IXW, IYW, IZW, UHL: ', &
+                                        IOR0, ICG, ICW, IXW, IYW, IZW, UHL(IXW, IYW, IZW)
+#endif
+   ENDDO PACK_MGM_TRUE
+ENDDO
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PACK: Sizes SEND_BUFFER_REAL, VC=', SIZE(OS%SEND_BUFFER_REAL), SIZE(UHL)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
+#endif
+
+END SUBROUTINE SCARC_PACK_MGM_TRUE
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack single layer of interface boundary cells for MGM mean and extrapolation boundary settings
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_MGM_TRUE(NM, NOM)
+USE SCARC_POINTERS, ONLY: OL, OG, OUHL, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
+INTEGER, INTENT(IN) :: NM, NOM
+INTEGER :: IOR0, ICG, IWG, LL
+
+OUHL => SCARC(NM)%LEVEL(NLEVEL_MIN)%MGM%OUHL
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'UNPACK: Sizes RECV_BUFFER_REAL, VC=', SIZE(RECV_BUFFER_REAL), SIZE(OUHL)
+WRITE(MSG%LU_DEBUG,'(8E14.6)') RECV_BUFFER_REAL(1:16)
+WRITE(MSG%LU_DEBUG,*) 'UNPACK: MGM2=', NM, NOM
+#endif
+
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   UNPACK_MGM_TRUE: DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+      IWG = OG%ICG_TO_IWG(ICG)
+      OUHL(IWG) = RECV_BUFFER_REAL(LL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 4I4, E14.6)') 'UNPACK_MGM_TRUE: NM, NOM, ICG, IWG, OUHL:', NM, NOM, ICG, IWG, OUHL(IWG)
+#endif
+      LL = LL + 1
+   ENDDO UNPACK_MGM_TRUE
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_MGM_TRUE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack double layer of interface boundary cells for MGM true approximate boundary settings
@@ -1087,6 +1715,7 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') OS%SEND_BUFFER_REAL(1:16)
 
 END SUBROUTINE SCARC_PACK_MGM_DOUBLE
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack double layer of interface boundary cells for MGM true approximate boundary setting
 ! --------------------------------------------------------------------------------------------------------------
@@ -1114,6 +1743,7 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_DOUBLE: NM, NOM, ICG, IWG, OU
    ENDDO UNPACK_MGM_DOUBLE
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_DOUBLE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1180,6 +1810,7 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 1E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1255,6 +1886,7 @@ WRITE(MSG%LU_DEBUG,'(A, 8I4, 3E14.6)') 'PACK_MGM_VELO: NM, IOR0, ICG, IWG, IXW, 
 ENDDO
 END SUBROUTINE SCARC_PACK_MGM_VELO2
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
 ! --------------------------------------------------------------------------------------------------------------
@@ -1286,6 +1918,7 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 1E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OVEL
    ENDDO UNPACK_MGM_VELO
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified pressure vector (predictor/corrector)
@@ -1321,135 +1954,8 @@ WRITE(MSG%LU_DEBUG,'(A, 4I4, 2E14.6)') 'UNPACK_MGM_VELO: NM, NOM, ICG, IWG, OUIP
 ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO2
 
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping auxiliary vector 
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_AUXILIARY(NL)
-USE SCARC_POINTERS, ONLY: L, G, OL, OG, OS, F
-INTEGER, INTENT(IN) :: NL
-INTEGER :: IOR0, ICG, ICW1, ICW2, IWG, IXW, IYW, IZW, LL
 
-LL = 1
-OS%SEND_BUFFER_REAL = NSCARC_HUGE_REAL_EB
-DO IOR0 = -3, 3
 
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   F => L%FACE(IOR0)
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-
-      ICW1 = OG%ICG_TO_ICW(ICG, 1)
-      IF (ICW1 > 0) OS%SEND_BUFFER_REAL(LL) = G%AUX1(ICW1)
-      LL = LL + 1
-
-      IF (NL /= NLEVEL_MIN) CYCLE
-
-      IWG  = OG%ICG_TO_IWG(ICG)
-      IXW  = G%WALL(IWG)%IXW + F%INCRX
-      IYW  = G%WALL(IWG)%IYW + F%INCRY
-      IZW  = G%WALL(IWG)%IZW + F%INCRZ
-
-      ICW2 = G%CELL_NUMBER(IXW, IYW, IZW)
-      IF (ICW2 > 0) OS%SEND_BUFFER_REAL(LL+1) = G%AUX1(ICW2)
-      LL = LL + 1
-
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_PACK_AUXILIARY
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping auxiliary vector 
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_AUXILIARY (NM, NOM, NL)
-USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
-INTEGER, INTENT(IN) :: NM, NOM, NL
-INTEGER :: IOR0, ICG, ICE1, ICE2, LL
-
-RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
-LL = 1
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-
-      ICE1 = OG%ICG_TO_ICE(ICG,1)
-      IF (ICE1 > 0) G%AUX1(ICE1) = RECV_BUFFER_REAL(LL)
-      LL = LL + 1
-
-      IF (NL /= NLEVEL_MIN) CYCLE
-
-      ICE2 = OG%ICG_TO_ICE(ICG,2)
-      IF (ICE2 > 0) G%AUX1(ICE2) = RECV_BUFFER_REAL(LL+1)
-      LL = LL + 1
-
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_UNPACK_AUXILIARY
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack and unpack overlapping nullspace vector 
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_NULLSPACE(NL)
-USE SCARC_POINTERS, ONLY: L, G, F, OL, OG, OS
-INTEGER, INTENT(IN) :: NL
-INTEGER :: IOR0, ICG, ICW1, ICW2, IWG, IXW, IYW, IZW, LL
-
-LL = 1
-OS%SEND_BUFFER_REAL = NSCARC_HUGE_REAL_EB
-DO IOR0 = -3, 3
-
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   F => L%FACE(IOR0)
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-
-      ICW1 = OG%ICG_TO_ICW(ICG, 1)
-      IF (ICW1 > 0) OS%SEND_BUFFER_REAL(LL)   = G%NULLSPACE(ICW1)
-      LL = LL + 1
-
-      IF (NL /= NLEVEL_MIN) CYCLE
-
-      IWG  = OG%ICG_TO_IWG(ICG)
-      IXW  = G%WALL(IWG)%IXW + F%INCRX
-      IYW  = G%WALL(IWG)%IYW + F%INCRY
-      IZW  = G%WALL(IWG)%IZW + F%INCRZ
-
-      ICW2 = G%CELL_NUMBER(IXW, IYW, IZW)
-      IF (ICW2 > 0) OS%SEND_BUFFER_REAL(LL+1) = G%NULLSPACE(ICW2)
-      LL = LL + 1
-
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_PACK_NULLSPACE
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping nullspace vector 
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_NULLSPACE (NM, NOM, NL)
-USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
-INTEGER, INTENT(IN) :: NM, NOM, NL
-INTEGER :: IOR0, ICG, ICE1, ICE2, LL
-
-RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
-LL = 1
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-
-      ICE1 = OG%ICG_TO_ICE(ICG,1)
-      IF (ICE1 > 0) G%NULLSPACE(ICE1) = RECV_BUFFER_REAL(LL)
-      LL = LL + 1
-
-      IF (NL /= NLEVEL_MIN) CYCLE
-
-      ICE2 = OG%ICG_TO_ICE(ICG,2)
-      IF (ICE2 > 0) G%NULLSPACE(ICE2) = RECV_BUFFER_REAL(LL+1)
-      LL = LL + 1
-
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_UNPACK_NULLSPACE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
@@ -1482,6 +1988,7 @@ WRITE(MSG%LU_DEBUG,'(8E14.6)') VC
 #endif
 
 END SUBROUTINE SCARC_PACK_VECTOR_PLAIN
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
@@ -1517,6 +2024,7 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_VECTOR_PLAIN
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of solid vector IS_SOLID
 ! --------------------------------------------------------------------------------------------------------------
@@ -1542,6 +2050,7 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_SOLIDS: IOR0, ICG, IWG, IXW, IYW, IZW, SEND_BUFF ', 
 ENDDO
 
 END SUBROUTINE SCARC_PACK_SOLIDS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping parts of specified vector VC (numbered via IC values)
@@ -1576,6 +2085,7 @@ ENDDO
 
 END SUBROUTINE SCARC_UNPACK_SOLIDS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping and internal parts of specified vector
 ! --------------------------------------------------------------------------------------------------------------
@@ -1605,6 +2115,7 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_PACK_VECTOR_MEAN
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack overlapping and internal parts of specified vector
@@ -1637,6 +2148,7 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_VECTOR_MEAN
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping information about matrix columns (compact storage technique only)
@@ -1678,408 +2190,140 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_MATRIX_COLS
 
+
+#ifdef WITH_SCARC_AMG
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping information about matrix columns (compact storage technique only)
+!> \brief Pack overlapping auxiliary vector 
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MATRIX_COLS(NM, NOM, NMATRIX)
-USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
-INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
-INTEGER :: IOR0, ICG, LL, ICP
-
-RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
-OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
-
-LL = 1                                 
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS: FIRSTW, LASTW:', OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-#endif
-   ICP = OL%GHOST_FIRSTE(IOR0)
-   OAC%ROW(ICP) = LL
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                          ! skip solid cells
-      OAC%COL(LL) = ABS(RECV_BUFFER_INT(LL))
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:A: IOR0, ICP, ICG, LL, COL:', IOR0, ICP, ICG, LL, OAC%COL(LL)
-#endif
-      DO WHILE (RECV_BUFFER_INT(LL+1) >= 0)
-         LL = LL + 1
-         OAC%COL(LL) = ABS(RECV_BUFFER_INT(LL))
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:B: IOR0, ICP, ICG, LL, COL:', IOR0, ICP, ICG, LL, OAC%COL(LL)
-#endif
-      ENDDO
-      LL = LL + 1
-      ICP = ICP + 1
-      OAC%ROW(ICP) = LL
-   ENDDO
-   OAC%N_ROW = ICP  
-   OAC%N_VAL = LL - 1
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLS:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
-#endif
-ENDDO
-
-END SUBROUTINE SCARC_UNPACK_MATRIX_COLS
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping information about matrix columns (compact storage technique only)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MATRIX_COLSG(NMATRIX)                
-USE SCARC_POINTERS, ONLY: OS, OL, OG, AC, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NMATRIX
-INTEGER :: IOR0, ICG, ICW, LL, ICOL
-INTEGER, POINTER, DIMENSION(:) :: COLG
-
-AC => SCARC_POINT_TO_CMATRIX (NMATRIX)
-IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
-   COLG => AC%COL
-ELSE
-   COLG => AC%COLG
-ENDIF
-
-LL = 1
-OS%SEND_BUFFER_INT = NSCARC_HUGE_INT
-
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-
-   DO ICG= OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-      ICW = OG%ICG_TO_ICW(ICG, 1)
-      IF (ICW < 0) CYCLE                               ! skip solid cells
-      ICOL = AC%ROW(ICW)
-      OS%SEND_BUFFER_INT(LL) = -COLG(ICOL)          ! send first element with negative sign (thus, mark beginning)
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLSG:A: IOR0, ICG, ICW, ICOL, COLG:', IOR0, ICG, ICW, ICOL, -COLG(ICOL)
-#endif
-      LL = LL + 1                              
-      DO ICOL = AC%ROW(ICW)+1, AC%ROW(ICW+1)-1
-         OS%SEND_BUFFER_INT(LL) = COLG(ICOL)   
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'PACK_MATRIX_COLSG:B: IOR0, ICG, ICW, ICOL, COLG:', IOR0, ICG, ICW, ICOL, COLG(ICOL)
-#endif
-         LL = LL + 1
-      ENDDO
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_PACK_MATRIX_COLSG
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping information about matrix columns (compact storage technique only)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MATRIX_COLSG(NM, NOM, NMATRIX)
-USE SCARC_POINTERS, ONLY: OL, OG, OAC, RECV_BUFFER_INT, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_INT
-INTEGER, INTENT(IN) :: NM, NOM, NMATRIX
-INTEGER :: IOR0, ICG, LL, ICP
-INTEGER, POINTER, DIMENSION(:) :: COLG
-
-RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
-OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
-IF (NMESHES == 1 .OR. TYPE_SCOPE(0) == NSCARC_SCOPE_LOCAL) THEN
-   COLG => OAC%COL
-ELSE
-   COLG => OAC%COLG
-ENDIF
-
-LL = 1                                 
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
-   ICP = OL%GHOST_FIRSTE(IOR0)
-   OAC%ROW(ICP) = LL
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                     ! skip solid cells
-      COLG(LL) = ABS(RECV_BUFFER_INT(LL))
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:A:  IOR0, ICP, ICG, LL, COLG:', IOR0, ICP, ICG, LL, COLG(LL)
-#endif
-      DO WHILE (RECV_BUFFER_INT(LL+1) > 0)
-         LL = LL + 1
-         COLG(LL) = ABS(RECV_BUFFER_INT(LL))
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:B:  IOR0, ICP, ICG, LL, COLG:', IOR0, ICP, ICG, LL, COLG(LL)
-#endif
-      ENDDO
-      LL = LL + 1
-      ICP = ICP + 1
-      OAC%ROW(ICP) = LL
-   ENDDO
-   OAC%N_ROW = ICP  
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_COLSG:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
-#endif
-   OAC%N_VAL = LL - 1
-ENDDO
-
-END SUBROUTINE SCARC_UNPACK_MATRIX_COLSG
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping information about matrix values (both storage techniques)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MATRIX_VALS(NMATRIX, NL)
-USE SCARC_POINTERS, ONLY: AB, AC, OS, OL, OG, SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NMATRIX, NL
-INTEGER :: IOR0, ICG, ICW, LL, ID, ICOL
-
-LL = 1
-OS%SEND_BUFFER_INT = NSCARC_ZERO_REAL_EB
-SELECT CASE (SET_MATRIX_TYPE(NL))
-
-   ! Bandwise matrix on level NL
-   CASE (NSCARC_MATRIX_BANDWISE)                
-
-      AB => SCARC_POINT_TO_BMATRIX (NMATRIX)
-      DO IOR0 = -3, 3
-         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-         DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-            ICW = OG%ICG_TO_ICW(ICG, 1)
-            DO ID = 1, AB%N_STENCIL
-               OS%SEND_BUFFER_REAL(LL) = AB%VAL(ICW, ID)
-               LL = LL + 1
-            ENDDO
-         ENDDO
-      ENDDO
-
-   ! Compact matrix on level NL
-   CASE (NSCARC_MATRIX_COMPACT)
-
-      AC => SCARC_POINT_TO_CMATRIX (NMATRIX)
-      DO IOR0 = -3, 3
-         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-         DO ICG= OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-            ICW = OG%ICG_TO_ICW(ICG, 1)
-            IF (ICW < 0) CYCLE                                ! skip solid cells
-            DO ICOL = AC%ROW(ICW), AC%ROW(ICW+1)-1
-               OS%SEND_BUFFER_REAL(LL) = AC%VAL(ICOL)
-               LL = LL + 1
-            ENDDO
-         ENDDO
-      ENDDO
-
-END SELECT
-
-END SUBROUTINE SCARC_PACK_MATRIX_VALS
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping information about matrix values (both storage techniques)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MATRIX_VALS(NM, NOM, NL, NMATRIX)
-USE SCARC_POINTERS, ONLY: OL, OG, OAB, OAC, RECV_BUFFER_REAL, &
-                          SCARC_POINT_TO_OTHER_BMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, SCARC_POINT_TO_BUFFER_REAL
-INTEGER, INTENT(IN) :: NM, NOM, NL, NMATRIX
-INTEGER :: IOR0, ICG, ICOL, ID, LL
-
-RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
-
-SELECT CASE (SET_MATRIX_TYPE(NL))
-
-   ! Bandwise matrix on level NL
-   CASE (NSCARC_MATRIX_BANDWISE)              
-
-      OAB => SCARC_POINT_TO_OTHER_BMATRIX (NMATRIX)
-      LL = 1
-      DO IOR0 = -3, 3
-         IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-         DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-            DO ID = 1, OAB%N_STENCIL
-               OAB%VAL(ICG, ID) = RECV_BUFFER_REAL(LL)
-               LL = LL + 1
-            ENDDO
-         ENDDO
-      ENDDO
-
-   ! Compact matrix on level NL
-   CASE (NSCARC_MATRIX_COMPACT)
-
-      OAC => SCARC_POINT_TO_OTHER_CMATRIX (NMATRIX)
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_VALS:OAC%ROW:', NM, NOM, NL, NMATRIX
-WRITE(MSG%LU_DEBUG,*) 'UNPACK_MATRIX_VALS:OAC%ROW:', OAC%ROW(1:OAC%N_ROW)
-#endif
-      LL = 1
-      DO IOR0 = -3, 3
-         IF (OL%GHOST_LASTE(IOR0) == 0) CYCLE
-         DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-            IF (OG%ICG_TO_ICE(ICG,1) < 0) CYCLE                     ! skip solid cells
-            DO ICOL = OAC%ROW(ICG), OAC%ROW(ICG+1)-1
-               OAC%VAL(ICOL) = RECV_BUFFER_REAL(LL)
-               LL = LL + 1
-            ENDDO
-         ENDDO
-      ENDDO
-
-END SELECT
-
-END SUBROUTINE SCARC_UNPACK_MATRIX_VALS
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack information about matrix sizes into send vector
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MATRIX_SIZES(NL)
-USE SCARC_POINTERS, ONLY: OS, OG
+SUBROUTINE SCARC_PACK_AUXILIARY(NL)
+USE SCARC_POINTERS, ONLY: L, G, OL, OG, OS, F
 INTEGER, INTENT(IN) :: NL
+INTEGER :: IOR0, ICG, ICW1, ICW2, IWG, IXW, IYW, IZW, LL
 
-SELECT CASE (SET_MATRIX_TYPE(NL))
-   CASE (NSCARC_MATRIX_BANDWISE)
-      OS%SEND_BUFFER_INT0(1) = OG%POISSONB%N_VAL
-      OS%SEND_BUFFER_INT0(2) = OG%POISSONB%N_DIAG
-      OS%SEND_BUFFER_INT0(3) = OG%POISSONB%N_STENCIL
-   CASE (NSCARC_MATRIX_COMPACT)
-      OS%SEND_BUFFER_INT0(1) = OG%POISSON%N_VAL
-      OS%SEND_BUFFER_INT0(2) = OG%POISSON%N_ROW
-      OS%SEND_BUFFER_INT0(3) = OG%POISSON%N_STENCIL
-END SELECT
-
-END SUBROUTINE SCARC_PACK_MATRIX_SIZES
-   
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack information about matrix sizes into send vector
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MATRIX_SIZES(NM, NOM, NL)
-USE SCARC_POINTERS, ONLY: OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
-INTEGER, INTENT(IN) :: NM, NOM, NL
-
-RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 0)
-SELECT CASE (SET_MATRIX_TYPE(NL))
-   CASE (NSCARC_MATRIX_BANDWISE)
-      OG%POISSONB%N_VAL     = RECV_BUFFER_INT(1)
-      OG%POISSONB%N_DIAG    = RECV_BUFFER_INT(2)
-      OG%POISSONB%N_STENCIL = RECV_BUFFER_INT(3)
-   CASE (NSCARC_MATRIX_COMPACT)
-      OG%POISSON%N_VAL     = RECV_BUFFER_INT(1)
-      OG%POISSON%N_ROW     = RECV_BUFFER_INT(2)
-      OG%POISSON%N_STENCIL = RECV_BUFFER_INT(3)
-END SELECT
-
-END SUBROUTINE SCARC_UNPACK_MATRIX_SIZES
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack overlapping information about matrix diagonals (compact storage technique only)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_MATRIX_DIAGS(NTYPE)
-USE SCARC_POINTERS, ONLY: AC, OS, OL, OG, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NTYPE
-INTEGER :: IOR0, ICG, ICW, ICOL
-
-AC => SCARC_POINT_TO_CMATRIX (NTYPE)
-
-OS%SEND_BUFFER_REAL = NSCARC_ZERO_REAL_EB
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-      ICW = OG%ICG_TO_ICW(ICG, 1)
-      IF (ICW < 0) CYCLE                                   ! skip solid cells
-      ICOL = AC%ROW(ICW)
-      OS%SEND_BUFFER_REAL(ICG) = AC%VAL(ICOL)
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,'(A,4I8,E14.6)') 'PACK_MATRIX_DIAGS: IOR0, ICG, ICW, ICOL, VAL:', &
-                                     IOR0, ICG, ICW, ICOL, AC%VAL(ICOL)
-#endif
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_PACK_MATRIX_DIAGS
-      
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack overlapping information about matrix diagonals (compact storage technique only)
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS(NM, NOM)
-USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
-INTEGER, INTENT(IN) :: NM, NOM
-INTEGER :: IOR0, ICG, ICE, LL
-
-RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
 LL = 1
+OS%SEND_BUFFER_REAL = NSCARC_HUGE_REAL_EB
 DO IOR0 = -3, 3
+
    IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      ICE = OG%ICG_TO_ICE(ICG, 1)
-      IF (ICE < 0) CYCLE                                   ! skip solid cells
-      G%DIAG(ICE) = RECV_BUFFER_REAL(LL)
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,'(A, 3I8,E14.6)') 'UNPACK_MATRIX_DIAGS: NOM, IOR0, ICG, ICE, DIAG:', &
-                                      IOR0, ICG, ICE, G%DIAG(ICE)
-#endif
-      LL = LL + 1
-   ENDDO
-ENDDO
-
-END SUBROUTINE SCARC_UNPACK_MATRIX_DIAGS
-
-! --------------------------------------------------------------------------------------------------------------
-!> \brief Pack zones numbers along interfaces
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_PACK_CELL_NEIGHBORS(NL)
-USE SCARC_POINTERS, ONLY: L, G, OS, OL, OG, A, F, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NL
-INTEGER :: IOR0, ICG, ICW, ICWG, LL, IWG, IXW, IYW, IZW
-
-A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
-OS%SEND_BUFFER_INT = NSCARC_HUGE_INT
-LL = 1
-DO IOR0 = -3, 3
-   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
-   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
-      ICW  = OG%ICG_TO_ICW(ICG, 1)                                 ! local cell number adjacent to interface
-      ICWG = G%LOCAL_TO_GLOBAL(ICW)                                ! global cell number adjacent to interface
-      OS%SEND_BUFFER_INT(LL)   = ICW
-      OS%SEND_BUFFER_INT(LL+1) = ICWG
-      LL = LL + 2
-   ENDDO
-   IF (NL /= NLEVEL_MIN) CYCLE
    F => L%FACE(IOR0)
    DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+
+      ICW1 = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW1 > 0) OS%SEND_BUFFER_REAL(LL) = G%AUX1(ICW1)
+      LL = LL + 1
+
+      IF (NL /= NLEVEL_MIN) CYCLE
+
       IWG  = OG%ICG_TO_IWG(ICG)
       IXW  = G%WALL(IWG)%IXW + F%INCRX
       IYW  = G%WALL(IWG)%IYW + F%INCRY
       IZW  = G%WALL(IWG)%IZW + F%INCRZ
-      ICW  = G%CELL_NUMBER(IXW, IYW, IZW)
-      OG%ICG_TO_ICW(ICG, 2) = ICW                              
-      ICWG = G%LOCAL_TO_GLOBAL(ICW)
-      OS%SEND_BUFFER_INT(LL)   = ICW
-      OS%SEND_BUFFER_INT(LL+1) = ICWG
-      LL = LL + 2
+
+      ICW2 = G%CELL_NUMBER(IXW, IYW, IZW)
+      IF (ICW2 > 0) OS%SEND_BUFFER_REAL(LL+1) = G%AUX1(ICW2)
+      LL = LL + 1
+
    ENDDO
 ENDDO
 
-END SUBROUTINE SCARC_PACK_CELL_NEIGHBORS
+END SUBROUTINE SCARC_PACK_AUXILIARY
+
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Unpack zones numbers along interfaces
+!> \brief Unpack overlapping auxiliary vector 
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS(NM, NOM, NL)
-USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_INT, SCARC_POINT_TO_BUFFER_INT
+SUBROUTINE SCARC_UNPACK_AUXILIARY (NM, NOM, NL)
+USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
 INTEGER, INTENT(IN) :: NM, NOM, NL
-INTEGER :: ICG, IOR0, LL, IOFF
+INTEGER :: IOR0, ICG, ICE1, ICE2, LL
 
-CROUTINE = 'SCARC_UNPACK_CELL_NEIGHBORS'
-
-RECV_BUFFER_INT => SCARC_POINT_TO_BUFFER_INT (NM, NOM, 1)
-
-CALL SCARC_ALLOCATE_INT1 (OG%ICG_TO_OCELL, 1, 2*OG%NCG, NSCARC_INIT_ZERO, 'G%ICG_TO_OCELL', CROUTINE)
-CALL SCARC_ALLOCATE_INT1 (OG%ICG_TO_GCELL, 1, 2*OG%NCG, NSCARC_INIT_ZERO, 'G%ICG_TO_GCELL', CROUTINE)
-
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
 LL = 1
 DO IOR0 = -3, 3
    IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
    DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      OG%ICG_TO_OCELL(ICG) = RECV_BUFFER_INT(LL)
-      OG%ICG_TO_GCELL(ICG) = RECV_BUFFER_INT(LL+1)
-      LL = LL + 2
-   ENDDO
-   IF (NL /= NLEVEL_MIN) CYCLE
-   IOFF = OL%GHOST_LASTW(IOR0)
-   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
-      G%ICE2 = G%ICE2 + 1
-      OG%ICG_TO_OCELL(ICG + IOFF) = RECV_BUFFER_INT(LL)
-      OG%ICG_TO_GCELL(ICG + IOFF) = RECV_BUFFER_INT(LL+1)
-      OG%ICG_TO_ICE(ICG, 2) = G%ICE2
-      LL = LL + 2
+
+      ICE1 = OG%ICG_TO_ICE(ICG,1)
+      IF (ICE1 > 0) G%AUX1(ICE1) = RECV_BUFFER_REAL(LL)
+      LL = LL + 1
+
+      IF (NL /= NLEVEL_MIN) CYCLE
+
+      ICE2 = OG%ICG_TO_ICE(ICG,2)
+      IF (ICE2 > 0) G%AUX1(ICE2) = RECV_BUFFER_REAL(LL+1)
+      LL = LL + 1
+
    ENDDO
 ENDDO
 
-END SUBROUTINE SCARC_UNPACK_CELL_NEIGHBORS
+END SUBROUTINE SCARC_UNPACK_AUXILIARY
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Pack and unpack overlapping nullspace vector 
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_PACK_NULLSPACE(NL)
+USE SCARC_POINTERS, ONLY: L, G, F, OL, OG, OS
+INTEGER, INTENT(IN) :: NL
+INTEGER :: IOR0, ICG, ICW1, ICW2, IWG, IXW, IYW, IZW, LL
+
+LL = 1
+OS%SEND_BUFFER_REAL = NSCARC_HUGE_REAL_EB
+DO IOR0 = -3, 3
+
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   F => L%FACE(IOR0)
+   DO ICG = OL%GHOST_FIRSTW(IOR0), OL%GHOST_LASTW(IOR0)
+
+      ICW1 = OG%ICG_TO_ICW(ICG, 1)
+      IF (ICW1 > 0) OS%SEND_BUFFER_REAL(LL)   = G%NULLSPACE(ICW1)
+      LL = LL + 1
+
+      IF (NL /= NLEVEL_MIN) CYCLE
+
+      IWG  = OG%ICG_TO_IWG(ICG)
+      IXW  = G%WALL(IWG)%IXW + F%INCRX
+      IYW  = G%WALL(IWG)%IYW + F%INCRY
+      IZW  = G%WALL(IWG)%IZW + F%INCRZ
+
+      ICW2 = G%CELL_NUMBER(IXW, IYW, IZW)
+      IF (ICW2 > 0) OS%SEND_BUFFER_REAL(LL+1) = G%NULLSPACE(ICW2)
+      LL = LL + 1
+
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_PACK_NULLSPACE
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Unpack overlapping nullspace vector 
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UNPACK_NULLSPACE (NM, NOM, NL)
+USE SCARC_POINTERS, ONLY: G, OL, OG, RECV_BUFFER_REAL, SCARC_POINT_TO_BUFFER_REAL
+INTEGER, INTENT(IN) :: NM, NOM, NL
+INTEGER :: IOR0, ICG, ICE1, ICE2, LL
+
+RECV_BUFFER_REAL => SCARC_POINT_TO_BUFFER_REAL (NM, NOM, 1)
+LL = 1
+DO IOR0 = -3, 3
+   IF (OL%GHOST_LASTW(IOR0) == 0) CYCLE
+   DO ICG = OL%GHOST_FIRSTE(IOR0), OL%GHOST_LASTE(IOR0)
+
+      ICE1 = OG%ICG_TO_ICE(ICG,1)
+      IF (ICE1 > 0) G%NULLSPACE(ICE1) = RECV_BUFFER_REAL(LL)
+      LL = LL + 1
+
+      IF (NL /= NLEVEL_MIN) CYCLE
+
+      ICE2 = OG%ICG_TO_ICE(ICG,2)
+      IF (ICE2 > 0) G%NULLSPACE(ICE2) = RECV_BUFFER_REAL(LL+1)
+      LL = LL + 1
+
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_UNPACK_NULLSPACE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
@@ -2126,6 +2370,7 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_ZONE_NEIGHBORS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
 ! --------------------------------------------------------------------------------------------------------------
@@ -2168,6 +2413,7 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_ZONE_NEIGHBORS:B: ICG, OZONE, GZONE :', &
 ENDDO
 END SUBROUTINE SCARC_UNPACK_ZONE_NEIGHBORS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
 ! --------------------------------------------------------------------------------------------------------------
@@ -2196,6 +2442,7 @@ ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_NUMS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
 ! --------------------------------------------------------------------------------------------------------------
@@ -2220,6 +2467,7 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_NUMS: ICG, LAYER2_NUMS:', ICG, RECV_BUFFER_
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_NUMS
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones numbers along interfaces
 ! --------------------------------------------------------------------------------------------------------------
@@ -2240,6 +2488,7 @@ WRITE(MSG%LU_DEBUG,*) 'PACK_LAYER2_VALS: ICG, IC, SEND_BUFFER_REAL(ICG):', ICG, 
 ENDDO
 
 END SUBROUTINE SCARC_PACK_LAYER2_VALS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones numbers along interfaces
@@ -2267,6 +2516,7 @@ WRITE(MSG%LU_DEBUG,*) 'UNPACK_LAYER2_VALS: ICG, L%L2PTR, G%ELAYER2_VALS:', ICG, 
    ENDDO
 ENDDO
 END SUBROUTINE SCARC_UNPACK_LAYER2_VALS
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack zones information into send vector
@@ -2301,6 +2551,7 @@ DO IOR0 = -3, 3
 ENDDO
 END SUBROUTINE SCARC_PACK_ZONE_TYPES
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Unpack zones information into send vector
 ! --------------------------------------------------------------------------------------------------------------
@@ -2326,6 +2577,7 @@ DO IOR0 = -3, 3
 ENDDO
 
 END SUBROUTINE SCARC_UNPACK_ZONE_TYPES
+#endif
 
 END MODULE SCARC_MPI
 

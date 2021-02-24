@@ -18,19 +18,45 @@ IMPLICIT NONE
 
 CONTAINS
 
+
 ! --------------------------------------------------------------------------------------------------------------------------
-!> \brief Check if two meshes are neighbors
+!> \brief Check if two meshes are face neighbors
 ! --------------------------------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION ARE_NEIGHBORS(NM, NOM)
+LOGICAL FUNCTION ARE_FACE_NEIGHBORS(NM, NOM)
 USE SCARC_POINTERS, ONLY: OM
 INTEGER, INTENT(IN) :: NM, NOM
-
-ARE_NEIGHBORS = .TRUE.
-
+ARE_FACE_NEIGHBORS = .TRUE.
 OM => MESHES(NM)%OMESH(NOM)
-IF (OM%NIC_R == 0 .AND. OM%NIC_S == 0) ARE_NEIGHBORS = .FALSE.
+IF (OM%NIC_R == 0 .AND. OM%NIC_S == 0) ARE_FACE_NEIGHBORS = .FALSE.
+END FUNCTION ARE_FACE_NEIGHBORS
 
+
+! --------------------------------------------------------------------------------------------------------------------------
+!> \brief Check if two meshes are diagonal neighbors
+! --------------------------------------------------------------------------------------------------------------------------
+LOGICAL FUNCTION ARE_DIAG_NEIGHBORS(NM, NOM)
+INTEGER, INTENT(IN) :: NM, NOM
+INTEGER :: N, NOM2
+ARE_DIAG_NEIGHBORS = .FALSE.
+NEIGHBOR_LOOP: DO N = 1, MESHES(NM)%N_NEIGHBORING_MESHES
+   NOM2 = MESHES(NM)%NEIGHBORING_MESH(N)
+   IF (NOM == NOM2 .OR. .NOT. ARE_FACE_NEIGHBORS (NM, NOM)) THEN
+      ARE_DIAG_NEIGHBORS = .TRUE.
+      EXIT NEIGHBOR_LOOP
+   ENDIF
+ENDDO NEIGHBOR_LOOP
+END FUNCTION ARE_DIAG_NEIGHBORS
+
+
+! --------------------------------------------------------------------------------------------------------------------------
+!> \brief Check if two meshes are diagonal neighbors
+! --------------------------------------------------------------------------------------------------------------------------
+LOGICAL FUNCTION ARE_NEIGHBORS(NM, NOM)
+INTEGER, INTENT(IN) :: NM, NOM
+ARE_NEIGHBORS = .FALSE.
+IF (ARE_FACE_NEIGHBORS (NM, NOM) .OR. ARE_DIAG_NEIGHBORS (NM, NOM)) ARE_NEIGHBORS = .TRUE.
 END FUNCTION ARE_NEIGHBORS
+
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
@@ -54,6 +80,7 @@ SELECT CASE (NTYPE)
 END SELECT
 
 END SUBROUTINE SCARC_SET_GRID_TYPE
+
 
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
@@ -87,6 +114,7 @@ END SELECT
 
 END SUBROUTINE SCARC_SET_SYSTEM_TYPE
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the data type of the currently processed array
 ! --------------------------------------------------------------------------------------------------------------
@@ -112,6 +140,7 @@ END SELECT
 
 END FUNCTION SET_DATA_TYPE
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the dimension of the currently processed array
 ! --------------------------------------------------------------------------------------------------------------
@@ -130,6 +159,7 @@ SELECT CASE (NDIM)
 END SELECT
 
 END FUNCTION SET_DIMENSION
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get full text information about the initialization type of the currently processed array
@@ -163,6 +193,7 @@ IF (NSTATE == NSCARC_STORAGE_REMOVE) SET_INIT_TYPE = ' '
 
 END FUNCTION SET_INIT_TYPE
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Get type of matrix storage scheme for specified grid level
 ! --------------------------------------------------------------------------------------------------------------
@@ -176,6 +207,7 @@ ELSE
 ENDIF
 
 END FUNCTION SET_MATRIX_TYPE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Check if a subdiagonal entry must be computed in a specified coordinate direction
@@ -213,6 +245,7 @@ RETURN
 
 END FUNCTION IS_VALID_DIRECTION
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Get grid permutation (MGM only)
 ! ------------------------------------------------------------------------------------------------------------------
@@ -223,10 +256,11 @@ GET_PERM = -1
 IF (JC > 0 .AND. JC <= G%NC) GET_PERM = G%PERM_FW(JC)
 END FUNCTION GET_PERM
 
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Filter out mean value
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_FILTER_MEANVALUE(NV, NL)
+SUBROUTINE FILTER_MEANVALUE(NV, NL)
 USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL
 INTEGER :: NM, IC, I, J, K
@@ -260,12 +294,13 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDDO
 ENDDO
 
-END SUBROUTINE SCARC_FILTER_MEANVALUE
+END SUBROUTINE FILTER_MEANVALUE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Restore last cell of last mesh
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RESTORE_LAST_CELL (XX, NL)
+SUBROUTINE RESTORE_LAST_CELL (XX, NL)
 USE SCARC_POINTERS, ONLY: S, VC, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: XX, NL
 
@@ -275,32 +310,34 @@ S => SCARC(UPPER_MESH_INDEX)
 VC => SCARC_POINT_TO_VECTOR (UPPER_MESH_INDEX, NL, XX)
 VC(S%NC) = S%RHS_END
 
-END SUBROUTINE SCARC_RESTORE_LAST_CELL
+END SUBROUTINE RESTORE_LAST_CELL
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell should be considered during packing of zone numbers
 ! --------------------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION SCARC_FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
+LOGICAL FUNCTION FORBIDDEN_ZONE(SEND_BUFFER_INT, IZ, ICG1, ICG2)
 INTEGER, DIMENSION(:), INTENT(IN) :: SEND_BUFFER_INT
 INTEGER, INTENT(IN) :: IZ, ICG1, ICG2
 INTEGER :: LL, ICG
 
-SCARC_FORBIDDEN_ZONE = .FALSE.
+FORBIDDEN_ZONE = .FALSE.
 LL = 5
 DO ICG = ICG1, ICG2
    IF (SEND_BUFFER_INT(LL) == IZ) THEN
-      SCARC_FORBIDDEN_ZONE = .TRUE.
+      FORBIDDEN_ZONE = .TRUE.
       RETURN
    ENDIF
    LL = LL + 4
 ENDDO
-END FUNCTION SCARC_FORBIDDEN_ZONE
+END FUNCTION FORBIDDEN_ZONE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Control multigrid cycling (F/V/W)
 ! Note: NLEVEL_MIN corresponds to finest level, NLEVEL_MAX to coarsest level
 ! --------------------------------------------------------------------------------------------------------------
-INTEGER FUNCTION SCARC_CYCLING_CONTROL(NTYPE, NL)
+INTEGER FUNCTION CYCLING_CONTROL(NTYPE, NL)
 USE SCARC_POINTERS, ONLY: MG
 INTEGER, INTENT(IN) :: NTYPE, NL
 INTEGER :: NM, IL, ICYCLE
@@ -372,9 +409,9 @@ SELECT CASE (NTYPE)
    
 END SELECT
 
-SCARC_CYCLING_CONTROL = ICYCLE
+CYCLING_CONTROL = ICYCLE
 RETURN
-END FUNCTION SCARC_CYCLING_CONTROL
+END FUNCTION CYCLING_CONTROL
 
 END MODULE SCARC_UTILITIES
 

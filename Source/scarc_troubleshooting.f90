@@ -36,6 +36,8 @@ SELECT CASE (NERROR)
       CERROR = 'Direct coarse grid solver is only working in combination with MKL'
    CASE (NSCARC_ERROR_EXCHANGE_RECV)
       CERROR = 'Wrong receive exchange structure'
+   CASE (NSCARC_ERROR_EXCHANGE_DIAG)
+      CERROR = 'Unknown type of diagonal data exchange'
    CASE (NSCARC_ERROR_EXCHANGE_SEND)
       CERROR = 'Wrong send exchange structure'
    CASE (NSCARC_ERROR_GRID_INDEX)

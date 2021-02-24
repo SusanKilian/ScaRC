@@ -143,12 +143,12 @@ END SUBROUTINE SCARC_SETUP_FFT
 !> \brief Setup data structures for the use of blockwise FFT methods as preconditioners
 ! New here: Perform own initialization of FFT based on H2CZIS/H3CZIS and use own SAVE and WORK arrays
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MGM_PASS2(NM, NL)
+SUBROUTINE SCARC_SETUP_MGM_FFT(NM, NL)
 USE SCARC_POINTERS, ONLY: M, S, L, MGM, FFT, SCARC_POINT_TO_MGM
 USE POIS, ONLY: H2CZIS, H3CZIS
 INTEGER, INTENT(IN) :: NM, NL
 
-CROUTINE = 'SCARC_SETUP_MGM_PASS2'
+CROUTINE = 'SCARC_SETUP_MGM_FFT'
  
 CALL SCARC_POINT_TO_MGM (NM, NL)                                    
 FFT => MGM%FFT
@@ -203,7 +203,7 @@ ELSE
                FFT%HX,FFT%XLM,FFT%ITRN,FFT%JTRN,IERROR,FFT%SAVE1)
 ENDIF
 
-END SUBROUTINE SCARC_SETUP_MGM_PASS2
+END SUBROUTINE SCARC_SETUP_MGM_FFT
 
 
 ! ------------------------------------------------------------------------------------------------------------------
