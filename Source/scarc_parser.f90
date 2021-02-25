@@ -108,7 +108,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
             CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_KRYLOV_INTERPOL, NSCARC_NONE)
       END SELECT
 
-      ! Set type of preconditioner (JACOBI/SSOR/MGS/MSGS/MSOR/MSSOR/ILU/LU/FFT/GMG/PARDISO/CLUSTER)
+      ! Set type of preconditioner (JACOBI/SSOR/MGS/MSGS/MSOR/MSSOR/ILU/LU/FFT/GMG/PARDISO/CLUSTER/OPTIMIZED)
       SELECT CASE (TRIM(SCARC_PRECON))
          CASE ('JACOBI')                                    ! Jacobi preconditioner
             TYPE_PRECON = NSCARC_RELAX_JAC
@@ -135,28 +135,11 @@ SELECT CASE (TRIM(SCARC_METHOD))
                   TYPE_SMOOTH = NSCARC_RELAX_JAC
                CASE ('SSOR')
                   TYPE_SMOOTH = NSCARC_RELAX_SSOR
-               CASE ('MJAC')
-                  TYPE_SMOOTH = NSCARC_RELAX_MJAC
-               CASE ('MGS')
-                  TYPE_SMOOTH = NSCARC_RELAX_MGS
-               CASE ('MSGS')
-                  TYPE_SMOOTH = NSCARC_RELAX_MSGS
-               CASE ('MSOR')
-                  TYPE_SMOOTH = NSCARC_RELAX_MSOR
-               CASE ('MSSOR')
-                  TYPE_SMOOTH = NSCARC_RELAX_MSSOR
                CASE ('ILU')
                   TYPE_SMOOTH = NSCARC_RELAX_ILU
                CASE ('FFT')
                   IF (IS_UNSTRUCTURED) CALL SCARC_ERROR(NSCARC_ERROR_FFT_GRID, SCARC_NONE, NSCARC_NONE)
                   TYPE_SMOOTH = NSCARC_RELAX_FFT
-               CASE ('FFTO')
-                  IF (IS_UNSTRUCTURED) CALL SCARC_ERROR(NSCARC_ERROR_FFT_GRID, SCARC_NONE, NSCARC_NONE)
-                  IF (NMESHES == 1) THEN
-                     TYPE_SMOOTH = NSCARC_RELAX_FFT
-                  ELSE
-                     TYPE_SMOOTH = NSCARC_RELAX_FFTO
-                  ENDIF
                CASE ('PARDISO')
 #ifdef WITH_MKL
                   TYPE_SMOOTH = NSCARC_RELAX_MKL
@@ -172,6 +155,8 @@ SELECT CASE (TRIM(SCARC_METHOD))
                   TYPE_SMOOTH = NSCARC_RELAX_SSOR
                   CALL SCARC_ERROR(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
 #endif
+               CASE DEFAULT
+                  CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_SMOOTH, NSCARC_NONE)
             END SELECT
          CASE ('FFT')                                                ! FFT preconditioner
             IF (IS_UNSTRUCTURED) CALL SCARC_ERROR(NSCARC_ERROR_FFT_GRID, SCARC_NONE, NSCARC_NONE)
@@ -183,6 +168,14 @@ SELECT CASE (TRIM(SCARC_METHOD))
             ELSE
                TYPE_PRECON = NSCARC_RELAX_FFTO
             ENDIF
+         CASE ('OPTIMIZED')                                          ! LU preconditioner based on either FFT or PARDISO
+#ifdef WITH_MKL
+            TYPE_PRECON   = NSCARC_RELAX_OPTIMIZED
+            TYPE_MKL(0)   = NSCARC_MKL_LOCAL
+            TYPE_SCOPE(1) = NSCARC_SCOPE_LOCAL
+#else
+            CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_PRECON, NSCARC_NONE)
+#endif
          CASE ('PARDISO')                                            ! LU preconditioner based on MKL-PARDISO
 #ifdef WITH_MKL
             TYPE_PRECON   = NSCARC_RELAX_MKL
@@ -190,7 +183,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
             TYPE_SCOPE(1) = NSCARC_SCOPE_LOCAL
 #else
             TYPE_PRECON   = NSCARC_RELAX_SSOR
-            CALL SCARC_ERROR(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
+            CALL SCARC_WARNING(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE ('CLUSTER')                            !  LU-preconditioner based on MKL Cluster_Sparse_Solver
 #ifdef WITH_MKL
@@ -198,12 +191,14 @@ SELECT CASE (TRIM(SCARC_METHOD))
             TYPE_MKL(0)   = NSCARC_MKL_GLOBAL
             TYPE_SCOPE(1) = NSCARC_SCOPE_GLOBAL
 #else
-         TYPE_PRECON   = NSCARC_RELAX_SSOR
-         CALL SCARC_ERROR(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
+            TYPE_PRECON   = NSCARC_RELAX_SSOR
+            CALL SCARC_WARNING(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE DEFAULT
             TYPE_PRECON   = NSCARC_RELAX_SSOR
-            CALL SCARC_ERROR(NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
+            TYPE_MKL(0)   = NSCARC_MKL_NONE
+            TYPE_SCOPE(1) = NSCARC_SCOPE_LOCAL
+            CALL SCARC_WARNING(NSCARC_WARNING_ONLY_SSOR_PRECON, SCARC_NONE, NSCARC_NONE)
       END SELECT
 
       ! set type scope for preconditioner (GLOBAL/LOCAL)
@@ -262,6 +257,12 @@ SELECT CASE (TRIM(SCARC_METHOD))
             ELSE
                TYPE_SMOOTH = NSCARC_RELAX_FFTO
             ENDIF
+         CASE ('OPTIMIZED')
+#ifdef WITH_MKL
+            TYPE_SMOOTH = NSCARC_RELAX_OPTIMIZED
+#else
+            CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_SMOOTH, NSCARC_NONE)
+#endif
          CASE ('PARDISO')
 #ifdef WITH_MKL
             TYPE_SMOOTH = NSCARC_RELAX_MKL
@@ -277,7 +278,8 @@ SELECT CASE (TRIM(SCARC_METHOD))
             CALL SCARC_WARNING(NSCARC_WARNING_NO_MKL_SMOOTH, SCARC_NONE, NSCARC_NONE)
 #endif
          CASE DEFAULT
-            CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_SMOOTH, NSCARC_NONE)
+            TYPE_SMOOTH = NSCARC_RELAX_SSOR
+            CALL SCARC_WARNING(NSCARC_WARNING_ONLY_SSOR_SMOOTH, SCARC_NONE, NSCARC_NONE)
       END SELECT
 
       ! set type scope for smoother (GLOBAL/LOCAL)

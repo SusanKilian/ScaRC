@@ -626,6 +626,8 @@ TYPE SCARC_LEVEL_TYPE
 
    INTEGER :: L2PTR = 0                                        !< Pointer to current second layer cell
 
+   LOGICAL :: HAS_OBSTRUCTIONS = .FALSE.                       !< Information whether current mesh has obstructions or not
+
 END TYPE SCARC_LEVEL_TYPE
 
 !> \brief Sample sequence of used solvers in stack

@@ -32,28 +32,6 @@ CONTAINS
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
-INTEGER :: NSTACK
-
-NSTACK = NSCARC_STACK_ROOT
-STACK(NSTACK)%SOLVER => POISSON_SOLVER
-
-CALL SCARC_SETUP_MKL(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSTACK, NLEVEL_MIN, NLEVEL_MIN)
-
-! In the multi-mesh case use CLUSTER_SPARSE_SOLVER, else PARDISO solver (only on finest grid level)
-
-IF (NMESHES > 1) THEN 
-   CALL SCARC_SETUP_CLUSTER(NLEVEL_MIN, NLEVEL_MIN)
-ELSE 
-   CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
-ENDIF
-
-END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
-
-
-! ------------------------------------------------------------------------------------------------------------------
-!> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
-! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MKL(NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: SV
 INTEGER, INTENT(IN) :: NSOLVER, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX
@@ -92,13 +70,63 @@ CALL SCARC_SETUP_STACK_VECTORS(.TRUE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TR
 END SUBROUTINE SCARC_SETUP_MKL
 
 
+! ------------------------------------------------------------------------------------------------------------------
+!> \brief Allocate and initialize vectors for LU-solvers (based on MKL)
+!  In the multi-mesh case use CLUSTER_SPARSE_SOLVER, else PARDISO solver (only on finest grid level)
+! ------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
+
+STACK(NSCARC_STACK_ROOT)%SOLVER => POISSON_SOLVER
+CALL SCARC_SETUP_MKL(NSCARC_SOLVER_MAIN, NSCARC_SCOPE_GLOBAL, NSCARC_STAGE_ONE, NSCARC_STACK_ROOT, NLEVEL_MIN, NLEVEL_MIN)
+
+IF (NMESHES > 1) THEN 
+   CALL SCARC_SETUP_CLUSTER (NLEVEL_MIN, NLEVEL_MAX)
+ELSE 
+   CALL SCARC_SETUP_PARDISO (NLEVEL_MIN, NLEVEL_MAX)
+ENDIF
+
+END SUBROUTINE SCARC_SETUP_MKL_ENVIRONMENT
+
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Initialize CLUSTER_SPARSE_SOLVER from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_CLUSTER(NLMIN, NLMAX)
-USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
-INTEGER :: NM, NL, I 
+INTEGER :: NM, NL
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   DO NL = NLMIN, NLMAX
+      CALL SCARC_SETUP_CLUSTER_MESH(NM, NL)
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_SETUP_CLUSTER
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Initialize PARDISO from MKL-library
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_PARDISO(NLMIN, NLMAX)
+INTEGER, INTENT(IN) :: NLMIN, NLMAX
+INTEGER :: NM, NL
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   DO NL = NLMIN, NLMAX
+      CALL SCARC_SETUP_PARDISO_MESH(NM, NL)
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_SETUP_PARDISO
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Initialize CLUSTER_SPARSE_SOLVER from MKL-library on local mesh
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_CLUSTER_MESH(NM, NL)
+USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NM, NL
+INTEGER :: I 
 REAL (EB) :: TNOW
 REAL (EB) :: DUMMY(1)=0.0_EB
 REAL (FB) :: DUMMY_FB(1)=0.0_FB
@@ -106,90 +134,87 @@ REAL (FB) :: DUMMY_FB(1)=0.0_FB
 TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_CLUSTER'
 
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   LEVEL_LOOP: DO NL = NLMIN, NLMAX
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+MKL => L%MKL
+AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
-      MKL => L%MKL
-      AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
-
-      ! Allocate workspace for parameters and pointers needed in MKL-routine
+! Allocate workspace for parameters and pointers needed in MKL-routine
  
-      CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
 
-      IF (.NOT.ALLOCATED(MKL%CT)) THEN
-         ALLOCATE(MKL%CT(64), STAT=IERROR)
-         CALL CHKMEMERR ('SCARC', 'CT', IERROR)
-         DO I=1,64
-            MKL%CT(I)%DUMMY = 0
-         ENDDO
-      ENDIF
+IF (.NOT.ALLOCATED(MKL%CT)) THEN
+   ALLOCATE(MKL%CT(64), STAT=IERROR)
+   CALL CHKMEMERR ('SCARC', 'CT', IERROR)
+   DO I=1,64
+      MKL%CT(I)%DUMMY = 0
+   ENDDO
+ENDIF
 
-      ! Define corresponding parameters
-      ! Note: IPARM-vectory is allocate from 1:64, not from 0:63
+! Define corresponding parameters
+! Note: IPARM-vectory is allocate from 1:64, not from 0:63
  
-      MKL%NRHS   =  1         ! one right hand side
-      MKL%MAXFCT =  1         ! one matrix
-      MKL%MNUM   =  1         ! number of matrix to be factorized
-      MKL%ERROR  =  0         ! initialize error flag
-      MKL%MSGLVL =  0         ! do not print statistical information
-      IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
-         MKL%MTYPE  = -2      ! Matrix type real and symmetric indefinite
-      ELSE
-         MKL%MTYPE  = 11      ! Matrix type real and non-symmetric
-      ENDIF
-      MKL%IPARM(1)  =  1      ! no solver default
-      IF (N_MPI_PROCESSES > 4) THEN 
-         MKL%IPARM(2) =10     ! 10 = MPI Parallel fill-in reordering from METIS. If 3 = OpenMP parallel reordering in Master
-      ELSE                    ! Note IPARM(2)=10 has a bug which has been fixed from Intel MKL 2018 update 2 onwards.
-         MKL%IPARM(2) = 3
-      ENDIF
-      MKL%IPARM(4)  = 0       ! no iterative-direct algorithm
-      MKL%IPARM(5)  = 0       ! no user fill-in reducing permutation
-      MKL%IPARM(6)  = 0       ! =0 solution on the first n components of x
-      MKL%IPARM(8)  = 2       ! numbers of iterative refinement steps
-      MKL%IPARM(10) = 13      ! perturb the pivot elements with 1E-13
-      MKL%IPARM(11) = 1       ! use nonsymmetric permutation and scaling MPS  !!!!! was 1
-      MKL%IPARM(13) = 1       ! maximum weighted matching algorithm is switched-off
-                              !(default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
-      MKL%IPARM(14) = 0       ! Output: number of perturbed pivots
-      MKL%IPARM(18) = 0       ! Output: number of nonzeros in the factor LU
-      MKL%IPARM(19) = 0       ! Output: Mflops for LU factorization
-      MKL%IPARM(20) = 0       ! Output: Numbers of CG Iterations
-      MKL%IPARM(21) = 1       ! 1x1 diagonal pivoting for symmetric indefinite matrices.
-      MKL%IPARM(24) = 0
-      MKL%IPARM(27) = 1       ! Check matrix
-      MKL%IPARM(40) = 2       ! Matrix, solution and rhs provided in distributed assembled matrix input format.
+MKL%NRHS   =  1         ! one right hand side
+MKL%MAXFCT =  1         ! one matrix
+MKL%MNUM   =  1         ! number of matrix to be factorized
+MKL%ERROR  =  0         ! initialize error flag
+MKL%MSGLVL =  0         ! do not print statistical information
+IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
+   MKL%MTYPE  = -2      ! Matrix type real and symmetric indefinite
+ELSE
+   MKL%MTYPE  = 11      ! Matrix type real and non-symmetric
+ENDIF
+MKL%IPARM(1)  =  1      ! no solver default
+IF (N_MPI_PROCESSES > 4) THEN 
+   MKL%IPARM(2) =10     ! 10 = MPI Parallel fill-in reordering from METIS. If 3 = OpenMP parallel reordering in Master
+ELSE                    ! Note IPARM(2)=10 has a bug which has been fixed from Intel MKL 2018 update 2 onwards.
+   MKL%IPARM(2) = 3
+ENDIF
+MKL%IPARM(4)  = 0       ! no iterative-direct algorithm
+MKL%IPARM(5)  = 0       ! no user fill-in reducing permutation
+MKL%IPARM(6)  = 0       ! =0 solution on the first n components of x
+MKL%IPARM(8)  = 2       ! numbers of iterative refinement steps
+MKL%IPARM(10) = 13      ! perturb the pivot elements with 1E-13
+MKL%IPARM(11) = 1       ! use nonsymmetric permutation and scaling MPS  !!!!! was 1
+MKL%IPARM(13) = 1       ! maximum weighted matching algorithm is switched-off
+                        !(default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
+MKL%IPARM(14) = 0       ! Output: number of perturbed pivots
+MKL%IPARM(18) = 0       ! Output: number of nonzeros in the factor LU
+MKL%IPARM(19) = 0       ! Output: Mflops for LU factorization
+MKL%IPARM(20) = 0       ! Output: Numbers of CG Iterations
+MKL%IPARM(21) = 1       ! 1x1 diagonal pivoting for symmetric indefinite matrices.
+MKL%IPARM(24) = 0
+MKL%IPARM(27) = 1       ! Check matrix
+MKL%IPARM(40) = 2       ! Matrix, solution and rhs provided in distributed assembled matrix input format.
 
-      MKL%IPARM(41) = G%NC_OFFSET(NM) + 1                      ! first global cell number for mesh NM
-      MKL%IPARM(42) = G%NC_OFFSET(NM) + G%NC_LOCAL(NM)         ! last global cell number for mesh NM
-      !MKL%IPARM(39) = 2                                       ! provide matrix in distributed format
-      !MKL%IPARM(40) = G%NC_OFFSET(NM)+1                       ! first global cell number for mesh NM
-      !MKL%IPARM(41) = G%NC_OFFSET(NM)+G%NC_LOCAL(NM)          ! last global cell number for mesh NM
+MKL%IPARM(41) = G%NC_OFFSET(NM) + 1                      ! first global cell number for mesh NM
+MKL%IPARM(42) = G%NC_OFFSET(NM) + G%NC_LOCAL(NM)         ! last global cell number for mesh NM
+!MKL%IPARM(39) = 2                                       ! provide matrix in distributed format
+!MKL%IPARM(40) = G%NC_OFFSET(NM)+1                       ! first global cell number for mesh NM
+!MKL%IPARM(41) = G%NC_OFFSET(NM)+G%NC_LOCAL(NM)          ! last global cell number for mesh NM
  
-      ! First perform only reordering and symbolic factorization
-      ! Then perform only factorization
+! First perform only reordering and symbolic factorization
+! Then perform only factorization
  
-      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
 
-         MKL%IPARM(28) = 1         ! single precision
-         MKL%PHASE = 11
-         CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                      AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                      MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MPI_COMM_WORLD, MKL%ERROR)
-         MKL%PHASE = 22
-         CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                      AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                      MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MPI_COMM_WORLD, MKL%ERROR)
+   MKL%IPARM(28) = 1         ! single precision
+   MKL%PHASE = 11
+   CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MPI_COMM_WORLD, MKL%ERROR)
+   MKL%PHASE = 22
+   CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                AS%VAL_FB, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MPI_COMM_WORLD, MKL%ERROR)
 
-         IF (MKL%ERROR /= 0) THEN
-            WRITE(*,*) 'ERROR in MKL SETUP, MKL%ERROR=', MKL%ERROR
-            CALL MPI_FINALIZE(IERROR)
-            STOP
-         ENDIF
+   IF (MKL%ERROR /= 0) THEN
+      WRITE(*,*) 'ERROR in MKL SETUP, MKL%ERROR=', MKL%ERROR
+      CALL MPI_FINALIZE(IERROR)
+      STOP
+   ENDIF
 
-      ELSE
+ELSE
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'CLUSTER: G%NC_GLOBAL=', G%NC_GLOBAL
@@ -200,36 +225,33 @@ WRITE(MSG%LU_DEBUG,'(8I8)') AS%ROW
 WRITE(MSG%LU_DEBUG,*) 'AS%COL:'
 WRITE(MSG%LU_DEBUG,'(8I8)') AS%COL
 #endif
-         MKL%IPARM(28) = 0         ! double precision
-         MKL%PHASE = 11
-         CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                      AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                      MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-         MKL%PHASE = 22
-         CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
-                                      AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
-                                      MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-         IF (MKL%ERROR /= 0) THEN
-            WRITE(*,*) 'ERROR in MKL SETUP, MKL%ERROR=', MKL%ERROR
-            CALL MPI_FINALIZE(IERROR)
-            STOP
-         ENDIF
+   MKL%IPARM(28) = 0         ! double precision
+   MKL%PHASE = 11
+   CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
+   MKL%PHASE = 22
+   CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC_GLOBAL, &
+                                AS%VAL, AS%ROW, AS%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
+                                MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
+   IF (MKL%ERROR /= 0) THEN
+      WRITE(*,*) 'ERROR in MKL SETUP, MKL%ERROR=', MKL%ERROR
+      CALL MPI_FINALIZE(IERROR)
+      STOP
+   ENDIF
 
-      ENDIF
+ENDIF
 
-   ENDDO LEVEL_LOOP
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_SETUP_CLUSTER
+END SUBROUTINE SCARC_SETUP_CLUSTER_MESH
 
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Initialize PARDISO solver from MKL-library
+!> \brief Initialize PARDISO solver from MKL-library on local mesh
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_PARDISO(NLMIN, NLMAX)
+SUBROUTINE SCARC_SETUP_PARDISO_MESH(NM, NL)
 USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NLMIN, NLMAX
-INTEGER :: NM, NL, I, IDUMMY(1)=0
+INTEGER, INTENT(IN) :: NM, NL
+INTEGER :: I, IDUMMY(1)=0
 REAL (EB) :: TNOW
 REAL (EB) :: DUMMY(1)=0.0_EB
 REAL (FB) :: DUMMY_FB(1)=0.0_FB
@@ -237,70 +259,67 @@ REAL (FB) :: DUMMY_FB(1)=0.0_FB
 TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_PARDISO'
 
-MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   LEVEL_LOOP: DO NL = NLMIN, NLMAX
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
-      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+MKL => L%MKL
+AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
 
-      MKL => L%MKL
-      AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
-
-      ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
+! Allocate workspace for parameters nnd pointers eeded in MKL-routine
  
-      CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL%IPARM', CROUTINE)
 
-      IF (.NOT.ALLOCATED(MKL%PT)) THEN
-         ALLOCATE(MKL%PT(64), STAT=IERROR)
-         CALL CHKMEMERR ('SCARC', 'PT', IERROR)
-         DO I=1,64
-            MKL%PT(I)%DUMMY = 0
-         ENDDO
-      ENDIF
+IF (.NOT.ALLOCATED(MKL%PT)) THEN
+   ALLOCATE(MKL%PT(64), STAT=IERROR)
+   CALL CHKMEMERR ('SCARC', 'PT', IERROR)
+   DO I=1,64
+      MKL%PT(I)%DUMMY = 0
+   ENDDO
+ENDIF
 
-      ! Define corresponding parameters
-      ! Note: IPARM-vectory is allocate from 1:64, not from 0:63
+! Define corresponding parameters
+! Note: IPARM-vectory is allocate from 1:64, not from 0:63
  
-      MKL%NRHS   = 1
-      MKL%MAXFCT = 1
-      MKL%MNUM   = 1
+MKL%NRHS   = 1
+MKL%MAXFCT = 1
+MKL%MNUM   = 1
 
-      MKL%IPARM(1)  =  1      ! no solver default
-      MKL%IPARM(4)  =  0      ! factorization computed as required by phase
-      MKL%IPARM(5)  =  0      ! user permutation ignored
-      MKL%IPARM(6)  =  0      ! write solution on x
-      MKL%IPARM(8)  =  2      ! numbers of iterative refinement steps
-      MKL%IPARM(10) = 13      ! perturb the pivot elements with 1E-13
-      MKL%IPARM(11) =  0      ! disable scaling (default for SPD)
-      MKL%IPARM(13) =  0      ! disable matching
-      MKL%IPARM(18) = -1      ! Output: number of nonzeros in the factor LU
-      MKL%IPARM(19) = -1      ! Output: number of floating points operations
-      MKL%IPARM(20) =  1      ! Output: Numbers of CG Iterations
-      MKL%IPARM(27) =  1      ! use matrix checker
-      MKL%IPARM(37) =  0      ! matrix storage in COMPACT-format
-      MKL%IPARM(40) = 2       ! Matrix, solution and rhs provided in distributed assembled matrix input format.
+MKL%IPARM(1)  =  1      ! no solver default
+MKL%IPARM(4)  =  0      ! factorization computed as required by phase
+MKL%IPARM(5)  =  0      ! user permutation ignored
+MKL%IPARM(6)  =  0      ! write solution on x
+MKL%IPARM(8)  =  2      ! numbers of iterative refinement steps
+MKL%IPARM(10) = 13      ! perturb the pivot elements with 1E-13
+MKL%IPARM(11) =  0      ! disable scaling (default for SPD)
+MKL%IPARM(13) =  0      ! disable matching
+MKL%IPARM(18) = -1      ! Output: number of nonzeros in the factor LU
+MKL%IPARM(19) = -1      ! Output: number of floating points operations
+MKL%IPARM(20) =  1      ! Output: Numbers of CG Iterations
+MKL%IPARM(27) =  1      ! use matrix checker
+MKL%IPARM(37) =  0      ! matrix storage in COMPACT-format
+MKL%IPARM(40) = 2       ! Matrix, solution and rhs provided in distributed assembled matrix input format.
 
-      MKL%ERROR  =  0         ! initialize error flag
-      MKL%MSGLVL =  0         ! do not print statistical information
-      MKL%MTYPE  = -2         ! Matrix type real non-symmetric
+MKL%ERROR  =  0         ! initialize error flag
+MKL%MSGLVL =  0         ! do not print statistical information
+MKL%MTYPE  = -2         ! Matrix type real non-symmetric
 
-      ! First perform only reordering and symbolic factorization
-      ! Then perform only factorization
+! First perform only reordering and symbolic factorization
+! Then perform only factorization
 
-      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_PARDISO SINGLE: G%NC=',G%NC
 CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO SETUP')
 #endif
-         MKL%IPARM(28) = 1         ! single precision
-         MKL%PHASE = 11
-         CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                        AS%VAL_FB, AS%ROW, AS%COL, IDUMMY, &
-                        MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MKL%ERROR)
-         MKL%PHASE = 22
-         CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                        AS%VAL_FB, AS%ROW, AS%COL, IDUMMY, &
-                        MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MKL%ERROR)
-      ELSE
+   MKL%IPARM(28) = 1         ! single precision
+   MKL%PHASE = 11
+   CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                  AS%VAL_FB, AS%ROW, AS%COL, IDUMMY, &
+                  MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MKL%ERROR)
+   MKL%PHASE = 22
+   CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                  AS%VAL_FB, AS%ROW, AS%COL, IDUMMY, &
+                  MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY_FB, DUMMY_FB, MKL%ERROR)
+ELSE
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'PARDISO: G%NC_GLOBAL=', G%NC_GLOBAL
 WRITE(MSG%LU_DEBUG,*) 'AS%VAL:'
@@ -312,21 +331,18 @@ WRITE(MSG%LU_DEBUG,*) (AS%COL(I), I=1,9)
 WRITE(MSG%LU_DEBUG,*) 'SETUP_PARDISO DOUBLE: G%NC=',G%NC
 CALL SCARC_DEBUG_CMATRIX(AS, 'AS','PARDISO SETUP')
 #endif
-         MKL%IPARM(28) = 0         ! double precision
-         MKL%PHASE = 11
-         CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                        AS%VAL, AS%ROW, AS%COL, IDUMMY, &
-                        MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
-         MKL%PHASE = 22
-         CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
-                        AS%VAL, AS%ROW, AS%COL, IDUMMY, &
-                        MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
-      ENDIF
+   MKL%IPARM(28) = 0         ! double precision
+   MKL%PHASE = 11
+   CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                  AS%VAL, AS%ROW, AS%COL, IDUMMY, &
+                  MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
+   MKL%PHASE = 22
+   CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                  AS%VAL, AS%ROW, AS%COL, IDUMMY, &
+                  MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
+ENDIF
 
-   ENDDO LEVEL_LOOP
-ENDDO MESHES_LOOP
-
-END SUBROUTINE SCARC_SETUP_PARDISO
+END SUBROUTINE SCARC_SETUP_PARDISO_MESH
 
 
 ! --------------------------------------------------------------------------------------------------------------

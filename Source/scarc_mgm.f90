@@ -35,18 +35,14 @@ INTEGER:: NM
 CROUTINE = 'SCARC_SETUP_MGM'
 IS_MGM = .TRUE.
 
+CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_MGM(NM, NL)
+   CALL SCARC_POINT_TO_GRID (NM, NL)
 
-   ! Check whether the individual meshes contain obstructions or not
-   ! If the optimized Laplace solver is chosen and there are no obstructions in the mesh, a faster FFT solver 
-   ! can be used for the local MGM Laplace problems instead of the PARDISO solver
-
-   IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) MGM%HAS_OBSTRUCTIONS = .TRUE.
-
-   ! Store number of cells and external/internal boundary cells for simpler use in MGM method
-
+   ! Initialize MGM related variables
+    
    MGM%NCS = L%STRUCTURED%NC
    MGM%NCU = L%UNSTRUCTURED%NC
 
@@ -127,17 +123,13 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_ALLOCATE_REAL3 (MGM%W2, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'MGM%W2', CROUTINE)
 
    ! Configure boundary cell counters and weights for 'True Approximate' boundary setting
+   ! BTYPE  : Type of boundary condition in single boundary cells (Dirichlet/Neumann/Internal)
+   ! WEIGHT : Weight for true approximate setting in single boundary cells
 
    IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
 
-      ! BTYPE  : Type of boundary condition in single boundary cells (Dirichlet/Neumann/Internal)
-      ! WEIGHT : Weight for true approximate setting in single boundary cells
-
       CALL SCARC_ALLOCATE_INT2 (MGM%BTYPE, 1, MGM%NWE, -3, 3, NSCARC_INIT_NONE, 'MGM%BTYPE', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1 (MGM%WEIGHT, 1, MGM%NWE, NSCARC_INIT_ZERO, 'MGM%WEIGHT', CROUTINE)
-
-      CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
-      CALL SCARC_POINT_TO_GRID (NM, NL)
 
       CALL SCARC_SETUP_MGM_TRUE_APPROXIMATE 
 
@@ -156,7 +148,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LU .OR. TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
 
-      G => L%UNSTRUCTURED
       LO => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LOWER)
       UP => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_UPPER)
 
@@ -167,6 +158,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_CMATRIX (UP, NLEVEL_MIN, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_LIGHT, 'UP', CROUTINE)
    
       CALL SCARC_SETUP_MGM_PASS2(NM, NLEVEL_MIN)
+
    ENDIF
 
 ENDDO
@@ -388,10 +380,6 @@ ROW_LOOP: DO IC0 = 1, G%NC
       IF (ABS(VAL) > TWO_EPSILON_EB) CALL SCARC_INSERT_TO_CMATRIX (LO, VAL, JC, IC, G%NC, NMAX_L, 'LM')
 
    ENDDO COL_LOOP
-   IF (MY_RANK == 0 .AND. MOD(IC0,10) == 0) WRITE(*, *) '==================================> IC0=', IC0, ' IC=',IC
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG, *) '==================================> IC0=', IC0, ' IC=',IC
-#endif
 
 ENDDO ROW_LOOP
 

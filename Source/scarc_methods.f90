@@ -111,6 +111,11 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
             CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
             CALL SCARC_SETUP_PARDISO(NLEVEL_MIN, NLEVEL_MIN)
       END SELECT
+
+   CASE (NSCARC_RELAX_OPTIMIZED)                                    ! mixture of IntelMKL and FFT preconditioning
+      CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
+      CALL SCARC_SETUP_OPTIMIZED(NLEVEL_MIN, NLEVEL_MIN)
+
 #endif
  
    CASE (NSCARC_RELAX_GMG)                                          ! Preconditioning by complete GMG method
@@ -162,6 +167,32 @@ ENDIF
 N_STACK_TOTAL = NSTACK                                 
 
 END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief  Setup optimized local preconditioner, either local FFT or PARDISO, depending on structure of mesh
+! If mesh does not contain obstructions, the faster FFT preconditioner is used, otherwise PARDISO from IntelMKL
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_OPTIMIZED(NLMIN, NLMAX)
+USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_LEVEL
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT_MESH
+USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO_MESH
+INTEGER, INTENT(IN) :: NLMIN, NLMAX
+INTEGER :: NM, NL
+
+DO NL = NLMIN, NLMAX
+   DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+      CALL SCARC_POINT_TO_LEVEL(NM, NL)
+      IF (L%HAS_OBSTRUCTIONS) THEN
+         CALL SCARC_SETUP_PARDISO_MESH(NM, NL)
+      ELSE
+         CALL SCARC_SETUP_FFT_MESH(NM, NL)
+      ENDIF
+   ENDDO
+ENDDO
+
+END SUBROUTINE SCARC_SETUP_OPTIMIZED
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief  Setup environment for global multigrid method to solve the overall Poisson problem
@@ -247,7 +278,7 @@ END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 !  - environment for unstructured local solvers in pass 2 of MGM
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
+USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_MGM
 USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
 #ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
@@ -367,7 +398,7 @@ SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
       CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_POINT_TO_MGM (NM, NLEVEL_MIN)
-         IF (MGM%HAS_OBSTRUCTIONS) THEN
+         IF (L%HAS_OBSTRUCTIONS) THEN
             CALL SCARC_SETUP_MGM_PARDISO (NM, NLEVEL_MIN)
          ELSE
             CALL SCARC_SETUP_MGM_FFT (NM, NLEVEL_MIN)
@@ -1049,7 +1080,6 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
             ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
          ENDDO                         
          !$OMP END PARALLEL DO
-         ST%X = 0.0_EB                      ! TODO: CAUTION - ONLY TEMPORARILY - Check !!
 
          !!$OMP PARALLEL 
          MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
@@ -1898,7 +1928,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    G => L%UNSTRUCTURED
    ST  => L%STAGE(STACK(NS)%SOLVER%TYPE_STAGE)
 
-   SELECT CASE (MGM%HAS_OBSTRUCTIONS)
+   SELECT CASE (L%HAS_OBSTRUCTIONS)
 
       ! If mesh contains obstructions, then the grid is really unstructured and PARDISO from IntelMKL is used
        
@@ -2960,7 +2990,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
                ENDIF
 
                IF (NL == NLEVEL_MIN) THEN
-               SSOR_FORWARD_COMPACT_LOOP: DO IC = 1, G%NC                                   ! forward SSOR step
+               SSOR_FORWARD_COMPACT_LOOP: DO IC = 1, G%NC                                  ! forward SSOR step
                   AUX = 0.0_EB
                   DO ICOL = A%ROW(IC)+1, A%ROW(IC+1)-1
                      IF (A%COL(ICOL) >= IC) CYCLE                                          ! only process lower diags
@@ -2974,8 +3004,8 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
                SSOR_BACKWARD_COMPACT_LOOP: DO IC = G%NC-1, 1, -1                           ! backward SSOR step
                   AUX = 0.0_EB
                   DO ICOL = A%ROW(IC)+1, A%ROW(IC+1)-1
-                     IF (A%COL(ICOL) <= IC) CYCLE                                         ! only process upper diags
-                     IF (A%COL(ICOL) <= G%NC) THEN                                        ! ignore overlaps
+                     IF (A%COL(ICOL) <= IC) CYCLE                                          ! only process upper diags
+                     IF (A%COL(ICOL) <= G%NC) THEN                                         ! ignore overlaps
                         AUX = AUX + A%VAL(ICOL) * V2(A%COL(ICOL))
                      ENDIF
                   ENDDO
@@ -2984,10 +3014,10 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
 
                ELSE
 
-               SSOR_FORWARD_COMPACT_LOOP_COARSE: DO IC = 1, G%NC                                   ! forward SSOR step
+               SSOR_FORWARD_COMPACT_LOOP_COARSE: DO IC = 1, G%NC                           ! forward SSOR step
                   AUX = 0.0_EB
                   DO ICOL = A%ROW(IC)+1, A%ROW(IC+1)-1
-                     IF (A%COL(ICOL) >= IC .OR. A%COL(ICOL) == 0) CYCLE                            ! only process lower diags
+                     IF (A%COL(ICOL) >= IC .OR. A%COL(ICOL) == 0) CYCLE                    ! only process lower diags
                      IF (A%COL(ICOL) <= G%NC) THEN
                         AUX = AUX + A%VAL(ICOL) * V2(A%COL(ICOL))  ! ignore overlaps
                      ENDIF
@@ -2995,11 +3025,11 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
                   V2(IC) = (V2(IC) - AUX * OMEGA_SSOR) / A%VAL(A%ROW(IC))
                ENDDO SSOR_FORWARD_COMPACT_LOOP_COARSE
 
-               SSOR_BACKWARD_COMPACT_LOOP_COARSE: DO IC = G%NC-1, 1, -1                           ! backward SSOR step
+               SSOR_BACKWARD_COMPACT_LOOP_COARSE: DO IC = G%NC-1, 1, -1                     ! backward SSOR step
                   AUX = 0.0_EB
                   DO ICOL = A%ROW(IC)+1, A%ROW(IC+1)-1
-                     IF (A%COL(ICOL) <= IC .OR. A%COL(ICOL) == 0) CYCLE                   ! only process upper diags
-                     IF (A%COL(ICOL) <= G%NC) THEN                                        ! ignore overlaps
+                     IF (A%COL(ICOL) <= IC .OR. A%COL(ICOL) == 0) CYCLE                     ! only process upper diags
+                     IF (A%COL(ICOL) <= G%NC) THEN                                          ! ignore overlaps
                         AUX = AUX + A%VAL(ICOL) * V2(A%COL(ICOL))
                      ENDIF
                   ENDDO
@@ -3022,7 +3052,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
 
                SSOR_FORWARD_BANDWISE_2D_LOOP: DO IC = 1, G%NC                 ! forward SSOR step
                   AUX = 0.0_EB
-                  DO IOR0 = 1, 3, 2                                          ! only process lower x- and z-diag
+                  DO IOR0 = 1, 3, 2                                           ! only process lower x- and z-diag
                      JC = IC + AB%OFFSET(IOR0)
                      IF (JC >= 1 .AND. JC <= G%NC) AUX = AUX + AB%VAL(IC, AB%POS(IOR0)) * V2(JC)
                   ENDDO
@@ -3031,7 +3061,7 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
 
                SSOR_BACKWARD_BANDWISE_2D_LOOP: DO IC = G%NC-1, 1, -1          ! backward SSOR step
                   AUX = 0.0_EB
-                  DO IOR0 = -1, -3, -2                                       ! only process upper x- and z-diag
+                  DO IOR0 = -1, -3, -2                                        ! only process upper x- and z-diag
                      JC = IC + AB%OFFSET(IOR0)
                      IF (JC <= G%NC) THEN
                         AUX = AUX + AB%VAL(IC, AB%POS(IOR0)) * V2(JC)
@@ -3045,20 +3075,20 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: SSOR'
  
             ELSE
 
-               SSOR_FORWARD_BANDWISE_3D_LOOP: DO IC = 1, G%NC                  ! forward SSOR step
+               SSOR_FORWARD_BANDWISE_3D_LOOP: DO IC = 1, G%NC                 ! forward SSOR step
                   AUX = 0.0_EB
-                  DO IOR0 = 1, 3                                             ! only process lower diags
-                     IF (AB%POS(IOR0) == 0) CYCLE                            ! no contribution for y-direction in 2D
+                  DO IOR0 = 1, 3                                              ! only process lower diags
+                     IF (AB%POS(IOR0) == 0) CYCLE                             ! no contribution for y-direction in 2D
                      JC = IC + AB%OFFSET(IOR0)
                      IF (JC >= 1 .AND. JC <= G%NC) AUX = AUX + AB%VAL(IC, AB%POS(IOR0)) * V2(JC)
                   ENDDO
                   V2(IC) = (V2(IC) - AUX * OMEGA_SSOR) / AB%VAL(IC, AB%POS(0))
                ENDDO SSOR_FORWARD_BANDWISE_3D_LOOP
 
-               SSOR_BACKWARD_BANDWISE_3D_LOOP: DO IC = G%NC-1, 1, -1           ! backward SSOR step
+               SSOR_BACKWARD_BANDWISE_3D_LOOP: DO IC = G%NC-1, 1, -1          ! backward SSOR step
                   AUX = 0.0_EB
-                  DO IOR0 = -1, -3, -1                                       ! only process upper diags
-                     IF (AB%POS(IOR0) == 0) CYCLE                            ! no contribution for y-direction in 2D
+                  DO IOR0 = -1, -3, -1                                        ! only process upper diags
+                     IF (AB%POS(IOR0) == 0) CYCLE                             ! no contribution for y-direction in 2D
                      JC = IC + AB%OFFSET(IOR0)
                      IF (JC >= IC .AND. JC <= G%NC) AUX = AUX + AB%VAL(IC, AB%POS(IOR0)) * V2(JC)
                   ENDDO
@@ -3242,12 +3272,16 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: FFT'
 CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-FFT: NV1 INIT ', NL)
 CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 INIT ', NL)
 #endif
+         ! Feed corresponding right hand sides for FFT
+
          !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
          DO IC = 1, G%NC
             FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = V1(IC)
          ENDDO
          !$OMP END PARALLEL DO
 
+         ! Call corresponding FFT solver
+ 
          IF (TWO_D) THEN
             CALL H2CZSS (FFT%BXS,  FFT%BXF, FFT%BZS, FFT%BZF, FFT%ITRN, &
                          FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
@@ -3256,6 +3290,8 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 INIT ', NL)
                          FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
          ENDIF
 
+         ! Extract computed solution which is contained in FFT%PRHS
+ 
          !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
          DO IC = 1, G%NC
             V2(IC) = FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) 
@@ -3285,6 +3321,8 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
          V1  => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
          V2  => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
 
+         ! Feed corresponding right hand sides for FFT
+ 
          IF (NM == 1) THEN
 
             !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
@@ -3341,7 +3379,6 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
 
          ENDIF
 
- 
          ! Call corresponding FFT solver
  
          IF (TWO_D) THEN
@@ -3352,8 +3389,7 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
                          FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
          ENDIF
 
- 
-         ! Extract computed data from FFT%PRHS
+         ! Extract computed solution which is contained in FFT%PRHS
  
          IF (NM == 1) THEN
             !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
@@ -3537,6 +3573,110 @@ WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
 #endif
       ENDIF MKL_SCOPE_IF
 
+   ! --------- Preconditioning by optimized use of FFT or PARDISO, depending on structure of mesh
+ 
+   CASE (NSCARC_RELAX_OPTIMIZED)
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: FFT'
+#endif
+      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+         CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+         ! If mesh happens to contain obstructions, PARDISO preconditioner is used
+          
+         IF (L%HAS_OBSTRUCTIONS) THEN
+
+            MKL => L%MKL
+            AS => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_SYM)
+
+            MKL%PHASE  = 33                            ! only solving
+
+            V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)
+            V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, G%NC=',G%NC
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, G%NC=',G%NC
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, PRE, V1:'
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V1
+WRITE(MSG%LU_DEBUG,*) 'PARDISO, PRE, V2:'
+WRITE(MSG%LU_DEBUG,'(6E14.6)') V2
+CALL SCARC_DEBUG_CMATRIX(AS, 'AS','CLUSTER')
+#endif
+            IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+
+               V1_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, NV1)
+               V2_FB => SCARC_POINT_TO_VECTOR_FB (NM, NL, NV2)
+
+               V1_FB(1:G%NC) = REAL(V1(1:G%NC), FB)
+               V2_FB(1:G%NC) = 0.0_FB
+   
+               CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                              AS%VAL_FB, AS%ROW, AS%COL, &
+                              MKL%PERM, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, V1_FB, V2_FB, MKL%ERROR)
+
+               V2(1:G%NC) = REAL(V2_FB(1:G%NC), EB)
+            ELSE
+
+               V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)
+               V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)
+
+               CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, G%NC, &
+                              AS%VAL, AS%ROW, AS%COL, &
+                              MKL%PERM, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, V1, V2, MKL%ERROR)
+
+            ENDIF
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'MKL%ERROR:', MKL%ERROR
+#endif
+            IF (MKL%ERROR /= 0) CALL SCARC_ERROR(NSCARC_ERROR_MKL_INTERNAL, SCARC_NONE, MKL%ERROR)
+
+         ! If mesh happens to be purely structured, FFT preconditioner is used
+
+         ELSE
+
+            FFT => L%FFT
+   
+            V1  => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
+            V2  => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
+   
+#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-FFT: NV1 INIT ', NL)
+CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 INIT ', NL)
+#endif
+            ! Feed corresponding right hand sides for FFT
+   
+            !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+            DO IC = 1, G%NC
+               FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = V1(IC)
+            ENDDO
+            !$OMP END PARALLEL DO
+   
+            ! Call corresponding FFT solver
+    
+            IF (TWO_D) THEN
+               CALL H2CZSS (FFT%BXS,  FFT%BXF, FFT%BZS, FFT%BZF, FFT%ITRN, &
+                            FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
+            ELSE
+               CALL H3CZSS (FFT%BXS,  FFT%BXF, FFT%BYS, FFT%BYF, FFT%BZS, FFT%BZF, FFT%ITRN, FFT%JTRN, &
+                            FFT%PRHS, FFT%POIS_PTB, FFT%SAVE1, FFT%WORK, FFT%HX)
+            ENDIF
+   
+            ! Extract computed solution which is contained in FFT%PRHS
+    
+            !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+            DO IC = 1, G%NC
+               V2(IC) = FFT%PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC)) 
+            ENDDO
+            !$OMP END PARALLEL DO 
+   
+#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
+#endif
+         ENDIF
+      ENDDO
 #endif
 
 END SELECT

@@ -97,6 +97,16 @@ SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
             ELSE IF (TYPE_SCOPE(1) == NSCARC_SCOPE_LOCAL) THEN
                TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
             ENDIF
+
+         CASE (NSCARC_RELAX_OPTIMIZED)
+
+            IF (HAS_TWO_LEVELS) THEN
+               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
+               IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_MKL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
+            ELSE
+               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
+            ENDIF
+            TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
 #endif
          ! Preconditioning by defect correction based on geometric multigrid method,
          ! use specified hierarchy of grid levels
@@ -552,6 +562,10 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: STRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
 #endif
+      
+      ! Check whether the current meshes contains obstructions or not
+      ! This information can be used to replace local preconditioning by the faster FFT for structured meshes
+      IF (G%NC < L%NX*L%NY*L%NZ) L%HAS_OBSTRUCTIONS = .TRUE.
 
    ! If only one specified type of discretization must be admistrated:
    ! allocate and preset cell numbers and state arrays for requested type of discretization
@@ -606,6 +620,10 @@ WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: UNSTRUCTURED: NC, NCE, NCE2:', G%NC, G%NCE, 
       G%NC   = G%NC_LOCAL(NM)
       G%NCE  = G%NC_LOCAL(NM)
       G%NCE2 = G%NC_LOCAL(NM)
+
+      ! Check whether the current meshes contains obstructions or not
+      ! This information can be used to replace local preconditioning by the faster FFT for structured meshes
+      IF (TYPE_GRID == NSCARC_GRID_UNSTRUCTURED .AND. G%NC < L%NX*L%NY*L%NZ) L%HAS_OBSTRUCTIONS = .TRUE.
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP_GRIDS: ', TYPE_GRID,' : NC, NCE, NCE2:', G%NC, G%NCE, G%NCE2
