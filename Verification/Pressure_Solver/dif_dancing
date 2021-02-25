@@ -1,6 +1,6 @@
 dif 4 dancing_eddies_mgm_cg
-dif 4 dancing_eddies_mgm_lu
-dif 4 dancing_eddies_mgm_luperm
+#dif 4 dancing_eddies_mgm_lu
+#dif 4 dancing_eddies_mgm_luperm
 dif 4 dancing_eddies_mgm_opt
 dif 4 dancing_eddies_mgm_pardiso
 dif 4 dancing_eddies_scarc
@@ -8,7 +8,7 @@ dif 4 dancing_eddies_uscarc
 dif 4 dancing_eddies_scarc_amg
 dif 4 dancing_eddies_scarc_tight
 dif 4 dancing_eddies_default
-#dif 4 dancing_eddies_uglmat
-#dif 4 dancing_eddies_tight
-#dif 4 dancing_eddies_tight_overlap
-#dif 1 dancing_eddies_1mesh
+dif 4 dancing_eddies_uglmat
+dif 4 dancing_eddies_tight
+dif 4 dancing_eddies_tight_overlap
+dif 1 dancing_eddies_1mesh
