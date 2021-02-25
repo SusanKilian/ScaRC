@@ -152,6 +152,10 @@ SELECT CASE (NWARNING)
       CWARNING = 'Intel MKL library missing - only SSOR smoother is used'
    CASE (NSCARC_WARNING_NO_MKL_LU)
       CWARNING = 'Intel MKL library missing - using LU instead'
+   CASE (NSCARC_WARNING_ONLY_SSOR_PRECON)
+      CWARNING = 'Only SSOR preconditioner available'
+   CASE (NSCARC_WARNIONLY_SSOR_SMOOTH)
+      CWARNING = 'Only SSOR smoother available'
    CASE (NSCARC_WARNING_NO_GLOBAL_SCOPE)
       CWARNING = 'No global scope preconditioner available'
 END SELECT
