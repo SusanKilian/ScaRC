@@ -1,11 +1,11 @@
-&HEAD CHID='uscarc_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
+&HEAD CHID='scarc_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
 &MESH IJK=32,1,16  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'USCARC'  /
+&PRES SOLVER = 'SCARC'  /
 
 &TIME T_END=0.5, DT=0.002 /
 

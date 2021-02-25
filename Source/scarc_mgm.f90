@@ -594,7 +594,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          BYS => M%BYS ; BYF => M%BYF
          BZS => M%BZS ; BZF => M%BZF
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE:', NTYPE
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
 #endif
@@ -653,7 +653,7 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
                      HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
                   ENDIF
             END SELECT
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
             WRITE(MSG%LU_DEBUG, '(A, 5I6, E14.6)') 'UPDATE_GHOST_CELLS: IW, IOR0, IXW, IYW, IZG, HP:',&
                                                    IW, IOR0, IXW, IYW, IZG, HP(IXW, IYW, IZG)
 #endif
@@ -671,7 +671,7 @@ WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1
          BXS => MGM%BXS ; BXF => MGM%BXF
          BYS => MGM%BYS ; BYF => MGM%BYF
          BZS => MGM%BZS ; BZF => MGM%BZF
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE: LAPLACE'
 WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(IXG, 1, IZG), IXG = 0, L%NX+1), IZG = L%NZ+1, 0, -1)
 WRITE(MSG%LU_DEBUG,*) 'BXS:'
@@ -706,7 +706,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE ( 1)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXG, IYW, IZW, BXS(IYW, IZW), HP(IXW, IYW, IZW), HP(IXG, IYW, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -717,7 +717,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE (-1)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXG, IYW, IZW, BXF(IYW, IZW), HP(IXW, IYW, IZW), HP(IXG, IYW, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -728,7 +728,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE ( 2)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYG, IZW, BYS(IXW, IZW), HP(IXW, IYW, IZW), HP(IXW, IYG, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -739,7 +739,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE (-2)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYG, IZW, BYF(IXW, IZW), HP(IXW, IYW, IZW), HP(IXW, IYG, IZW)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -750,7 +750,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE ( 3)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYW, IZG, BZS(IXW, IYW), HP(IXW, IYW, IZW), HP(IXW, IYW, IZG)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -761,7 +761,7 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
                CASE (-3)
                   IF (GWC%BTYPE == INTERNAL) THEN
                      HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
       WRITE(MSG%LU_DEBUG, 1000) IOR0, IW, IXW, IYW, IZG, BZF(IXW, IYW), HP(IXW, IYW, IZW), HP(IXW, IYW, IZG)
 #endif
                   ELSE IF (GWC%BTYPE == DIRICHLET) THEN
@@ -781,7 +781,7 @@ CALL SCARC_DEBUG_PRESSURE (HP, NM, 'H')
 #endif
 
 ENDDO
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 1000 FORMAT('MGM_UPDATE: LAPLACE: INTERNAL: IOR0=', I4, ': IW=', I4, ': I, J, K=', 3I4, ' BC, HPOLD, HP:', 3E14.6)
 #endif
 
@@ -1156,7 +1156,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 5I6, 1E14.6)') 'MGM-POISSON:B: IX, IY, IZ,
 
          G => L%UNSTRUCTURED
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG, *) '=======================> BEGIN OF MGM_STORE_SOLUTION: LAPLACE'
 IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
    WRITE(MSG%LU_DEBUG, *) 'ST%X'
@@ -1205,7 +1205,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:CG: IX, IY, IZ
                         IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
                         ICU = G%PERM_FW(G%CELL_NUMBER(IX, IY, IZ))    ! unstructured permuted cell number
                         MGM%UHL(IX, IY, IZ) = MGM%X(ICU)              ! solution contained in MGM%X
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LUPERM: IX, IY, IZ, ICU, UL:',&
                                                       IX, IY, IZ, ICU, MGM%UHL(IX, IY, IZ), MGM%X(ICU)
 #endif
@@ -1228,7 +1228,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ
                ENDDO
           END SELECT
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: LAPLACE'
    WRITE(MSG%LU_DEBUG, *) 'MGM%UHL'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UHL(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
@@ -1238,7 +1238,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 4I6, 2E14.6)') 'MGM-LAPLACE:LU: IX, IY, IZ
 
       CASE (NSCARC_MGM_MERGE)
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, *) '=======================> START OF MGM_STORE_SOLUTION: MGM_MERGE'
    WRITE(MSG%LU_DEBUG, *) 'MGM%SIP'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%SIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)
@@ -1259,7 +1259,7 @@ IF (IY == 1) WRITE(MSG%LU_DEBUG, '(A, 3I6, 3E14.6)') 'MGM:M: IX, IY, IZ, SP, UL,
          ENDDO
 
 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG, *) '=======================> END   OF MGM_STORE_SOLUTION: MGM_MERGE'
    WRITE(MSG%LU_DEBUG, *) 'MGM%UIP'
    WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((MGM%UIP(IX, 1, IZ), IX = 0, L%NX+1), IZ = L%NZ+1, 0, -1)

@@ -1,0 +1,14 @@
+difo 4 dancing_eddies_mgm_cg
+#difo 4 dancing_eddies_mgm_lu
+#difo 4 dancing_eddies_mgm_luperm
+difo 4 dancing_eddies_mgm_opt
+difo 4 dancing_eddies_mgm_pardiso
+difo 4 dancing_eddies_scarc
+difo 4 dancing_eddies_uscarc
+difo 4 dancing_eddies_scarc_amg
+difo 4 dancing_eddies_scarc_tight
+difo 4 dancing_eddies_default
+difo 4 dancing_eddies_uglmat
+difo 4 dancing_eddies_tight
+difo 4 dancing_eddies_tight_overlap
+difo 1 dancing_eddies_1mesh

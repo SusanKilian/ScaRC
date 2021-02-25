@@ -1,0 +1,14 @@
+difo 1 pressure_iteration2d_1mesh
+difo 8 pressure_iteration2d_default
+difo 8 pressure_iteration2d_mgm_mean_cg
+difo 8 pressure_iteration2d_mgm_mean_lu
+difo 8 pressure_iteration2d_mgm_mean_luperm
+difo 8 pressure_iteration2d_scarc
+difo 8 pressure_iteration2d_scarc_cggmg
+difo 8 pressure_iteration2d_scarc_gmg
+difo 8 pressure_iteration2d_scarc_tight
+difo 8 pressure_iteration2d_scarc_twolevel
+difo 8 pressure_iteration2d_tight
+difo 8 pressure_iteration2d_uglmat
+difo 8 pressure_iteration2d_uscarc
+

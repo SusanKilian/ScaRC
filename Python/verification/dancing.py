@@ -87,7 +87,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
     colors  = ["r","b","g","k","c","m","y","c","m","y","k","r","b","g"]
     linestyles  = ["-","-.",":","--","-","-.",":","--","-","-.",":","--"]
 
-    legsize = fnt.FontProperties(size=8)
+    legsize = fnt.FontProperties(size=7)
 
     clen = len(chid)
     nsim = len(time)
@@ -105,7 +105,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
        legend.append(chid[i])
 
     ax.legend(legend, prop=legsize, loc="lower center",
-              bbox_to_anchor=(0.50, -0.25), fancybox=True, shadow=True, ncol=4)
+              bbox_to_anchor=(0.50, -0.25), fancybox=True, shadow=True, ncol=3)
 
     ax.grid(True)
     #ax.set_title('%s '%(chid),fontsize=30)
@@ -143,8 +143,9 @@ chid=[]
 #chid.append('%s_default' %case)
 chid.append('%s_scarc' %case)
 chid.append('%s_uscarc' %case)
-chid.append('%s_mgm_mean_krylov' %case)
-chid.append('%s_mgm_mean_lu' %case)
+chid.append('%s_mgm_mean_cg' %case)
+chid.append('%s_mgm_mean_opt' %case)
+chid.append('%s_mgm_mean_pardiso' %case)
 chid.append('%s_uglmat' %case)
 
 

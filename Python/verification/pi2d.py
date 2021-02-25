@@ -85,7 +85,7 @@ def plot_csv(path, case, chid, time, quan, name, tstart, tend):
 
     markers = ["s","D","o","v","h","^","<","s","D","o","v","h","^","<"]
     colors  = ["r","k","g","b","c","m","y","c","m","y","k","r","b","g"]
-    linestyles  = ["-","-",":","--","-","-.",":","--","-","-.",":","--","-","-.",":","--"]
+    linestyles  = ["-",":","--","-","-.",":","--","-","-.",":","--","-","-.",":","--"]
 
     legsize = fnt.FontProperties(size=8)
 
@@ -118,6 +118,7 @@ def plot_csv(path, case, chid, time, quan, name, tstart, tend):
     if name == 'scarc-iter': ax.set_ylim(0, 50)
     if name == 'scarc-rate': ax.set_ylim(0, 1)
     if name == 'iter': ax.set_ylim(0, 5)
+    if name == 'error': ax.set_ylim(0, 0.0007)
 
     labels = ax.get_xticklabels() + ax.get_yticklabels()
     for label in labels:
@@ -143,12 +144,12 @@ tend = 0.5
 chid=[]
 #chid.append('%s_1mesh' %case)
 #chid.append('%s_default' %case)
-chid.append('%s_uglmat' %case)
-chid.append('%s_scarc' %case)
-chid.append('%s_uscarc' %case)
-chid.append('%s_scarc_gmg' %case)
-chid.append('%s_scarc_cggmg' %case)
-chid.append('%s_scarc_twolevel' %case)
+#chid.append('%s_uglmat' %case)
+#chid.append('%s_scarc' %case)
+#chid.append('%s_uscarc' %case)
+#chid.append('%s_scarc_gmg' %case)
+#chid.append('%s_scarc_cggmg' %case)
+#chid.append('%s_scarc_twolevel' %case)
 chid.append('%s_mgm_mean_cg' %case)
 chid.append('%s_mgm_mean_lu' %case)
 chid.append('%s_mgm_mean_luperm' %case)

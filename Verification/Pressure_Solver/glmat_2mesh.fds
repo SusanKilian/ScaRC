@@ -1,4 +1,4 @@
-&HEAD CHID='uscarc_opt_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and optimized PARDISO or FFT as Laplace solver on 2 meshes' /
+&HEAD CHID='glmat_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and optimized PARDISO or FFT as Laplace solver on 2 meshes' /
 
 &MESH IJK=16,1,16  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 &MESH IJK=16,1,16  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /
@@ -6,7 +6,7 @@
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'USCARC' , SCARC_PRECON = 'OPTIMIZED' /
+&PRES SOLVER = 'GLMAT'/
 
 &TIME T_END=0.5, DT=0.002 /
 

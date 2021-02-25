@@ -1,0 +1,15 @@
+difo 1 mgm_mean_cg_1mesh
+difo 2 mgm_mean_cg_2mesh
+difo 1 mgm_mean_lu_1mesh
+difo 2 mgm_mean_lu_2mesh
+difo 1 mgm_mean_luperm_1mesh
+difo 2 mgm_mean_luperm_2mesh
+difo 2 mgm_mean_luperm_2mesh_fine
+difo 1 mgm_mean_opt_1mesh
+difo 2 mgm_mean_opt_2mesh
+difo 1 mgm_mean_pardiso_1mesh
+difo 2 mgm_mean_pardiso_2mesh
+difo 1 scarc_1mesh
+difo 2 scarc_2mesh
+difo 1 uscarc_1mesh
+difo 2 uscarc_2mesh
