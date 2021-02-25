@@ -1,0 +1,13 @@
+dis 8 pressure_iteration3d_mgm_mean_cg
+dis 8 pressure_iteration3d_mgm_mean_pardiso
+dis 8 pressure_iteration3d_mgm_mean_opt
+dis 8 pressure_iteration3d_scarc
+dis 8 pressure_iteration3d_scarc_cggmg
+dis 8 pressure_iteration3d_scarc_gmg
+dis 8 pressure_iteration3d_scarc_tight
+dis 8 pressure_iteration3d_scarc_twolevel
+dis 8 pressure_iteration3d_uscarc
+dis 8 pressure_iteration3d_default
+dis 8 pressure_iteration3d_uglmat
+dis 8 pressure_iteration3d_tight
+dis 1 pressure_iteration3d_1mesh

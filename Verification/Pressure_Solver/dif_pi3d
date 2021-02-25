@@ -7,7 +7,7 @@ dif 8 pressure_iteration3d_scarc_gmg
 dif 8 pressure_iteration3d_scarc_tight
 dif 8 pressure_iteration3d_scarc_twolevel
 dif 8 pressure_iteration3d_uscarc
-dif 8 pressure_iteration3d_default
-dif 8 pressure_iteration3d_uglmat
-dif 8 pressure_iteration3d_tight
-dif 1 pressure_iteration3d_1mesh
+#dif 8 pressure_iteration3d_default
+#dif 8 pressure_iteration3d_uglmat
+#dif 8 pressure_iteration3d_tight
+#dif 1 pressure_iteration3d_1mesh
