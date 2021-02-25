@@ -528,6 +528,8 @@ MAIN_LOOP: DO
 
    ICYC  = ICYC + 1   ! Time step iterations
 
+   IF (MY_RANK == 10000) WRITE(*,*) ' ====================== ICYC = ', ICYC,' ======================================'
+
    ! Do not print out general diagnostics into .out file every time step
 
    DIAGNOSTICS = .FALSE.
@@ -1345,7 +1347,7 @@ SUBROUTINE PRESSURE_ITERATION_SCHEME
 
 ! Iterate calls to pressure solver until velocity tolerance is satisfied
 
-INTEGER :: NM_MAX_V,NM_MAX_P
+INTEGER :: NM_MAX_V,NM_MAX_P, III, KKK
 REAL(EB) :: TNOW,VELOCITY_ERROR_MAX_OLD,PRESSURE_ERROR_MAX_OLD
 
 PRESSURE_ITERATIONS = 0
@@ -1395,6 +1397,23 @@ PRESSURE_ITERATION_LOOP: DO
 
    ! Solve the Poission equation using either FFT, SCARC, or GLMAT
 
+    IF (MY_RANK == 10000) THEN
+       WRITE(*,*) '--------FVX:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%FVX(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------FVZ:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%FVZ(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------U:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%U(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------US:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%US(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------W:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%W(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------WS:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%WS(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------PRHS:'
+       WRITE(*,'(9E12.4)') ((MESHES(1)%PRHS(III,1,KKK),III=1,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,1,-1)
+    ENDIF
+
    SELECT CASE(PRES_METHOD)
       CASE ('FFT')
          DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
@@ -1410,15 +1429,23 @@ PRESSURE_ITERATION_LOOP: DO
          CALL COPY_H_OMESH_TO_MESH
    END SELECT
 
+    IF (MY_RANK == 10000) THEN
+       WRITE(*,*) '--------H:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%H(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+       WRITE(*,*) '--------HS:'
+       WRITE(*,'(10E12.4)') ((MESHES(1)%HS(III,1,KKK),III=0,MESHES(1)%IBAR+1),KKK=MESHES(1)%KBAR+1,0,-1)
+    ENDIF
+
    ! Check the residuals of the Poisson solution
 
    DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
       IF (EVACUATION) CYCLE
-      IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. PRES_METHOD=='GLMAT') THEN ! UGLMAT unstructured global matrix solver.
+      IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. &
+         (PRES_METHOD=='GLMAT'.OR.PRES_METHOD=='USCARC')) THEN ! UGLMAT/USCARC unstructured global matrix solvers
          CALL PRESSURE_SOLVER_CHECK_RESIDUALS_U(NM)
-      ELSE
+     ELSE
          CALL PRESSURE_SOLVER_CHECK_RESIDUALS(NM)
-      ENDIF
+     ENDIF
    ENDDO
 
 

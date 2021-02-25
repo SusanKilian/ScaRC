@@ -512,6 +512,8 @@ ENDIF
 ! Mandatory check of how well the computed pressure satisfies the inseparable Poisson equation:
 ! LHSS = del dot (1/rho) del p + del K = -del dot F - dD/dt = RHSS
 
+   IF (MY_RANK == 10000) WRITE(*,*) '======================================='
+
 IF (ITERATE_BAROCLINIC_TERM) THEN
    P => WORK7
    P = RHOP*(HP-KRES)
@@ -540,6 +542,12 @@ IF (ITERATE_BAROCLINIC_TERM) THEN
    ENDDO
    !$OMP END DO
    !$OMP END PARALLEL
+   IF (MY_RANK == 10000) THEN
+      WRITE(*,*) '--------HP:'
+      WRITE(*,'(10E12.4)') ((HP(I,1,K),I=0,IBAR+1),K=KBAR+1,0,-1)
+      WRITE(*,*) '--------RESIDUAL:'
+      WRITE(*,'(8E12.4)') ((RESIDUAL(I,1,K),I=1,IBAR),K=KBAR,1,-1)
+   ENDIF
    PRESSURE_ERROR_MAX(NM) = MAXVAL(RESIDUAL)
    PRESSURE_ERROR_MAX_LOC(:,NM) = MAXLOC(RESIDUAL)
 ENDIF
