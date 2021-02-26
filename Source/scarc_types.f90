@@ -553,7 +553,7 @@ TYPE SCARC_MGM_TYPE
 
    INTEGER :: ITE = 0                            
    INTEGER :: ITE_POISSON = 0
-   INTEGER :: ITE_LAPLACE = 0
+   INTEGER :: ITE_LAPLACE = 1
 
    LOGICAL :: HAS_OBSTRUCTIONS = .FALSE.
 

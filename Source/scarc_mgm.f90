@@ -410,26 +410,20 @@ USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: ITE_MGM, NTYPE
 INTEGER:: NM
 
-! Note: Convergence history of previous Krylov method is available in ITE and CAPPA 
-
 SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_FAILURE
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
-
-   !IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
-
-   SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL
-   SCARC_MGM_ITERATIONS = ITE_MGM
 
    SELECT CASE (NTYPE)
 
       ! Initialization - after first structured inhomogeneous Poisson solution
 
       CASE (0)
+
          MGM%ITE = 0
          MGM%ITE_LAPLACE = 0
-         MGM%ITE_POISSON = ITE                 
+         MGM%ITE_POISSON = ITE                   ! ITE, CAPPA contain statistics of preceding structured CG-solution
          MGM%CAPPA_POISSON = CAPPA
 #ifdef WITH_SCARC_DEBUG
          WRITE(MSG%LU_DEBUG, 1100) ICYC, PRESSURE_ITERATIONS, TOTAL_PRESSURE_ITERATIONS, &
@@ -445,6 +439,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ! MGM iteration - after each unstructured homogeneous Laplace solution
 
       CASE (1)
+
          MGM%ITE = ITE_MGM
 #ifdef WITH_SCARC_DEBUG
          IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
@@ -470,19 +465,21 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                                         MGM%ITE, VELOCITY_ERROR_GLOBAL
          ENDIF
 #endif
-         IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
-            MGM%ITE_LAPLACE = 1
-            MGM%CAPPA_LAPLACE = 0
-         ELSE IF (ITE > MGM%ITE_LAPLACE) THEN
-            MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG .AND. ITE > MGM%ITE_LAPLACE) THEN
+            MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)            ! Store worst Laplace-CG statistics
             MGM%CAPPA_LAPLACE = CAPPA
-         ENDIF
+         ENDIF                         
 
-      ! termination - after whole MGM solution
+      ! Termination - after whole MGM solution
 
       CASE (-1)
+
          CAPPA = MGM%CAPPA_POISSON   ! Reset to Krylov statistics of Poisson solution for statistics in chid.out
          ITE   = MGM%ITE_POISSON
+
+         SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL  ! Store achieved MGM accuracy for statistics in chid.out
+         SCARC_MGM_ITERATIONS = ITE_MGM                ! Store required MGM iterations for statistics in chid.out
+
 #ifdef WITH_SCARC_DEBUG
       IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) THEN
          IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG) THEN
@@ -577,11 +574,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      ! 
       ! Update ghostcells for local Laplace problems
       ! Along external boundaries use zero Dirichlet or Neumann BC's
       ! Along mesh interfaces use Dirichlet BC's corresponding to MGM interface settings 
-      ! 
+        
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
