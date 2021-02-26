@@ -349,7 +349,7 @@ END SUBROUTINE SCARC_SETUP_PARDISO_MESH
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_PARDISO(NM, NL)
-USE SCARC_POINTERS, ONLY: G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, IDUMMY(1)=0
 REAL (EB) :: TNOW
@@ -359,6 +359,8 @@ TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_PARDISO'
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+MKL => L%MKL
 AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
 
 ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
