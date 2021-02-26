@@ -1,15 +1,15 @@
-&HEAD CHID='tunnel_demo_mgm_mean_krylov', TITLE='Example of a tunnel simulation with structured ScaRC solver' /
+&HEAD CHID='tunnel_demo_mgm_cg', TITLE='Example of a tunnel simulation with optimized UScaRC-MGM method' /
 &TIME T_END=2. /
-&MESH IJK=40,10,10, XB=0.0,16.0,-2.0,2.0,0.0,4.0, MULT_ID='mesh' /
-&MULT ID='mesh', DX=16., I_UPPER=7 /
-&MISC GVEC=-1.70,0.0,-9.65 /
+&MESH IJK=80,20,20, XB=0.0,16.0,-2.0,2.0,0.0,4.0, MULT_ID='mesh' /
 
-&PRES SOLVER                   = 'USCARC' 
+&PRES SOLVER                   = 'USCARC'
       SCARC_METHOD             = 'MGM'
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_EXACT_INITIAL  = .TRUE.
-      SCARC_MGM_LAPLACE_SOLVER = 'KRYLOV'  /
+      SCARC_MGM_LAPLACE_SOLVER = 'CG'  /
 
+&MULT ID='mesh', DX=16., I_UPPER=7 /
+&MISC GVEC=-1.70,0.0,-9.65 /
 &DUMP VELOCITY_ERROR_FILE=.TRUE. /
 &REAC FUEL='PROPANE', SOOT_YIELD=0.015 /
 &SURF ID='fire', COLOR='RED', HRRPUA=2000.0 /

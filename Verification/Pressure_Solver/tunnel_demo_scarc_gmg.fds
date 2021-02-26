@@ -1,6 +1,6 @@
 &HEAD CHID='tunnel_demo_scarc_gmg_l2', TITLE='Example of a tunnel simulation with structured ScaRC solver' /
 &TIME T_END=2. /
-&MESH IJK=40,10,10, XB=0.0,16.0,-2.0,2.0,0.0,4.0, MULT_ID='mesh' /
+&MESH IJK=80,20,20, XB=0.0,16.0,-2.0,2.0,0.0,4.0, MULT_ID='mesh' /
 &MULT ID='mesh', DX=16., I_UPPER=7 /
 &MISC GVEC=-1.70,0.0,-9.65 /
 &PRES SOLVER                  = 'SCARC'

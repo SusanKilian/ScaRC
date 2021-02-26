@@ -4,7 +4,7 @@
 !
 !===========================================================================================================================
 #define WITH_SCARC_AMG
-#define WITH_SCARC_VERBOSE
+#undef WITH_SCARC_VERBOSE
 
 
 !=======================================================================================================================
@@ -295,10 +295,12 @@ INTEGER, PARAMETER :: NSCARC_VECTOR_TWO_E            = 16        !< Flag for 1D-
 INTEGER, PARAMETER :: NSCARC_VECTOR_H                = 17        !< Flag for 3D-vector H 
 INTEGER, PARAMETER :: NSCARC_VECTOR_HS               = 18        !< Flag for 3D-vector HS
 
-INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_PRECON   =  1        !< Type of warning message: No MKL available for preconditioner
-INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_SMOOTH   =  2        !< Type of warning message: No MKL available for smoother
+INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_PRECON   =  1        !< Type of warning message: No MKL preconditioner available
+INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_SMOOTH   =  2        !< Type of warning message: No MKL smoother available
 INTEGER, PARAMETER :: NSCARC_WARNING_NO_MKL_LU       =  3        !< Type of warning message: Using LU instead of MKL
-INTEGER, PARAMETER :: NSCARC_WARNING_NO_GLOBAL_SCOPE =  4        !< Type of warning message: Using LU instead of MKL
+INTEGER, PARAMETER :: NSCARC_WARNING_NO_GLOBAL_SCOPE =  4        !< Type of warning message: No global scope solver available
+INTEGER, PARAMETER :: NSCARC_WARNING_ONLY_SSOR_PRECON=  5        !< Type of warning message: Only SSOR preconditioner available
+INTEGER, PARAMETER :: NSCARC_WARNING_ONLY_SSOR_SMOOTH=  6        !< Type of warning message: Only SSOR smoother available
 
 INTEGER, PARAMETER :: NSCARC_UNDEF_INT               = -1        !< Flag for undefined integer value
 INTEGER, PARAMETER :: NSCARC_ZERO_INT                =  0        !< Flag for zero integer value
@@ -2113,6 +2115,10 @@ SELECT CASE (NWARNING)
       CWARNING = 'Intel MKL library missing - only SSOR smoother is used'
    CASE (NSCARC_WARNING_NO_MKL_LU)
       CWARNING = 'Intel MKL library missing - using LU instead'
+   CASE (NSCARC_WARNING_ONLY_SSOR_PRECON)
+      CWARNING = 'Only SSOR preconditioner available'
+   CASE (NSCARC_WARNING_ONLY_SSOR_SMOOTH)
+      CWARNING = 'Only SSOR smoother available'
    CASE (NSCARC_WARNING_NO_GLOBAL_SCOPE)
       CWARNING = 'No global scope preconditioner available'
 END SELECT
@@ -4234,6 +4240,10 @@ SELECT CASE(TYPE_PRECON)
          SV%CNAME = 'SCARC_PRECON_CLUSTER'
          SV%NIT   = 1
       ENDIF
+   CASE (NSCARC_RELAX_OPTIMIZED)
+      SV%CNAME = 'SCARC_PRECON_OPTIMIZED'
+      SV%NIT   = 1
+      SV%OMEGA = 1.0_EB
 #endif
    CASE DEFAULT
       CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, TYPE_PRECON)
@@ -4318,6 +4328,9 @@ SELECT CASE(TYPE_SMOOTH)
       ELSE
          SV%CNAME = 'SCARC_SMOOTH_PARDISO'
       ENDIF
+   CASE (NSCARC_RELAX_OPTIMIZED)
+      SV%CNAME = 'SCARC_SMOOTH_OPTIMIZED'
+      SV%OMEGA = 1.0_EB
 #endif
    CASE DEFAULT
       CALL SCARC_ERROR(NSCARC_ERROR_PARSE_INPUT, SCARC_NONE, TYPE_SMOOTH)
@@ -11437,33 +11450,27 @@ ENDIF MULTI_LEVEL_IF
 #ifdef WITH_MKL
 IF (.NOT. IS_MGM) THEN
 
-   DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+     DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-      CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
-      IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
-         IF (.NOT.L%HAS_OBSTRUCTIONS) THEN
-            TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_NONE
-            WRITE(*,*) 'NM=', NM,': TYPE_MKL(', NLEVEL_MIN,')=', TYPE_MKL(NLEVEL_MIN)
-         ENDIF
-      ENDIF
-      IF (TYPE_MKL(NLEVEL_MIN) /= NSCARC_MKL_NONE) THEN
-         CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
-         WRITE(*,*) 'NM=', NM,': SETTING UP MKL MATRIX'
-      ENDIF
+        CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
+        IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
+           IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_NONE
+        ENDIF
+        IF (TYPE_MKL(NLEVEL_MIN) /= NSCARC_MKL_NONE) CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
 
-      IF (HAS_GMG_LEVELS) THEN
-         DO NL = NLEVEL_MIN+1, NLEVEL_MAX
-            CALL SCARC_POINT_TO_GRID (NM, NL)
-            IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
-               IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NL) = NSCARC_MKL_NONE
-            ENDIF
-            IF (TYPE_MKL(NL) /= NSCARC_MKL_NONE) CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NL)
-         ENDDO
-      ENDIF
+        IF (HAS_GMG_LEVELS) THEN
+           DO NL = NLEVEL_MIN+1, NLEVEL_MAX
+              CALL SCARC_POINT_TO_GRID (NM, NL)
+              IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
+                 IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NL) = NSCARC_MKL_NONE
+              ENDIF
+              IF (TYPE_MKL(NL) /= NSCARC_MKL_NONE) CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NL)
+           ENDDO
+        ENDIF
 
-   ENDDO 
+     ENDDO
 
-ELSE 
+ELSE
 
    TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
    TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
@@ -19662,6 +19669,8 @@ CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
 CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
 
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: SIP'
+
 CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this structured inhomogeneous Poisson solution in MGM%SIP
 CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
 
@@ -19691,6 +19700,8 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
 
    CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
    CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)             ! compute UScaRC with unstructured CG-method 
+
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL-EXACT '
 
    CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                
    CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                   
@@ -19782,6 +19793,7 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
       CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
 
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL ', ITE_MGM, ': VEL_ERR:', VELOCITY_ERROR_GLOBAL
       IF (SCARC_MGM_CHECK_LAPLACE) THEN
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC

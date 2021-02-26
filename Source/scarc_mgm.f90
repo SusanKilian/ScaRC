@@ -567,7 +567,7 @@ SUBROUTINE SCARC_MGM_UPDATE_GHOSTCELLS(NTYPE)
 USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, MGM, BXS, BXF, BYS, BYF, BZS, BZF, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN):: NTYPE
 INTEGER:: NM, IW, IOR0, IXG, IYG, IZG, IXW, IYW, IZW 
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 INTEGER:: I, K
 #endif
 
@@ -576,89 +576,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)                                   
 
    SELECT CASE(NTYPE)
-
-      CASE  (NSCARC_MGM_POISSON, NSCARC_MGM_SCARC, NSCARC_MGM_USCARC, NSCARC_MGM_TERMINATE) 
-
-         IF (NTYPE == NSCARC_MGM_POISSON) THEN
-            HP => MGM%SIP
-         ELSE IF (NTYPE == NSCARC_MGM_TERMINATE) THEN
-            HP => MGM%UIP
-         ELSE IF (NTYPE == NSCARC_MGM_SCARC) THEN
-            HP => MGM%SCARC
-         ELSE IF (NTYPE == NSCARC_MGM_USCARC) THEN
-            HP => MGM%USCARC
-         ELSE
-            WRITE(*,*) 'ERROR IN MGM_UPDATE_GHOSTCELLS'
-         ENDIF
-         BXS => M%BXS ; BXF => M%BXF
-         BYS => M%BYS ; BYF => M%BYF
-         BZS => M%BZS ; BZF => M%BZF
-
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE:', NTYPE
-WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
-#endif
-       
-         WALL_CELLS_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
-      
-            GWC => G%WALL(IW)
-      
-            IF (GWC%BTYPE == INTERNAL) CYCLE
-
-            IXG = GWC%IXG
-            IYG = GWC%IYG
-            IZG = GWC%IZG
-      
-            IXW = GWC%IXW
-            IYW = GWC%IYW
-            IZW = GWC%IZW
-      
-            IOR0 = GWC%IOR
-      
-            SELECT CASE (IOR0)
-               CASE ( 1)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*BXS(IYW, IZW)
-                  ENDIF
-               CASE (-1)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*BXF(IYW, IZW)
-                  ENDIF
-               CASE ( 2)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*BYS(IXW, IZW)
-                  ENDIF
-               CASE (-2)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*BYF(IXW, IZW)
-                  ENDIF
-               CASE ( 3)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*BZS(IXW, IYW)
-                  ENDIF
-               CASE (-3)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
-                  ENDIF
-            END SELECT
-#ifdef WITH_SCARC_DEBUG2
-            WRITE(MSG%LU_DEBUG, '(A, 5I6, E14.6)') 'UPDATE_GHOST_CELLS: IW, IOR0, IXW, IYW, IZG, HP:',&
-                                                   IW, IOR0, IXW, IYW, IZG, HP(IXW, IYW, IZG)
-#endif
-      
-         ENDDO WALL_CELLS_LOOP
 
       ! 
       ! Update ghostcells for local Laplace problems
@@ -772,6 +689,92 @@ WRITE(MSG%LU_DEBUG,'(9E14.6)') ((BZF(IXW,IYW),IXW=1,L%NX),IYW=1,L%NY)
             END SELECT
       
          ENDDO WALL_CELLS_LOOP_LAPLACE
+
+      ! All other cases: 
+      ! Updating the ghost cells for the inhomogeneous structured Poisson as well as 
+      ! the (optional) ScaRC and UScaRC solutions in MGM and when terminating the current MGM run
+
+      CASE  (NSCARC_MGM_POISSON, NSCARC_MGM_SCARC, NSCARC_MGM_USCARC, NSCARC_MGM_TERMINATE) 
+
+         SELECT CASE (NTYPE)
+            CASE (NSCARC_MGM_POISSON)
+               HP => MGM%SIP
+            CASE (NSCARC_MGM_SCARC) 
+               HP => MGM%SCARC
+            CASE (NSCARC_MGM_USCARC)
+               HP => MGM%USCARC
+            CASE (NSCARC_MGM_TERMINATE)
+               HP => MGM%UIP
+         END SELECT
+
+         BXS => M%BXS ; BXF => M%BXF
+         BYS => M%BYS ; BYF => M%BYF
+         BZS => M%BZS ; BZF => M%BZF
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG, *) 'UPDATE_MGM_GHOST_CELLS:1: HP: NTYPE:', NTYPE
+WRITE(MSG%LU_DEBUG, MSG%CFORM3) ((HP(I, 1, K), I = 0, L%NX+1), K = L%NZ+1, 0, -1)
+#endif
+       
+         WALL_CELLS_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
+      
+            GWC => G%WALL(IW)
+      
+            IF (GWC%BTYPE == INTERNAL) CYCLE
+
+            IXG = GWC%IXG
+            IYG = GWC%IYG
+            IZG = GWC%IZG
+      
+            IXW = GWC%IXW
+            IYW = GWC%IYW
+            IZW = GWC%IZW
+      
+            IOR0 = GWC%IOR
+      
+            SELECT CASE (IOR0)
+               CASE ( 1)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*BXS(IYW, IZW)
+                  ENDIF
+               CASE (-1)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*BXF(IYW, IZW)
+                  ENDIF
+               CASE ( 2)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*BYS(IXW, IZW)
+                  ENDIF
+               CASE (-2)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*BYF(IXW, IZW)
+                  ENDIF
+               CASE ( 3)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*BZS(IXW, IYW)
+                  ENDIF
+               CASE (-3)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
+                  ENDIF
+            END SELECT
+#ifdef WITH_SCARC_DEBUG2
+            WRITE(MSG%LU_DEBUG, '(A, 5I6, E14.6)') 'UPDATE_GHOST_CELLS: IW, IOR0, IXW, IYW, IZG, HP:',&
+                                                   IW, IOR0, IXW, IYW, IZG, HP(IXW, IYW, IZG)
+#endif
+      
+         ENDDO WALL_CELLS_LOOP
 
    END SELECT
 #ifdef WITH_SCARC_DEBUG2
