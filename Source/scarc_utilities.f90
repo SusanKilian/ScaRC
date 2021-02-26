@@ -49,7 +49,7 @@ END FUNCTION ARE_DIAG_NEIGHBORS
 
 
 ! --------------------------------------------------------------------------------------------------------------------------
-!> \brief Check if two meshes are diagonal neighbors
+!> \brief Check if two meshes are neighbors
 ! --------------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION ARE_NEIGHBORS(NM, NOM)
 INTEGER, INTENT(IN) :: NM, NOM
