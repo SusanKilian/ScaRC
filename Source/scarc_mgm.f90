@@ -1449,8 +1449,8 @@ IF (TYPE_MGM_BC == NSCARC_MGM_BC_EXPOL .AND. TOTAL_PRESSURE_ITERATIONS <= 2) ITY
             J = G%ICY(ICW) 
             K = G%ICZ(ICW) 
 
-#ifdef WITH_SCARC_DEBUG2
-      WRITE(MSG%LU_DEBUG, *) '          IWG, ICW, I, J, K :', IWG, ICW, I, J, K
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG, *) '          IWG, ICW, I, J, K :', IWG, ICW, I, J, K, TYPE_GRID
 #endif
 
             SELECT CASE (ITYPE)
