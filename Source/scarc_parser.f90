@@ -324,10 +324,6 @@ SELECT CASE (TRIM(SCARC_METHOD))
       HAS_MULTIPLE_GRIDS = .TRUE.
 
       TYPE_METHOD = NSCARC_METHOD_MGM
-      TYPE_SCOPE(0:1) = NSCARC_SCOPE_LOCAL
-#ifdef WITH_MKL
-      TYPE_MKL(0:1) = NSCARC_MKL_LOCAL
-#endif
 
       ! set type of MGM interface BCs of Laplace problems
       SELECT CASE (TRIM(SCARC_MGM_BC))
