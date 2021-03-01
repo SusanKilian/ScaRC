@@ -1791,31 +1791,64 @@ ELSE
    AS => G%LAPLACE_SYM
 ENDIF
 
-DO IW = 1, G%NW
+SELECT CASE (TYPE_MKL_PRECISION) 
 
-   GWC => G%WALL(IW)
-   IOR0 = GWC%IOR
-   IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
-   IF (GWC%BTYPE /= INTERNAL) CYCLE
+   CASE (NSCARC_PRECISION_DOUBLE)
 
-   F  => L%FACE(IOR0)
-
-   I = GWC%IXW
-   J = GWC%IYW
-   K = GWC%IZW
-
-   IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-
-   NOM = GWC%NOM
-   IC  = G%CELL_NUMBER(I, J, K)
-
-   IP = AS%ROW(IC)
-   AS%VAL(IP) = AS%VAL(IP) - F%INCR_BOUNDARY
+      DO IW = 1, G%NW
+      
+         GWC => G%WALL(IW)
+         IOR0 = GWC%IOR
+         IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
+         IF (GWC%BTYPE /= INTERNAL) CYCLE
+      
+         F  => L%FACE(IOR0)
+      
+         I = GWC%IXW
+         J = GWC%IYW
+         K = GWC%IZW
+      
+         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+      
+         NOM = GWC%NOM
+         IC  = G%CELL_NUMBER(I, J, K)
+      
+         IP = AS%ROW(IC)
+         AS%VAL(IP) = AS%VAL(IP) - F%INCR_BOUNDARY
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :DIRICHLET: IW, I, J, K, NOM, IC, AS%VAL:', IW, I, J, K, NOM, IC, AS%VAL(IP)
 #endif
+      
+      ENDDO 
+      
+   CASE (NSCARC_PRECISION_SINGLE)
 
-ENDDO 
+      DO IW = 1, G%NW
+      
+         GWC => G%WALL(IW)
+         IOR0 = GWC%IOR
+         IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
+         IF (GWC%BTYPE /= INTERNAL) CYCLE
+      
+         F  => L%FACE(IOR0)
+      
+         I = GWC%IXW
+         J = GWC%IYW
+         K = GWC%IZW
+      
+         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+      
+         NOM = GWC%NOM
+         IC  = G%CELL_NUMBER(I, J, K)
+      
+         IP = AS%ROW(IC)
+         AS%VAL_FB(IP) = AS%VAL_FB(IP) - REAL(F%INCR_BOUNDARY, FB)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :DIRICHLET: IW, I, J, K, NOM, IC, AS%VAL_FB:', IW, I, J, K, NOM, IC, AS%VAL_FB(IP)
+#endif
+      
+      ENDDO 
+END SELECT
 
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_CMATRIX(AS, 'POISSON_SYM', 'POISSON_MKL WITH DIRICHLET BDRY')

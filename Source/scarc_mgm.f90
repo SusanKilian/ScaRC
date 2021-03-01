@@ -142,6 +142,13 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL1 (MGM%X, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1 (MGM%B, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
 
+#ifdef WITH_MKL
+      IF (TYPE_MKL_PRECISION == NSCARC_PRECISION_SINGLE) THEN
+         CALL SCARC_ALLOCATE_REAL1_FB (MGM%X_FB, 1, G%NC, NSCARC_INIT_ZERO, 'X', CROUTINE)
+         CALL SCARC_ALLOCATE_REAL1_FB (MGM%B_FB, 1, G%NC, NSCARC_INIT_ZERO, 'B', CROUTINE)
+      ENDIF
+#endif
+
    ENDIF
 
    ! The following code is still experimental and addresses the solution of the LU method compactly stored matrices

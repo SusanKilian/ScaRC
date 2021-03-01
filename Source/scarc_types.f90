@@ -512,7 +512,8 @@ TYPE SCARC_MGM_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: UHL_VS_DSCARC       !< difference of unstructured Laplace MGM and diff ScaRC-UScarC
 
    REAL(EB), ALLOCATABLE, DIMENSION (:)     :: BC                  !< Boundary conditions along internal mesh interfaces
-   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: X, Y, B             !< RHS and solution vectors of LU (experimental)
+   REAL(EB), ALLOCATABLE, DIMENSION (:)     :: X, Y, B             !< solution, auxiliary and RHS vectors for local Laplace solvers
+   REAL(FB), ALLOCATABLE, DIMENSION (:)     :: X_FB, B_FB          !< solution and RHS vectors for local Laplace solvers (SP)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: AAA                 !< Matrix for LU-decomposition (experimental)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: LLL                 !< Lower part of LU-decomposition (experimental)
    REAL(EB), ALLOCATABLE, DIMENSION (:,:)   :: UUU                 !< Upper part of LU-decomposition (experimental)
