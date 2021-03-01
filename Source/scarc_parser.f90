@@ -326,7 +326,7 @@ SELECT CASE (TRIM(SCARC_METHOD))
       TYPE_METHOD   = NSCARC_METHOD_MGM
       TYPE_SCOPE(1) = NSCARC_SCOPE_LOCAL
 #ifdef WITH_MKL
-      TYPE_MKL(0:1) = NSCARC_MKL_LOCAL
+      TYPE_MKL(1) = NSCARC_MKL_LOCAL
 #endif
 
       ! set type of MGM interface BCs of Laplace problems
