@@ -1689,6 +1689,7 @@ ELSE
 #endif
 
 ENDIF
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: SIP, ITE_MGM, VEL_ERR:', 0, VELOCITY_ERROR_GLOBAL
 
 ! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
 ! This is only necessary if the requested accuracy has not already been achieved by pass 1
@@ -1760,6 +1761,7 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       ENDIF
 
       STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM, 1)
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL, ITE_MGM, VEL_ERR:', ITE_MGM, VELOCITY_ERROR_GLOBAL
       IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
 
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN

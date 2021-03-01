@@ -3672,7 +3672,7 @@ IF (TRIM(PRES_METHOD) == 'SCARC' .OR. TRIM(PRES_METHOD) == 'USCARC') THEN
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate  ',SCARC_CAPPA
    ELSE
-      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,i6,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
+      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,i4,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate ',SCARC_CAPPA, &
                                                  ', MGM Iterations ',SCARC_MGM_ITERATIONS, &

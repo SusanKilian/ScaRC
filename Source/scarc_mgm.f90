@@ -415,6 +415,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
+   SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL  ! Store achieved MGM accuracy for statistics in chid.out
+   SCARC_MGM_ITERATIONS = ITE_MGM                ! Store required MGM iterations for statistics in chid.out
+
    SELECT CASE (NTYPE)
 
       ! Initialization - after first structured inhomogeneous Poisson solution
@@ -477,8 +480,6 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CAPPA = MGM%CAPPA_POISSON   ! Reset to Krylov statistics of Poisson solution for statistics in chid.out
          ITE   = MGM%ITE_POISSON
 
-         SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL  ! Store achieved MGM accuracy for statistics in chid.out
-         SCARC_MGM_ITERATIONS = ITE_MGM                ! Store required MGM iterations for statistics in chid.out
 
 #ifdef WITH_SCARC_DEBUG
       IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) THEN

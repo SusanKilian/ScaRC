@@ -853,7 +853,7 @@ TYPE SCARC_MGM_TYPE
 
    INTEGER :: ITE = 0                            
    INTEGER :: ITE_POISSON = 0
-   INTEGER :: ITE_LAPLACE = 0
+   INTEGER :: ITE_LAPLACE = 1
 
    LOGICAL :: HAS_OBSTRUCTIONS = .FALSE.
 
@@ -2197,7 +2197,7 @@ END FUNCTION ARE_DIAG_NEIGHBORS
 
 
 ! --------------------------------------------------------------------------------------------------------------------------
-!> \brief Check if two meshes are diagonal neighbors
+!> \brief Check if two meshes are neighbors
 ! --------------------------------------------------------------------------------------------------------------------------
 LOGICAL FUNCTION ARE_NEIGHBORS(NM, NOM)
 INTEGER, INTENT(IN) :: NM, NOM
@@ -4388,6 +4388,7 @@ SV => STACK(NSTACK)%SOLVER
 SV%TYPE_SCOPE(0) = NSCOPE
 SV%TYPE_SOLVER   = NSCARC_SOLVER_MGM
 SV%TYPE_RELAX    = TYPE_PRECON
+SV%TYPE_GRID     = TYPE_GRID
 
 SV%EPS   =  SCARC_PRECON_ACCURACY
 SV%NIT   =  SCARC_PRECON_ITERATIONS
@@ -4417,7 +4418,6 @@ END SELECT
 SVP => STACK(NSTACK-1)%SOLVER
 
 SV%TYPE_ACCURACY      = SVP%TYPE_ACCURACY
-SV%TYPE_GRID          = SVP%TYPE_GRID
 SV%TYPE_LEVEL(0:2)    = SVP%TYPE_LEVEL(0:2)
 SV%TYPE_MATRIX        = SVP%TYPE_MATRIX
 SV%TYPE_MKL_PRECISION = SVP%TYPE_MKL_PRECISION
@@ -7723,7 +7723,7 @@ END SUBROUTINE SCARC_SETUP_PARDISO_MESH
 !> \brief Initialize PARDISO solver from MKL-library
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_PARDISO(NM, NL)
-USE SCARC_POINTERS, ONLY: G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, AS, MKL, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, IDUMMY(1)=0
 REAL (EB) :: TNOW
@@ -7733,6 +7733,8 @@ TNOW = CURRENT_TIME()
 CROUTINE = 'SCARC_SETUP_PARDISO'
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+MKL => L%MKL
 AS  => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE_SYM)
 
 ! Allocate workspace for parameters nnd pointers eeded in MKL-routine
@@ -11445,32 +11447,36 @@ MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
 ENDIF MULTI_LEVEL_IF
 
 ! ------ If MKL-solver is used on specific levels, then setup symmetric Poisson matrix there
-! ------ If optimized 
-  
 #ifdef WITH_MKL
 IF (.NOT. IS_MGM) THEN
 
-     DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-        CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
-        IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
-           IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_NONE
-        ENDIF
-        IF (TYPE_MKL(NLEVEL_MIN) /= NSCARC_MKL_NONE) CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
+      CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
+      IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
+         IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NLEVEL_MIN) = NSCARC_MKL_NONE
+      ENDIF
+      IF (TYPE_MKL(NLEVEL_MIN) /= NSCARC_MKL_NONE) THEN
+         CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
+      ENDIF
 
-        IF (HAS_GMG_LEVELS) THEN
-           DO NL = NLEVEL_MIN+1, NLEVEL_MAX
-              CALL SCARC_POINT_TO_GRID (NM, NL)
-              IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
-                 IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NL) = NSCARC_MKL_NONE
-              ENDIF
-              IF (TYPE_MKL(NL) /= NSCARC_MKL_NONE) CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NL)
-           ENDDO
-        ENDIF
+      IF (HAS_GMG_LEVELS) THEN
+         DO NL = NLEVEL_MIN+1, NLEVEL_MAX
+            CALL SCARC_POINT_TO_GRID (NM, NL)
+            IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
+               IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NL) = NSCARC_MKL_NONE
+            ENDIF
+            IF (TYPE_MKL(NL) /= NSCARC_MKL_NONE) THEN
+               CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NL)
+               CALL SCARC_SETUP_BOUNDARY_MKL(NSCARC_MATRIX_POISSON, NM, NL)
+            ENDIF
+         ENDDO
+      ENDIF
 
-     ENDDO
+   ENDDO 
 
-ELSE
+ELSE 
 
    TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
    TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
@@ -11484,6 +11490,7 @@ ELSE
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
          CALL SCARC_SETUP_MATRIX_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_MKL(NSCARC_MATRIX_POISSON, NM, NLEVEL_MIN)
       ENDDO 
    ENDIF
 
@@ -11492,9 +11499,7 @@ ELSE
          CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
          CALL SCARC_SETUP_MATRIX_MKL (NSCARC_MATRIX_LAPLACE, NM, NLEVEL_MIN)
       ENDDO 
-   ENDIF
-
-   IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_OPTIMIZED) THEN 
+   ELSE IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_OPTIMIZED) THEN 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
          IF (L%STRUCTURED%NC > L%UNSTRUCTURED%NC) CALL SCARC_SETUP_MATRIX_MKL (NSCARC_MATRIX_LAPLACE, NM, NLEVEL_MIN)
@@ -11508,7 +11513,6 @@ ELSE
 
 ENDIF
 #endif
-
 
 END SUBROUTINE SCARC_SETUP_SYSTEMS
 
@@ -12840,6 +12844,49 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
 END SELECT 
 
 END SUBROUTINE SCARC_SETUP_BOUNDARY
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Insert internal Dirichlet boundary conditions to local MKL preconditioning matrices
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_BOUNDARY_MKL (NMATRIX, NM, NL)
+USE SCARC_POINTERS, ONLY: L, G, F, GWC, AS, SCARC_POINT_TO_GRID
+INTEGER, INTENT(IN) :: NMATRIX, NM, NL
+INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP
+
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+IF (NMATRIX == NSCARC_MATRIX_POISSON) THEN
+   AS => G%POISSON_SYM
+ELSE
+   AS => G%LAPLACE_SYM
+ENDIF
+
+DO IW = 1, G%NW
+
+   GWC => G%WALL(IW)
+   IOR0 = GWC%IOR
+   IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
+   IF (GWC%BTYPE /= INTERNAL) CYCLE
+
+   F  => L%FACE(IOR0)
+
+   I = GWC%IXW
+   J = GWC%IYW
+   K = GWC%IZW
+
+   IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+
+   NOM = GWC%NOM
+   IC  = G%CELL_NUMBER(I, J, K)
+
+   IP = AS%ROW(IC)
+   AS%VAL(IP) = AS%VAL(IP) - F%INCR_BOUNDARY
+
+ENDDO 
+
+ 
+END SUBROUTINE SCARC_SETUP_BOUNDARY_MKL
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -16986,45 +17033,46 @@ USE SCARC_POINTERS, ONLY: MGM, SCARC_POINT_TO_MGM
 INTEGER, INTENT(IN):: ITE_MGM, NTYPE
 INTEGER:: NM
 
-! Note: Convergence history of previous Krylov method is available in ITE and CAPPA 
-
 SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_FAILURE
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_MGM(NM, NLEVEL_MIN)
 
-   !IF (MGM%VELOCITY_ERROR > VELOCITY_ERROR_GLOBAL) VELOCITY_ERROR_GLOBAL = MGM%VELOCITY_ERROR
-
-   SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL
-   SCARC_MGM_ITERATIONS = ITE_MGM
+   SCARC_MGM_ACCURACY   = VELOCITY_ERROR_GLOBAL  ! Store achieved MGM accuracy for statistics in chid.out
+   SCARC_MGM_ITERATIONS = ITE_MGM                ! Store required MGM iterations for statistics in chid.out
 
    SELECT CASE (NTYPE)
 
       ! Initialization - after first structured inhomogeneous Poisson solution
 
       CASE (0)
+
          MGM%ITE = 0
          MGM%ITE_LAPLACE = 0
-         MGM%ITE_POISSON = ITE                 
+         MGM%ITE_POISSON = ITE                   ! ITE, CAPPA contain statistics of preceding structured CG-solution
          MGM%CAPPA_POISSON = CAPPA
 
       ! MGM iteration - after each unstructured homogeneous Laplace solution
 
       CASE (1)
-         MGM%ITE = ITE_MGM
-         IF (TYPE_MGM_LAPLACE >= NSCARC_MGM_LAPLACE_LU) THEN
-            MGM%ITE_LAPLACE = 1
-            MGM%CAPPA_LAPLACE = 0
-         ELSE IF (ITE > MGM%ITE_LAPLACE) THEN
-            MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)
-            MGM%CAPPA_LAPLACE = CAPPA
-         ENDIF
 
-      ! termination - after whole MGM solution
+         MGM%ITE = ITE_MGM
+         IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_CG .AND. ITE > MGM%ITE_LAPLACE) THEN
+            MGM%ITE_LAPLACE = MAX(ITE, MGM%ITE_LAPLACE)            ! Store worst Laplace-CG statistics
+            MGM%CAPPA_LAPLACE = CAPPA
+         ELSE
+            MGM%ITE_LAPLACE = 1
+            MGM%CAPPA_LAPLACE = 0.0_EB
+         ENDIF                         
+
+      ! Termination - after whole MGM solution
 
       CASE (-1)
+
          CAPPA = MGM%CAPPA_POISSON   ! Reset to Krylov statistics of Poisson solution for statistics in chid.out
          ITE   = MGM%ITE_POISSON
+
+
    END SELECT
    IF (VELOCITY_ERROR_GLOBAL <= VELOCITY_ERROR_MGM) SCARC_MGM_CONVERGENCE_STATE = NSCARC_MGM_SUCCESS
 
@@ -17047,86 +17095,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT CASE(NTYPE)
 
-      CASE  (NSCARC_MGM_POISSON, NSCARC_MGM_SCARC, NSCARC_MGM_USCARC, NSCARC_MGM_TERMINATE) 
-
-         IF (NTYPE == NSCARC_MGM_POISSON) THEN
-            HP => MGM%SIP
-         ELSE IF (NTYPE == NSCARC_MGM_TERMINATE) THEN
-            HP => MGM%UIP
-         ELSE IF (NTYPE == NSCARC_MGM_SCARC) THEN
-            HP => MGM%SCARC
-         ELSE IF (NTYPE == NSCARC_MGM_USCARC) THEN
-            HP => MGM%USCARC
-         ELSE
-            WRITE(*,*) 'ERROR IN MGM_UPDATE_GHOSTCELLS'
-         ENDIF
-         BXS => M%BXS ; BXF => M%BXF
-         BYS => M%BYS ; BYF => M%BYF
-         BZS => M%BZS ; BZF => M%BZF
-
-       
-         WALL_CELLS_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
-      
-            GWC => G%WALL(IW)
-      
-            IF (GWC%BTYPE == INTERNAL) CYCLE
-
-            IXG = GWC%IXG
-            IYG = GWC%IYG
-            IZG = GWC%IZG
-      
-            IXW = GWC%IXW
-            IYW = GWC%IYW
-            IZW = GWC%IZW
-      
-            IOR0 = GWC%IOR
-      
-            SELECT CASE (IOR0)
-               CASE ( 1)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*BXS(IYW, IZW)
-                  ENDIF
-               CASE (-1)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*BXF(IYW, IZW)
-                  ENDIF
-               CASE ( 2)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*BYS(IXW, IZW)
-                  ENDIF
-               CASE (-2)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*BYF(IXW, IZW)
-                  ENDIF
-               CASE ( 3)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*BZS(IXW, IYW)
-                  ENDIF
-               CASE (-3)
-                  IF (GWC%BTYPE == DIRICHLET) THEN
-                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
-                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
-                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
-                  ENDIF
-            END SELECT
-      
-         ENDDO WALL_CELLS_LOOP
-
-      ! 
       ! Update ghostcells for local Laplace problems
       ! Along external boundaries use zero Dirichlet or Neumann BC's
       ! Along mesh interfaces use Dirichlet BC's corresponding to MGM interface settings 
-      ! 
+        
       CASE (NSCARC_MGM_LAPLACE)
 
          HP => MGM%UHL
@@ -17200,6 +17172,84 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             END SELECT
       
          ENDDO WALL_CELLS_LOOP_LAPLACE
+
+      ! All other cases: 
+      ! Updating the ghost cells for the inhomogeneous structured Poisson as well as 
+      ! the (optional) ScaRC and UScaRC solutions in MGM and when terminating the current MGM run
+
+      CASE  (NSCARC_MGM_POISSON, NSCARC_MGM_SCARC, NSCARC_MGM_USCARC, NSCARC_MGM_TERMINATE) 
+
+         SELECT CASE (NTYPE)
+            CASE (NSCARC_MGM_POISSON)
+               HP => MGM%SIP
+            CASE (NSCARC_MGM_SCARC) 
+               HP => MGM%SCARC
+            CASE (NSCARC_MGM_USCARC)
+               HP => MGM%USCARC
+            CASE (NSCARC_MGM_TERMINATE)
+               HP => MGM%UIP
+         END SELECT
+
+         BXS => M%BXS ; BXF => M%BXF
+         BYS => M%BYS ; BYF => M%BYF
+         BZS => M%BZS ; BZF => M%BZF
+       
+         WALL_CELLS_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
+      
+            GWC => G%WALL(IW)
+      
+            IF (GWC%BTYPE == INTERNAL) CYCLE
+
+            IXG = GWC%IXG
+            IYG = GWC%IYG
+            IZG = GWC%IZG
+      
+            IXW = GWC%IXW
+            IYW = GWC%IYW
+            IZW = GWC%IZW
+      
+            IOR0 = GWC%IOR
+      
+            SELECT CASE (IOR0)
+               CASE ( 1)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXS(IYW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) - L%DX*BXS(IYW, IZW)
+                  ENDIF
+               CASE (-1)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXG, IYW, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BXF(IYW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXG, IYW, IZW) =  HP(IXW, IYW, IZW) + L%DX*BXF(IYW, IZW)
+                  ENDIF
+               CASE ( 2)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYS(IXW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) - L%DY*BYS(IXW, IZW)
+                  ENDIF
+               CASE (-2)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYG, IZW) = -HP(IXW, IYW, IZW) + 2.0_EB*BYF(IXW, IZW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYG, IZW) =  HP(IXW, IYW, IZW) + L%DY*BYF(IXW, IZW)
+                  ENDIF
+               CASE ( 3)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZS(IXW, IYW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) - L%DZ*BZS(IXW, IYW)
+                  ENDIF
+               CASE (-3)
+                  IF (GWC%BTYPE == DIRICHLET) THEN
+                     HP(IXW, IYW, IZG) = -HP(IXW, IYW, IZW) + 2.0_EB*BZF(IXW, IYW)
+                  ELSE IF (GWC%BTYPE == NEUMANN) THEN
+                     HP(IXW, IYW, IZG) =  HP(IXW, IYW, IZW) + L%DZ*BZF(IXW, IYW)
+                  ENDIF
+            END SELECT
+      
+         ENDDO WALL_CELLS_LOOP
 
    END SELECT
 
@@ -18589,7 +18639,7 @@ SELECT_LAPLACE_SOLVER: SELECT CASE (TYPE_MGM_LAPLACE)
       CALL SCARC_WARNING (NSCARC_WARNING_NO_MKL_PRECON, SCARC_NONE, NSCARC_NONE)
 #endif
 
-   ! Setup local IntelMKL-PARDISO solvers 
+   ! Setup local LU or permuted LU solvers
 
    CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
       CALL SCARC_SETUP_STACK_MGM(NSTACK, NSCARC_SCOPE_LOCAL)
@@ -19669,8 +19719,6 @@ CALL SCARC_SETUP_MGM_WORKSPACE(NLEVEL_MIN)
 CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_STRUCTURED, NSCARC_MATRIX_POISSON)
 CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)
 
-IF (MY_RANK == 0) WRITE(*,*) 'MGM: SIP'
-
 CALL SCARC_MGM_STORE (NSCARC_MGM_POISSON)                   ! store this structured inhomogeneous Poisson solution in MGM%SIP
 CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_POISSON)       ! update ghost cell values correspondingly (global solution!)
 
@@ -19700,8 +19748,6 @@ IF (SCARC_MGM_CHECK_LAPLACE .OR. USE_CORRECT_INITIALIZATION) THEN
 
    CALL SCARC_SET_SYSTEM_TYPE (NSCARC_GRID_UNSTRUCTURED, NSCARC_MATRIX_POISSON)
    CALL SCARC_METHOD_KRYLOV (NSTACK, NSCARC_STACK_ZERO, NLEVEL_MIN)             ! compute UScaRC with unstructured CG-method 
-
-IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL-EXACT '
 
    CALL SCARC_MGM_STORE (NSCARC_MGM_USCARC)                                
    CALL SCARC_MGM_UPDATE_GHOSTCELLS (NSCARC_MGM_USCARC)                   
@@ -19743,6 +19789,7 @@ ELSE
    STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(0, 0)
 
 ENDIF
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: SIP, ITE_MGM, VEL_ERR:', 0, VELOCITY_ERROR_GLOBAL
 
 ! ------------- Pass 2: Solve local unstructured homogeneous Laplace solutions UHL
 ! This is only necessary if the requested accuracy has not already been achieved by pass 1
@@ -19793,13 +19840,13 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_MGM_VELO, NSCARC_NONE, NLEVEL_MIN)
       CALL SCARC_MGM_COMPUTE_VELOCITY_ERROR (NSCARC_MGM_LAPLACE)
 
-IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL ', ITE_MGM, ': VEL_ERR:', VELOCITY_ERROR_GLOBAL
       IF (SCARC_MGM_CHECK_LAPLACE) THEN
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UHL_VS_DSCARC)       ! unstructured homogeneous Laplace vs difference UScaRC-ScaRC
          CALL SCARC_MGM_DIFF (NSCARC_MGM_UIP_VS_USCARC)       ! unstructured inhomogeneous Poisson vs UScaRC
       ENDIF
 
       STATE_MGM = SCARC_MGM_CONVERGENCE_STATE(ITE_MGM, 1)
+IF (MY_RANK == 0) WRITE(*,*) 'MGM: UHL, ITE_MGM, VEL_ERR:', ITE_MGM, VELOCITY_ERROR_GLOBAL
       IF (STATE_MGM == NSCARC_MGM_SUCCESS) EXIT MGM_CORRECTION_LOOP
 
       IF (TYPE_MGM_BC == NSCARC_MGM_BC_TRUE) THEN
