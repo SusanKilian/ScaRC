@@ -5,6 +5,7 @@
 
 &PRES SOLVER                   = 'USCARC'
       SCARC_METHOD             = 'MGM'
+      SCARC_MKL_PRECISION      = 'SINGLE'
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_LAPLACE_SOLVER = 'OPTIMIZED'  /
 
