@@ -1955,15 +1955,13 @@ ENDDO
 END SUBROUTINE SCARC_UNPACK_MGM_VELO2
 
 
-
-
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Pack overlapping parts of specified vector VC (numbered via IC values)
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_PACK_VECTOR_PLAIN(NM, NL, NV)
 USE SCARC_POINTERS, ONLY: OL, OG, OS, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NM, NL, NV
-REAL(EB), DIMENSION(:), POINTER :: VC2
+REAL(EB), DIMENSION(:), POINTER :: VC
 INTEGER :: IOR0, ICG, ICW
 
 VC => SCARC_POINT_TO_VECTOR(NM, NL, NV)
