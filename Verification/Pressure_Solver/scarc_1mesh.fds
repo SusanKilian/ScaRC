@@ -1,6 +1,6 @@
 &HEAD CHID='scarc_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
-&MESH IJK=32,1,16  XB=0.0,1.6,-0.01,0.01,0.0,0.8 /
+&MESH IJK=4,1,4  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
@@ -14,7 +14,7 @@
 &VENT XB=0.0,0.0,-0.01,0.01,0.3,0.5 SURF_ID='INFLOW' /
 &VENT MB='XMAX', SURF_ID='OPEN' /
 
-&OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
+ OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
 
 &SLCF PBY=0.0,QUANTITY='VELOCITY',VECTOR=.TRUE. /
 &SLCF PBY=0.0,QUANTITY='PRESSURE' /

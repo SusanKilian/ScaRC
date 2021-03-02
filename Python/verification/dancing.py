@@ -133,7 +133,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
 #tstart = 0.1
 #tend   = 1.00
 
-path = '/home/susanne/GIT/A_ScaRC/Verification/Pressure_Solver'
+path = '/home/susanne/Tank/Samba/GIT/A_ScaRC/Verification/Pressure_Solver'
 case = 'dancing_eddies'
 nmeshes = 4
 tstart = 0.0
@@ -141,11 +141,11 @@ tend = 2.0
 
 chid=[]
 #chid.append('%s_default' %case)
-chid.append('%s_scarc' %case)
-chid.append('%s_uscarc' %case)
-chid.append('%s_mgm_mean_cg' %case)
+#chid.append('%s_scarc' %case)
+#chid.append('%s_uscarc' %case)
+#chid.append('%s_mgm_mean_cg' %case)
+#chid.append('%s_mgm_mean_pardiso' %case)
 chid.append('%s_mgm_mean_opt' %case)
-chid.append('%s_mgm_mean_pardiso' %case)
 chid.append('%s_uglmat' %case)
 
 

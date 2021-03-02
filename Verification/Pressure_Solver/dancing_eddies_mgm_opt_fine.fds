@@ -1,10 +1,12 @@
-&HEAD CHID='dancing_eddies_mgm_opt', TITLE='Simple 2D Tunnel test of optimized UScaRC-MGM solver without exact initialization'/ 
+&HEAD CHID='dancing_eddies_mgm_opt', TITLE='Simple 2D Tunnel test of optimized UScaRC-MGM solver with fine accuracy and without exact initialization'/ 
 
 &MULT ID='mesh',DX=0.075,I_UPPER=3 /
 &MESH IJK=75,1,40, XB=0.0,0.075,-0.001,0.001,-0.02,0.020, MULT_ID='mesh' /
 
 &PRES SOLVER                   = 'USCARC'
       SCARC_METHOD             = 'MGM'
+      SCARC_MGM_ACCURACY       = 1E-6
+      SCARC_MGM_ITERATIONS     = 50
       SCARC_MGM_BC             = 'MEAN'
       SCARC_MGM_LAPLACE_SOLVER = 'OPTIMIZED'  /
 

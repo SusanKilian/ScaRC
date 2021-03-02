@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fnt
 
 
-def read_csv(chid, time, quan, nquan, title, isim, qerr, qite, zoom_x1, zoom_x2): 
+def read_csv(chid, time, quan, nquan, title, isim, qerr, qite, zoom_x1, zoom_x2):
 
     time_sim  = []
     quan_sim  = []
@@ -30,7 +30,7 @@ def read_csv(chid, time, quan, nquan, title, isim, qerr, qite, zoom_x1, zoom_x2)
     chid_sim = chid[isim]
     name_chid= "%s_devc.csv" % (chid_sim)
 
-    if not os.path.isfile(name_chid): 
+    if not os.path.isfile(name_chid):
        print 'Not found:  %s' %name_chid
        return 0
 
@@ -47,7 +47,7 @@ def read_csv(chid, time, quan, nquan, title, isim, qerr, qite, zoom_x1, zoom_x2)
         if start == 1:
            line, null = line.split ("\n")
            titles = line.split (",")
-        
+
         if (start > 0):
             start -= 1
             continue
@@ -63,7 +63,7 @@ def read_csv(chid, time, quan, nquan, title, isim, qerr, qite, zoom_x1, zoom_x2)
         if t>zoom_x2 and not found2:
            b2 = num
            found2 = True
-              
+
         time_sim.append(t)
 
         for iq in range(nquan):
@@ -127,7 +127,7 @@ def plot_csv(chid, time, quan, iquan, title, nsim, name, b1, b2, zoom_x1, zoom_x
     #pend0  =b2
 
     step = (pend0 - pstart0)/(nsim+1)
- 
+
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + box.height * 0.15, box.width, box.height * 0.89])
 
@@ -156,7 +156,7 @@ def plot_csv(chid, time, quan, iquan, title, nsim, name, b1, b2, zoom_x1, zoom_x
           legend.append('mgm_simple')
 
 
-    ax.legend(legend, prop=legsize, loc="lower center", 
+    ax.legend(legend, prop=legsize, loc="lower center",
               bbox_to_anchor=(0.50, -0.3), fancybox=True, shadow=True, ncol=3)
 
     ax.grid(True)
@@ -247,7 +247,7 @@ nsim = len(chid)
 if nsim == 0: sys.exit('no chids defined')
 
 if not os.path.exists("pictures/%s" %name): os.makedirs("pictures/%s" %name)
-   
+
 time = []
 quan = []
 title = []
@@ -259,7 +259,7 @@ for isim in range(nsim):
 print '---------------> Printing to %s, b1=%4d, b2=%4d' %(name, b1, b2)
 for iquan in range(nquan):
    plot_csv(chid, time, quan, iquan, title, nsim, name, b1, b2, zoom_x1, zoom_x2, zoom_y1, zoom_y2)
-   
+
 
 
 

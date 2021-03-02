@@ -129,7 +129,7 @@ def plot_csv(case, chid, time, quan, name, tstart, tend):
 #tstart = 0.1
 #tend   = 1.00
 
-path = '/home/susanne/GIT/A_ScaRC/Verification/Pressure_Solver'
+path = '/home/susanne/Tank/Samba/GIT/A_ScaRC/Verification/Pressure_Solver'
 case = 'duct_flow'
 nmeshes = 8
 tstart = 0.0

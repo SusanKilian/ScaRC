@@ -1,4 +1,4 @@
-&HEAD CHID='scarc_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
+&HEAD CHID='scarc_pardiso_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
 &MESH IJK=16,1,16  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 &MESH IJK=16,1,16  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /
@@ -6,7 +6,7 @@
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'SCARC', SCARC_PRECON = 'FFT', SCARC_MATRIX = 'COMPACT'  /
+&PRES SOLVER = 'SCARC', SCARC_PRECON = 'PARDISO'  /
 
 &TIME T_END=0.5, DT=0.002 /
 

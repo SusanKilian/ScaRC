@@ -1,4 +1,4 @@
-&HEAD CHID='uscarc_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and optimized PARDISO or FFT as Laplace solver on 2 meshes' /
+&HEAD CHID='uscarc_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
 &MESH IJK=16,1,16  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 &MESH IJK=16,1,16  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /

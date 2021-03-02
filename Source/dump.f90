@@ -3593,7 +3593,7 @@ END SUBROUTINE READ_RESTART
 
 SUBROUTINE WRITE_DIAGNOSTICS(T,DT)
 
-USE SCRC, ONLY: SCARC_METHOD, SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL, SCARC_MGM_ACCURACY, SCARC_MGM_ITERATIONS
+USE SCRC, ONLY: SCARC_METHOD, SCARC_CAPPA, SCARC_ITERATIONS, SCARC_RESIDUAL, SCARC_MGM_ACCURACY
 USE COMP_FUNCTIONS, ONLY : CURRENT_TIME,GET_DATE,GET_DATE_ISO_8601
 REAL(EB), INTENT(IN) :: T,DT
 INTEGER :: NM,II,JJ,KK
@@ -3672,10 +3672,9 @@ IF (TRIM(PRES_METHOD) == 'SCARC' .OR. TRIM(PRES_METHOD) == 'USCARC') THEN
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate  ',SCARC_CAPPA
    ELSE
-      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,i4,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
+      WRITE(LU_OUTPUT,'(7X,A,i6,A,e9.2,A,e9.2,A,e9.2)') 'ScaRC: iterations', SCARC_ITERATIONS, &
                                                  ', Residual ',SCARC_RESIDUAL,&
                                                  ', Rate ',SCARC_CAPPA, &
-                                                 ', MGM Iterations ',SCARC_MGM_ITERATIONS, &
                                                  ', MGM Velocity Error ',SCARC_MGM_ACCURACY
    ENDIF
 ENDIF
@@ -5771,9 +5770,6 @@ QUANTITY_LOOP: DO IQ=1,NQT
          STIME = REAL(T_BEGIN + (T-T_BEGIN)*TIME_SHRINK_FACTOR,FB)
          OPEN(LU_SLCF(IQ,NM),FILE=FN_SLCF(IQ,NM),FORM='UNFORMATTED',STATUS='OLD',POSITION='APPEND')
          WRITE(LU_SLCF(IQ,NM)) STIME
-         NX = I2 + 1 - I1
-         NY = J2 + 1 - J1
-         NZ = K2 + 1 - K1
          WRITE(LU_SLCF(IQ,NM)) (((QQ(I,J,K,1),I=I1,I2),J=J1,J2),K=K1,K2)
          CLOSE(LU_SLCF(IQ,NM))
 
