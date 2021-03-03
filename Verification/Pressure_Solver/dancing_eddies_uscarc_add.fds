@@ -1,14 +1,11 @@
-&HEAD CHID='dancing_eddies_mgm_opt', TITLE='Simple 2D Tunnel test of optimized UScaRC-MGM solver without exact initialization'/ 
+&HEAD CHID='dancing_eddies_uscarc_add', TITLE='Simple 2D Tunnel test of structured ScaRC solver'/ 
 
 &MULT ID='mesh',DX=0.075,I_UPPER=3 /
 &MESH IJK=75,1,40, XB=0.0,0.075,-0.001,0.001,-0.02,0.020, MULT_ID='mesh' /
 
-&PRES SOLVER                   = 'USCARC'
-      SCARC_METHOD             = 'MGM'
-      SCARC_MGM_BC             = 'MEAN'
-      SCARC_MGM_LAPLACE_SOLVER = 'OPTIMIZED'  /
+&PRES SOLVER = 'USCARC' , TUNNEL_PRECONDITIONER = .TRUE./
 
-&TIME T_END=2.0 /
+&TIME T_END=0.5 /
 
 &MISC DNS=.TRUE., STRATIFICATION=.FALSE., NOISE=.FALSE. /
 
@@ -36,6 +33,7 @@
 &DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC ITERATIONS', ID='SCARC_ITE' /
 &DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC RESIDUAL', ID='SCARC_RES' /
 &DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC CONVERGENCE RATE', ID='SCARC_CONV' /
+
 
 &TAIL /
 

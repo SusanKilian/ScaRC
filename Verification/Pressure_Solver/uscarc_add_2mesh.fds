@@ -1,4 +1,4 @@
-&HEAD CHID='uscarc_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
+&HEAD CHID='uscarc_add_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
 &MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 &MESH IJK=8,1,8  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /
@@ -6,7 +6,7 @@
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'USCARC' /
+&PRES SOLVER = 'USCARC', TUNNEL_PRECONDITIONER = .TRUE. /
 
 &TIME T_END=0.5, DT=0.002 /
 
