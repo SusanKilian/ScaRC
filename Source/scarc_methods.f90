@@ -115,7 +115,6 @@ SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
    CASE (NSCARC_RELAX_OPTIMIZED)                                    ! mixture of IntelMKL and FFT preconditioning
       CALL SCARC_SETUP_STACK_PRECON(NSTACK, NSCARC_SCOPE_LOCAL)
       CALL SCARC_SETUP_OPTIMIZED(NLEVEL_MIN, NLEVEL_MIN)
-
 #endif
  
    CASE (NSCARC_RELAX_GMG)                                          ! Preconditioning by complete GMG method
@@ -169,6 +168,7 @@ N_STACK_TOTAL = NSTACK
 END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 
 
+#ifdef WITH_MKL
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief  Setup optimized local preconditioner, either local FFT or PARDISO, depending on structure of mesh
 ! If mesh does not contain obstructions, the faster FFT preconditioner is used, otherwise PARDISO from IntelMKL
@@ -192,6 +192,7 @@ DO NL = NLMIN, NLMAX
 ENDDO
 
 END SUBROUTINE SCARC_SETUP_OPTIMIZED
+#endif
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -278,14 +279,18 @@ END SUBROUTINE SCARC_SETUP_MULTIGRID_ENVIRONMENT
 !  - environment for unstructured local solvers in pass 2 of MGM
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MGM_ENVIRONMENT
-USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_MGM
-USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
+USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_MGM
 #ifdef WITH_MKL
+USE SCARC_POINTERS, ONLY: L
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO, SCARC_SETUP_MGM_PARDISO
-#endif
-USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_MGM_FFT
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_MATRIX_MKL
-INTEGER :: NSTACK, NM, TYPE_MATRIX_SAVE
+#endif
+USE SCARC_MGM, ONLY: SCARC_SETUP_MGM
+USE SCARC_FFT, ONLY: SCARC_SETUP_FFT, SCARC_SETUP_MGM_FFT
+INTEGER :: NSTACK, TYPE_MATRIX_SAVE
+#ifdef WITH_MKL
+INTEGER :: NM
+#endif
 
 ! Allocate workspace and define variables for the different boundary settings in MGM-method
 
@@ -1070,7 +1075,6 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
             PRES%B_OLD = ST%B
          ENDIF
 #endif
-   
          ! Get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
 
          BXS => M%BXS   ;  BXF => M%BXF
@@ -1714,10 +1718,12 @@ IF (STATE_MGM /= NSCARC_MGM_SUCCESS) THEN
             CALL SCARC_METHOD_KRYLOV (N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_MGM_LAPLACE_LU, NSCARC_MGM_LAPLACE_LUPERM)
             CALL SCARC_METHOD_MGM_LU(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+#ifdef WITH_MKL
          CASE (NSCARC_MGM_LAPLACE_PARDISO)
             CALL SCARC_METHOD_MGM_PARDISO(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_MGM_LAPLACE_OPTIMIZED)
             CALL SCARC_METHOD_MGM_OPTIMIZED(N_STACK_LAPLACE, NSCARC_STACK_ZERO, NLEVEL_MIN)
+#endif
       END SELECT
    
       CALL SCARC_MGM_STORE (NSCARC_MGM_LAPLACE)            
@@ -1855,6 +1861,7 @@ CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_LU
 
 
+#ifdef WITH_MKL
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Perform solution of local Laplace problems by IntelMKL Pardiso methods on each mesh
 ! --------------------------------------------------------------------------------------------------------------
@@ -2041,6 +2048,7 @@ ENDDO MESHES_LOOP
 
 CALL SCARC_RELEASE_SCOPE(NS, NP)
 END SUBROUTINE SCARC_METHOD_MGM_OPTIMIZED
+#endif
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -2221,6 +2229,9 @@ END SUBROUTINE SCARC_METHOD_MULTIGRID
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_MKL(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+#ifndef WITH_MKL
+INTEGER :: NDUMMY
+#endif
 
 #ifdef WITH_MKL
 SELECT_MKL: SELECT CASE (TYPE_MKL(0))
@@ -2230,7 +2241,8 @@ SELECT_MKL: SELECT CASE (TYPE_MKL(0))
       CALL SCARC_METHOD_PARDISO(NSCARC_MATRIX_POISSON_SYM, NSTACK, NPARENT, NLEVEL)
 END SELECT SELECT_MKL
 #else
-WRITE(*,*) 'MKL not defined on stack position ', NSTACK, ' for parent ', NPARENT, ' on level ', NLEVEL
+NDUMMY = NPARENT * NLEVEL
+CALL SCARC_ERROR(NSCARC_ERROR_MKL_STACK, SCARC_NONE, NSTACK)
 #endif
 
 END SUBROUTINE SCARC_METHOD_MKL

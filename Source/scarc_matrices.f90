@@ -31,11 +31,12 @@ CONTAINS
 ! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
 ! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEMS
-USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
-INTEGER :: NM, NL
+USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID
 #ifdef WITH_MKL
+USE SCARC_POINTERS, ONLY: L
 INTEGER :: TYPE_MKL_SAVE(0:1), TYPE_SCOPE_SAVE(0:1)
 #endif
+INTEGER :: NM, NL
   
 CROUTINE = 'SCARC_SETUP_SYSTEMS'
 
@@ -1775,6 +1776,7 @@ END SELECT
 END SUBROUTINE SCARC_SETUP_BOUNDARY
 
 
+#ifdef WITH_MKL
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Insert internal Dirichlet boundary conditions to local MKL preconditioning matrices
 ! --------------------------------------------------------------------------------------------------------------
@@ -1855,6 +1857,7 @@ END SELECT
 #endif
  
 END SUBROUTINE SCARC_SETUP_BOUNDARY_MKL
+#endif
 
 
 ! --------------------------------------------------------------------------------------------------------------
