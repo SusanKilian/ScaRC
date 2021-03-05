@@ -337,10 +337,10 @@ IF (MY_RANK == 0) THEN
    WRITE(*,'(8E12.4)') BXS
    WRITE(*,*) 'BXF'
    WRITE(*,'(8E12.4)') BXF
-   WRITE(*,*) 'BYS'
-   WRITE(*,'(8E12.4)') BYS
-   WRITE(*,*) 'BYF'
-   WRITE(*,'(8E12.4)') BYF
+   !WRITE(*,*) 'BYS'
+   !WRITE(*,'(8E12.4)') BYS
+   !WRITE(*,*) 'BYF'
+   !WRITE(*,'(8E12.4)') BYF
    WRITE(*,*) 'BZS'
    WRITE(*,'(8E12.4)') BZS
    WRITE(*,*) 'BZF'

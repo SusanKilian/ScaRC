@@ -174,13 +174,13 @@ END SUBROUTINE SCARC_SOLVER
 !> \brief Add 2-level preconditioner
 ! --------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SOLVER_COARSE(NTYPE)
-USE SCARC_POINTERS, ONLY: M, SCARC_POINT_TO_LEVEL
+USE SCARC_POINTERS, ONLY: M, L, SCARC_POINT_TO_LEVEL
 USE GLOBAL_CONSTANTS
 USE MPI
 INTEGER, INTENT(IN) :: NTYPE
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP
 INTEGER :: I,J,K, NM
-REAL(EB) :: RR,BXS_BAR,BXF_BAR
+REAL(EB) :: RR,BXS_BAR,BXF_BAR, SSS
 INTEGER :: IERR,II
 
 
@@ -207,13 +207,28 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
          DO I=1,M%IBAR
             II = I_OFFSET(NM) + I  ! Spatial index of the entire tunnel, not just this mesh
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '============== I : ', I,' ============ II : ', II
+#endif
             TP_CC(II) = 0._EB
             DO K=1,M%KBAR
                DO J=1,M%JBAR
+                  SSS = M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
                   TP_CC(II) = TP_CC(II) + M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I4,3E12.4)') 'I, J, K, II, PRHS(I,J,K), SUM, TP_CC(II):', &
+                                      I,J,K, II, M%PRHS(I,J,K),SSS, TP_CC(II)
+                  TP_CC(II) = TP_CC(II) + M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
+#endif
                ENDDO
             ENDDO
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,I4,A,3E12.4)') '    ---> BEFORE: Final TP_CC(',II,')=', TP_CC(II), M%YF-M%YS, M%ZF-M%ZS
+#endif
             TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP_CC(II)
+#endif
             TP_DD(II) = -M%RDX(I)*(M%RDXN(I)+M%RDXN(I-1))  ! Diagonal of tri-diagonal matrix
             TP_AA(II) =  M%RDX(I)*M%RDXN(I)    ! Upper band of matrix
             TP_BB(II) =  M%RDX(I)*M%RDXN(I-1)  ! Lower band of matrix
@@ -393,19 +408,26 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDDO
          DO K=1,M%KBAR
             DO J=1,M%JBAR
-               HP(0,J,K)    = HP(0,J,K)    + H_BAR(I_OFFSET(NM))
+               DO I=1,M%IBAR
+                  IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) HP(I,J,K) = 0.0_EB
+               ENDDO
+            ENDDO
+         ENDDO
+         DO K=1,M%KBAR
+            DO J=1,M%JBAR
+               HP(0,J,K)      = HP(0,J,K)      + H_BAR(I_OFFSET(NM))
                HP(M%IBP1,J,K) = HP(M%IBP1,J,K) + H_BAR(I_OFFSET(NM)+M%IBP1)
             ENDDO
          ENDDO
          DO K=1,M%KBAR
             DO I=1,M%IBAR
-               HP(I,0,K)    = HP(I,0,K)    + H_BAR(I_OFFSET(NM)+I)
+               HP(I,0,K)      = HP(I,0,K)      + H_BAR(I_OFFSET(NM)+I)
                HP(I,M%JBP1,K) = HP(I,M%JBP1,K) + H_BAR(I_OFFSET(NM)+I)
             ENDDO
          ENDDO
          DO J=1,M%JBAR
             DO I=1,M%IBAR
-               HP(I,J,0)    = HP(I,J,0)    + H_BAR(I_OFFSET(NM)+I)
+               HP(I,J,0)      = HP(I,J,0)      + H_BAR(I_OFFSET(NM)+I)
                HP(I,J,M%KBP1) = HP(I,J,M%KBP1) + H_BAR(I_OFFSET(NM)+I)
             ENDDO
          ENDDO
