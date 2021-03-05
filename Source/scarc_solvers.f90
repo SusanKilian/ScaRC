@@ -201,7 +201,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'M%PRHS: BEFORE'
    DO K=M%KBAR+1,1,-1
-      WRITE(MSG%LU_DEBUG,'(9E12.4)') (M%PRHS(I,1,K), I=1, M%IBAR+1)
+      WRITE(MSG%LU_DEBUG,'(9E14.6)') (M%PRHS(I,1,K), I=1, M%IBAR+1)
    ENDDO
 #endif
    
@@ -216,18 +216,18 @@ WRITE(MSG%LU_DEBUG,*) '============== I : ', I,' ============ II : ', II
                   SSS = M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
                   TP_CC(II) = TP_CC(II) + M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E12.4)') 'I, J, K, II, PRHS(I,J,K), SUM, TP_CC(II):', &
+WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'I, J, K, II, PRHS(I,J,K), SUM, TP_CC(II):', &
                                       I,J,K, II, M%PRHS(I,J,K),SSS, TP_CC(II)
                   TP_CC(II) = TP_CC(II) + M%PRHS(I,J,K)*M%DY(J)*M%DZ(K)
 #endif
                ENDDO
             ENDDO
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,I4,A,3E12.4)') '    ---> BEFORE: Final TP_CC(',II,')=', TP_CC(II), M%YF-M%YS, M%ZF-M%ZS
+WRITE(MSG%LU_DEBUG,'(A,I4,A,3E14.6)') '    ---> BEFORE: Final TP_CC(',II,')=', TP_CC(II), M%YF-M%YS, M%ZF-M%ZS
 #endif
             TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP_CC(II)
+WRITE(MSG%LU_DEBUG,'(A,I4,A,E14.6)') '    ---> AFTER : Final TP_CC(',II,')=', TP_CC(II)
 #endif
             TP_DD(II) = -M%RDX(I)*(M%RDXN(I)+M%RDXN(I-1))  ! Diagonal of tri-diagonal matrix
             TP_AA(II) =  M%RDX(I)*M%RDXN(I)    ! Upper band of matrix
@@ -238,29 +238,29 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'I_OFFSET:', I_OFFSET
    WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_DD
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
    WRITE(MSG%LU_DEBUG,*) 'TP_AA: UPPER'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_AA
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
    WRITE(MSG%LU_DEBUG,*) 'TP_BB: LOWER'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_BB
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
    WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_CC
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
    WRITE(MSG%LU_DEBUG,*) 'M%PRHS: AFTER'
    DO K=M%KBAR+1,1,-1
-      WRITE(MSG%LU_DEBUG,'(9E12.4)') (M%PRHS(I,1,K), I=1, M%IBAR+1)
+      WRITE(MSG%LU_DEBUG,'(9E14.6)') (M%PRHS(I,1,K), I=1, M%IBAR+1)
    ENDDO
    WRITE(MSG%LU_DEBUG,*) 'M%BXS'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BXS
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BXS
    WRITE(MSG%LU_DEBUG,*) 'M%BXF'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BXF
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BXF
    WRITE(MSG%LU_DEBUG,*) 'M%BYS'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BYS
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BYS
    WRITE(MSG%LU_DEBUG,*) 'M%BYF'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BYF
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BYF
    WRITE(MSG%LU_DEBUG,*) 'M%BZS'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BZS
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BZS
    WRITE(MSG%LU_DEBUG,*) 'M%BZF'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') M%BZF
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') M%BZF
 #endif
          
          ! Create new left and right boundary condition arrays (M%BXS and M%BXF) for all meshes, including tunnel ends.
@@ -280,9 +280,9 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
          
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'BXS_BAR'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') BXS_BAR
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') BXS_BAR
    WRITE(MSG%LU_DEBUG,*) 'BXF_BAR'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') BXF_BAR
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') BXF_BAR
 #endif
          ! Apply boundary conditions at end of tunnel to the matrix components
          
@@ -308,9 +308,9 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
          
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER BC'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_DD
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
    WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS - AFTER BC'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_CC
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
 #endif
          IF (MY_RANK>0) THEN  ! MPI processes greater than 0 send their matrix components to MPI process 0
          
@@ -332,13 +332,13 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
          
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER MPI'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_DD
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
    WRITE(MSG%LU_DEBUG,*) 'TP_AA: UPPER - AFTER MPI'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_AA
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
    WRITE(MSG%LU_DEBUG,*) 'TP_BB: LOWER - AFTER MPI'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_BB
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
    WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS - AFTER MPI'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_CC
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
 #endif
    
             TRIDIAGONAL_SOLVER_1: DO I=2,TUNNEL_NXP
@@ -353,9 +353,9 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
             
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER SOLVE'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_DD
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
    WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS - AFTER SOLVE'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') TP_CC
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
 #endif
          ENDIF
          
@@ -369,7 +369,7 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
          
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'H_BAR BEFORE BC'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') H_BAR
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') H_BAR
 #endif
          IF (NM==1) THEN
             IF (M%LBC==FISHPAK_BC_NEUMANN_NEUMANN .OR. M%LBC==FISHPAK_BC_NEUMANN_DIRICHLET) THEN
@@ -389,17 +389,17 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
          
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'H_BAR AFTER BC'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') H_BAR
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') H_BAR
 #endif
    
       CASE (2)
    
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'H_BAR BEFORE UPDATE GHOSTCELLS'
-   WRITE(MSG%LU_DEBUG,'(8E12.4)') H_BAR
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') H_BAR
    WRITE(MSG%LU_DEBUG,*) 'HP BEFORE UPDATE GHOSTCELLS'
    DO K=M%KBAR+1,0,-1
-      WRITE(MSG%LU_DEBUG,'(10E12.4)') (HP(I,1,K), I=0,M%KBAR+1)
+      WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(I,1,K), I=0,M%KBAR+1)
    ENDDO
 #endif
    
@@ -435,7 +435,7 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E12.4)') '    ---> AFTER : Final TP_CC(',II,')=', TP
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'HP AFTER UPDATE GHOSTCELLS'
    DO K=M%KBAR+1,0,-1
-      WRITE(MSG%LU_DEBUG,'(10E12.4)') (HP(I,1,K), I=0,M%KBAR+1)
+      WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(I,1,K), I=0,M%KBAR+1)
    ENDDO
 #endif
    END SELECT
