@@ -967,6 +967,7 @@ SELECT_COARSE: SELECT CASE (TYPE_COARSE)
 
    CASE (NSCARC_COARSE_ITERATIVE)
 
+      WRITE(*,*) MY_RANK+1,':SETUP_COARSE_ITERATIVE'
       CALL SCARC_SETUP_STACK_KRYLOV(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
 
       NSTACK = NSTACK + 1
@@ -979,12 +980,16 @@ SELECT_COARSE: SELECT CASE (TYPE_COARSE)
 #ifdef WITH_MKL 
    CASE (NSCARC_COARSE_DIRECT)
 
+
+      WRITE(*,*) My_RANK+1,':SETUP_COARSE_DIRECT 1'
       CALL SCARC_SETUP_MKL(NSCARC_SOLVER_COARSE, NSCOPE, NSTAGE, NSTACK, NLMIN, NLMAX)
+      WRITE(*,*) My_RANK+1,':SETUP_COARSE_DIRECT 2'
       IF (NMESHES > 1) THEN
          CALL SCARC_SETUP_CLUSTER(NLMIN, NLMAX)                ! Use CLUSTER_SPARSE_SOLVER from IntelMKL
       ELSE
          CALL SCARC_SETUP_PARDISO(NLMIN, NLMAX)                ! Use PARDISO solver from IntelMKL
       ENDIF
+      WRITE(*,*) My_RANK+1,':SETUP_COARSE_DIRECT 3'
 #endif
 
    ! -------------- Otherwise: print error message
@@ -2745,18 +2750,41 @@ SELECT_PRECON_TYPE: SELECT CASE (TYPE_TWOLEVEL)
    CASE (NSCARC_TWOLEVEL_ADD)
 
       CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (R, 'PRECONDITIONER R1', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'PRECONDITIONER B1', NL)
+#endif
       DO IL = NL, NLEVEL_MAX-1                                    !  successively restrict to coarser levels up to coarsest
          CALL SCARC_RESTRICTION (B, B, IL, IL+1)                  !  b^{l+1} := Restriction(r^l)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (B, 'PRECONDITIONER B2', IL+1)
+#endif
       ENDDO
       CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)              !  solve A^L * x^L := b^L on coarsest level
       CALL SCARC_VECTOR_COPY (X, Z, 1.0_EB, NLEVEL_MAX)           !  z^L := x^L
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'PRECONDITIONER X2', NLEVEL_MAX)
+CALL SCARC_DEBUG_LEVEL (Z, 'PRECONDITIONER Z2', NLEVEL_MAX)
+#endif
 
       DO IL = NLEVEL_MAX-1, NL, -1                                !  successively interpolate to finer levels up to finest
          CALL SCARC_PROLONGATION(Z, Z, IL+1, IL)                  !  z^l := Prolongation(z^{l+1})
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (Z, 'PRECONDITIONER Z3', IL)
+#endif
       ENDDO
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V3', NL)
+#endif
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V4', NL)
+#endif
       CALL SCARC_VECTOR_SUM (Z, V, 1.0_EB, 1.0_EB, NL)            !  v^l := z^l + v^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V5', NL)
+#endif
 
    ! ---------- Multiplicative two-level preconditioning (coarse first, fine second)
  

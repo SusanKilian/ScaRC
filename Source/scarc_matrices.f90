@@ -1241,6 +1241,10 @@ WRITE(MSG%LU_DEBUG,*)
    ! --------------------------------------------------------------------------
    CASE DEFAULT
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BBB: BTYPE FOR LEVEL ', NL
+WRITE(MSG%LU_DEBUG,'(8I6)') G%WALL(1:G%NW)%BTYPE
+#endif
       DO IW = 1, G%NW
 
          GWC => G%WALL(IW)
@@ -1268,12 +1272,12 @@ WRITE(MSG%LU_DEBUG,*)
             CASE (DIRICHLET, INTERNAL)
                A%VAL(IP) = A%VAL(IP) - F%INCR_BOUNDARY
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :DIRICHLET: IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'BBB :DIRICHLET: IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
 #endif
             CASE (NEUMANN)
                A%VAL(IP) = A%VAL(IP) + F%INCR_BOUNDARY
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'BBB :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
 #endif
          END SELECT
 
@@ -1648,6 +1652,10 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
 
       ! Set correct boundary conditions 
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B: BTYPE FOR LEVEL ', NL
+WRITE(MSG%LU_DEBUG,'(8I6)') G%WALL(1:G%NW)%BTYPE
+#endif
       DO IW = 1, G%NW
 
          GWC => G%WALL(IW)
