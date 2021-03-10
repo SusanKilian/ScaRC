@@ -127,6 +127,7 @@ LOGICAL :: IS_MGM                = .FALSE.                       !< Flag for McK
 LOGICAL :: HAS_CSV_DUMP          = .FALSE.                       !< Flag for CSV-file to be dumped out
 LOGICAL :: HAS_MULTIPLE_GRIDS    = .FALSE.                       !< Flag for multiple discretization types
 LOGICAL :: HAS_TWO_LEVELS        = .FALSE.                       !< Flag for two grid levels
+LOGICAL :: HAS_XMEAN_LEVELS      = .FALSE.                       !< Flag for two-level xmean values preconditioning
 LOGICAL :: HAS_MULTIPLE_LEVELS   = .FALSE.                       !< Flag for multiple grid levels
 LOGICAL :: HAS_AMG_LEVELS        = .FALSE.                       !< Flag for AMG-based grid levels
 LOGICAL :: HAS_GMG_LEVELS        = .FALSE.                       !< Flag for GMG-based grid levels

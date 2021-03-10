@@ -155,7 +155,9 @@ END SELECT SELECT_KRYLOV_PRECON
  
 ! If two-level Krylov, allocate intermediate structures for interpolation and workspace for global coarse solver
  
-IF (HAS_TWO_LEVELS) THEN
+IF (HAS_XMEAN_LEVELS) THEN
+   CALL SCARC_SETUP_TWOLEVEL_XMEAN(NLEVEL_MIN)
+ELSE IF (HAS_TWO_LEVELS) THEN
    IF (.NOT.IS_CG_AMG) CALL SCARC_SETUP_INTERPOLATION(NSCARC_STAGE_ONE, NLEVEL_MIN+1, NLEVEL_MAX)
    NSTACK = NSTACK + 1
    CALL SCARC_SETUP_COARSE_SOLVER(NSCARC_STAGE_ONE, NSCARC_SCOPE_GLOBAL, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
@@ -944,6 +946,94 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO MESHES_LOOP
 
 END SUBROUTINE SCARC_SETUP_ILU
+
+
+! --------------------------------------------------------------------------------------------------------------------
+!> \brief Setup onedirectional Poisson-preconditioner
+! --------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_TWOLEVEL_XMEAN(NL)
+USE SCARC_POINTERS, ONLY: M, L, A, SCARC_POINT_TO_LEVEL, SCARC_POINT_TO_CMATRIX
+USE GLOBAL_CONSTANTS
+USE MPI
+INTEGER, INTENT(IN) :: NL
+INTEGER :: II, IX, NM
+
+CROUTINE = 'SCARC_SETUP_TWOLEVEL_XMEAN'
+
+MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_LEVEL (NM, NL)                                    
+   A => SCARC_POINT_TO_CMATRIX(NSCARC_MATRIX_POISSON)
+   CALL SCARC_ALLOCATE_REAL1 (A%DIAG, 1, TUNNEL_NXP, NSCARC_INIT_ZERO, 'A%DIAG', CROUTINE)
+
+   DO IX = 1, L%NX
+      II = I_OFFSET(NM) + IX  ! Spatial index of the entire tunnel, not just this mesh
+      TP_DD(II) = -M%RDX(IX)*(M%RDXN(IX)+M%RDXN(IX-1))  ! Diagonal of tri-diagonal matrix
+      TP_AA(II) =  M%RDX(IX)*M%RDXN(IX)    ! Upper band of matrix
+      TP_BB(II) =  M%RDX(IX)*M%RDXN(IX-1)  ! Lower band of matrix
+   ENDDO
+      
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'I_OFFSET:', I_OFFSET
+   WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+   WRITE(MSG%LU_DEBUG,*) 'TP_AA: UPPER'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
+   WRITE(MSG%LU_DEBUG,*) 'TP_BB: LOWER'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
+#endif
+      
+   ! Apply boundary conditions at end of tunnel to the matrix components
+   
+   IF (NM==1) THEN
+      IF (M%LBC==FISHPAK_BC_NEUMANN_NEUMANN .OR. M%LBC==FISHPAK_BC_NEUMANN_DIRICHLET) THEN  ! Neumann BC
+         TP_DD(1) = TP_DD(1) + TP_BB(1)
+      ELSE  ! Dirichlet BC
+         TP_DD(1) = TP_DD(1) - TP_BB(1)
+      ENDIF
+   ENDIF
+
+   IF (NM==NMESHES) THEN
+      IF (M%LBC==FISHPAK_BC_NEUMANN_NEUMANN .OR. M%LBC==FISHPAK_BC_DIRICHLET_NEUMANN) THEN  ! Neumann BC
+         TP_DD(TUNNEL_NXP) = TP_DD(TUNNEL_NXP) + TP_AA(TUNNEL_NXP)
+      ELSE  ! Dirichet BC
+         TP_DD(TUNNEL_NXP) = TP_DD(TUNNEL_NXP) - TP_AA(TUNNEL_NXP)
+      ENDIF
+   ENDIF
+      
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER BC'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+#endif
+   IF (MY_RANK>0) THEN  ! MPI processes greater than 0 send their matrix components to MPI process 0
+   
+      CALL MPI_GATHERV(TP_AA(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_AA,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(TP_BB(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_BB,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(TP_DD(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_DD,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      
+   ELSE  ! MPI process 0 receives matrix components and solves tri-diagonal linear system of equations.
+   
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_AA,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_BB,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_DD,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+   
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+      WRITE(MSG%LU_DEBUG,*) 'TP_AA: UPPER - AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
+      WRITE(MSG%LU_DEBUG,*) 'TP_BB: LOWER - AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
+#endif
+      
+   ENDIF
+      
+ENDDO MESHES_LOOP
+   
+END SUBROUTINE SCARC_SETUP_TWOLEVEL_XMEAN
 
 
 ! ------------------------------------------------------------------------------------------------------------------
@@ -2837,6 +2927,62 @@ CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V5', NL)
       ENDDO
       CALL SCARC_VECTOR_COPY (Y, V, 1.0_EB, NL)                   !  v^l := y^l
 
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+ 
+   !CASE (NSCARC_TWOLEVEL_XMEAN_ADD)
+   CASE (NSCARC_TWOLEVEL_XMEAN)
+   !CASE (-99)
+
+      CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-XMEAN B1', NL)
+#endif
+      CALL SCARC_RELAX_XMEAN (B, NL)
+ 
+      CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V1', NL)
+#endif
+      CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V2', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-XMEAN B2', NL)
+#endif
+      CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, 1.0_EB, NL)            !  v^l := z^l + v^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V3', NL)
+#endif
+
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+ 
+   !CASE (NSCARC_TWOLEVEL_XMEAN_MUL1)
+   CASE (-100)
+
+      CALL SCARC_VECTOR_COPY (R, Y, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
+      CALL SCARC_RELAX_XMEAN(Y, NL)
+      CALL SCARC_MATVEC_PRODUCT (Y, Z, NL)                        !  z^l := A^l * y^l
+
+      CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
+      CALL SCARC_VECTOR_COPY (Z, V, 1.0_EB, NL)                   !  v^l := z^l
+      CALL SCARC_RELAXATION (Z, V, NS+1, NP, NL)                  !  v^l := Relax(z^l)
+      CALL SCARC_VECTOR_SUM (Y, V, 1.0_EB, 1.0_EB, NL)            !  v^l := y^l - z^l
+
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+ 
+   !CASE (NSCARC_TWOLEVEL_XMEAN_MUL2)
+   CASE (-101)
+
+      CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
+      CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
+      CALL SCARC_MATVEC_PRODUCT (V, Z, NL)                        !  z^l := A^{l} * v^l
+
+      CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
+
+      CALL SCARC_VECTOR_COPY (Z, V, 1.0_EB, NL)                   !  v^l := z^l
+      CALL SCARC_RELAX_XMEAN(V, NL)                               !  x^{l+1} := A^{l+1}^{-1}(b^{l+1})
+      CALL SCARC_VECTOR_SUM (Z, V, 1.0_EB, 1.0_EB, NL)            !  z^l := r^l - z^l
+ 
+
 END SELECT SELECT_PRECON_TYPE
 
 END SUBROUTINE SCARC_PRECONDITIONER
@@ -2958,7 +3104,7 @@ USE SCARC_POINTERS, ONLY: AS, MKL, V1_FB, V2_FB
 #endif
 USE SCARC_UTILITIES, ONLY: SET_MATRIX_TYPE
 USE POIS, ONLY: H2CZSS, H3CZSS
-REAL(EB) :: AUX, OMEGA_SSOR = 1.5_EB 
+REAL(EB) :: AUX, OMEGA_SSOR = 1.5_EB
 REAL (EB) :: TNOW
 INTEGER, INTENT(IN) :: NV1, NV2, NS, NP, NL
 INTEGER :: NM, NP0, IC, JC, ICOL, ITYPE, IDIAG, IPTR, INCR, IOR0, IC0, IY, IZ
@@ -3300,8 +3446,6 @@ WRITE(MSG%LU_DEBUG,*) ' ===================== RELAX: OTHER'
       
       ENDDO LU_MESHES_LOOP
       
-
- 
    ! --------- Preconditioning by blockwise Geometric Multigrid
  
    CASE (NSCARC_RELAX_GMG)
@@ -3524,6 +3668,7 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-FFT: NV2 EXIT ', NL)
 
 #ifdef WITH_MKL
  
+
    ! --------- Preconditioning by LU-decomposition
  
    CASE (NSCARC_RELAX_MKL)
@@ -3639,6 +3784,7 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-MKL: NV2 EXIT ', NL)
 #endif
       ENDIF MKL_SCOPE_IF
 
+      
    ! --------- Preconditioning by optimized use of FFT or PARDISO, depending on structure of mesh
  
    CASE (NSCARC_RELAX_OPTIMIZED)
@@ -3749,6 +3895,179 @@ END SELECT
 
 CPU(MY_RANK)%RELAXATION =CPU(MY_RANK)%RELAXATION+CURRENT_TIME()-TNOW
 END SUBROUTINE SCARC_RELAXATION
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Twolevel relaxation by meanvalues in x-direction
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_RELAX_XMEAN (NV2,NL)
+USE SCARC_POINTERS, ONLY: M, L, G, A, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NV2, NL
+INTEGER :: II, IX, IY, IZ, IC, I, NM
+REAL(EB) :: SSS, RR
+ 
+MEAN1D_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
+
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'RELAX_MEAN1D: H_BAR BEFORE UPDATE GHOSTCELLS'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') H_BAR
+   CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-MEAN1D: NV2 INIT ', NL)
+#endif
+      
+   DO IX = 1, L%NX
+
+      II = I_OFFSET(NM) + IX  ! Spatial index of the entire tunnel, not just this mesh
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '============== IX : ', IX,' ============ II : ', II, M%DY(1), M%DZ(1), M%DY(1)*M%DZ(1)
+#endif
+
+      TP_CC(II) = 0._EB
+      DO IZ = 1, L%NZ
+         DO IY = 1, L%NY
+            IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
+            IC = G%CELL_NUMBER(IX, IY, IZ)
+            SSS = V2(IC)*M%DY(IY)*M%DZ(IZ)
+            TP_CC(II) = TP_CC(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A,5I4,3E14.6)') 'IX, IY, IZ, II, IC, V2(IC), SUM, TP_CC(II):', &
+                                      IX, IY, IZ, II, IC, V2(IC), SSS, TP_CC(II)
+            TP_CC(II) = TP_CC(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
+#endif
+         ENDDO
+      ENDDO
+      TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
+      TP_DD(II) = -M%RDX(IX)*(M%RDXN(IX)+M%RDXN(IX-1))  ! Diagonal of tri-diagonal matrix
+      TP_AA(II) =  M%RDX(IX)*M%RDXN(IX)    ! Upper band of matrix
+      TP_BB(II) =  M%RDX(IX)*M%RDXN(IX-1)  ! Lower band of matrix
+   ENDDO
+
+   IF (MY_RANK>0) THEN  ! MPI processes greater than 0 send their matrix components to MPI process 0
+      
+      CALL MPI_GATHERV(TP_CC(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_CC,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      
+   ELSE  ! MPI process 0 receives matrix components and solves tri-diagonal linear system of equations.
+      
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_CC,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,&
+                       0,MPI_COMM_WORLD,IERROR)
+      
+!#ifdef WITH_SCARC_DEBUG
+!      WRITE(MSG%LU_DEBUG,*) 'TP_BB: AFTER MPI'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
+!      WRITE(MSG%LU_DEBUG,*) 'TP_DD: AFTER MPI'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+!      WRITE(MSG%LU_DEBUG,*) 'TP_AA: AFTER MPI'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
+!      WRITE(MSG%LU_DEBUG,*) 'TP_CC: V2 - AFTER MPI'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+!#endif
+!      
+!      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
+!      A%DIAG = TP_DD
+!      TRIDIAGONAL_SOLVER_1: DO I = 2, TUNNEL_NXP
+!         RR = TP_BB(I)/TP_DD(I-1)
+!         A%DIAG(I) = TP_DD(I) - RR*TP_AA(I-1)
+!         TP_CC(I) = TP_CC(I) - RR*TP_CC(I-1)
+!      ENDDO TRIDIAGONAL_SOLVER_1
+!      TP_CC(TUNNEL_NXP)  = TP_CC(TUNNEL_NXP)/A%DIAG(TUNNEL_NXP)
+!      TRIDIAGONAL_SOLVER_2: DO I = TUNNEL_NXP-1, 1, -1
+!         TP_CC(I) = (TP_CC(I) - TP_AA(I)*TP_CC(I+1))/A%DIAG(I)
+!      ENDDO TRIDIAGONAL_SOLVER_2
+!         
+!#ifdef WITH_SCARC_DEBUG
+!      WRITE(MSG%LU_DEBUG,*) 'A%DIAG: DIAG - AFTER SOLVE'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') A%DIAG
+!      WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS - AFTER SOLVE'
+!      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+!#endif
+
+
+      ! Apply boundary conditions at end of tunnel to the matrix components
+      
+      IF (NM==1) THEN
+         IF (M%LBC==FISHPAK_BC_NEUMANN_NEUMANN .OR. M%LBC==FISHPAK_BC_NEUMANN_DIRICHLET) THEN  ! Neumann BC
+            TP_DD(1) = TP_DD(1) + TP_BB(1)
+         ELSE  ! Dirichlet BC
+            TP_DD(1) = TP_DD(1) - TP_BB(1)
+         ENDIF
+      ENDIF
+
+      IF (NM==NMESHES) THEN
+         IF (M%LBC==FISHPAK_BC_NEUMANN_NEUMANN .OR. M%LBC==FISHPAK_BC_DIRICHLET_NEUMANN) THEN  ! Neumann BC
+            TP_DD(TUNNEL_NXP) = TP_DD(TUNNEL_NXP) + TP_AA(TUNNEL_NXP)
+         ELSE  ! Dirichet BC
+            TP_DD(TUNNEL_NXP) = TP_DD(TUNNEL_NXP) - TP_AA(TUNNEL_NXP)
+         ENDIF
+      ENDIF
+      
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'TP_BB: AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_BB
+      WRITE(MSG%LU_DEBUG,*) 'TP_DD: AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+      WRITE(MSG%LU_DEBUG,*) 'TP_AA: AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_AA
+      WRITE(MSG%LU_DEBUG,*) 'TP_CC: V2 - AFTER MPI'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+#endif
+
+      TRIDIAGONAL_SOLVER_1: DO I=2,TUNNEL_NXP
+         RR    = TP_BB(I)/TP_DD(I-1)
+         TP_DD(I) = TP_DD(I) - RR*TP_AA(I-1)
+         TP_CC(I) = TP_CC(I) - RR*TP_CC(I-1)
+      ENDDO TRIDIAGONAL_SOLVER_1
+      TP_CC(TUNNEL_NXP)  = TP_CC(TUNNEL_NXP)/TP_DD(TUNNEL_NXP)
+      TRIDIAGONAL_SOLVER_2: DO I=TUNNEL_NXP-1,1,-1
+         TP_CC(I) = (TP_CC(I) - TP_AA(I)*TP_CC(I+1))/TP_DD(I)
+      ENDDO TRIDIAGONAL_SOLVER_2
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'TP_DD: DIAG - AFTER SOLVE'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_DD
+      WRITE(MSG%LU_DEBUG,*) 'TP_CC: RHS - AFTER SOLVE'
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+#endif
+   ENDIF
+      
+   ! The solution to the tri-diagonal linear system is TP_CC. Broadcast this to all the MPI processes.
+
+   CALL MPI_BCAST(TP_CC,TUNNEL_NXP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+
+   ! Contruct the 1-D solution H_BAR and add boundary conditions at the ends of the tunnel.
+
+   H_BAR(1:TUNNEL_NXP) = TP_CC(1:TUNNEL_NXP)
+      
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'H_BAR AFTER'
+   WRITE(MSG%LU_DEBUG,'(9E14.6)') H_BAR
+   WRITE(MSG%LU_DEBUG,'(A,I4,A,3E14.6)') '    ---> BEFORE: Final TP_CC(',II,')=', TP_CC(II), M%YF-M%YS, M%ZF-M%ZS
+#endif
+   TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,I4,A,E14.6)') '    ---> AFTER : Final TP_CC(',II,')=', TP_CC(II)
+#endif
+
+   DO IX = 1, L%NX
+      DO IY = 1, L%NY
+         DO IZ = 1, L%NZ
+            !IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
+            IC = G%CELL_NUMBER(IX, IY, IZ)
+            !V2(IC) = V2(IC) + H_BAR(I_OFFSET(NM)+IX)
+            V2(IC) = H_BAR(I_OFFSET(NM)+IX)
+         ENDDO
+      ENDDO
+   ENDDO
+
+ENDDO MEAN1D_MESHES_LOOP
+ 
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-MEAN1D: NV2 EXIT ', NL)
+#endif
+ 
+END SUBROUTINE SCARC_RELAX_XMEAN
 
 END MODULE SCARC_METHODS
 

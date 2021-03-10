@@ -190,6 +190,7 @@ TYPE SCARC_CMATRIX_TYPE
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL         !< Values of matrix (real precision)
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: ILU         !< ILU-decomposition
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: RELAX       !< Workspace for relaxation
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: DIAG        !< Workspace for Twolevel-Xmean preconditioning
    REAL(EB), DIMENSION (-3:3)           :: STENCIL     !< Store basic stencil information in single precision
 
    REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB      !< Values of matrix (single precision)

@@ -275,6 +275,7 @@ INTEGER, PARAMETER :: NSCARC_TWOLEVEL_MUL            =  2        !< Type of two-
 INTEGER, PARAMETER :: NSCARC_TWOLEVEL_MUL2           =  3        !< Type of two-level method: multiplicative 2-level, type2
 INTEGER, PARAMETER :: NSCARC_TWOLEVEL_COARSE         =  4        !< Type of two-level method: only coarse grid
 INTEGER, PARAMETER :: NSCARC_TWOLEVEL_MACRO          =  5        !< Type of two-level method: use macro solver 
+INTEGER, PARAMETER :: NSCARC_TWOLEVEL_XMEAN          =  6        !< Type of two-level method: mean values in x-direction
 
 INTEGER, PARAMETER :: NSCARC_VECTOR_ONE_X            =  1        !< Flag for 1D-vector on stage 1: X
 INTEGER, PARAMETER :: NSCARC_VECTOR_ONE_B            =  2        !< Flag for 1D-vector on stage 1: B
