@@ -4024,13 +4024,21 @@ WRITE(MSG%LU_DEBUG,*) 'II, (M%YF-M%YS)*(M%ZF-M%ZS), PRE%RHS(II):', II, (M%YF-M%Y
 
       PRE%AUX = PRE%DIAG
       TRIDIAGONAL_SOLVER_1: DO I=2,NX_GLOBAL
+         WRITE(MSG%LU_DEBUG,*) '=========================== I :', I
          VAL = PRE%LOW(I)/PRE%AUX(I-1)
+         WRITE(MSG%LU_DEBUG,*) 'BB(I), DD(I-1), RR:', I, PRE%LOW(I), PRE%AUX(I-1), VAL
          PRE%AUX(I) = PRE%AUX(I) - VAL*PRE%UP(I-1)
          PRE%RHS(I) = PRE%RHS(I) - VAL*PRE%RHS(I-1)
+         WRITE(MSG%LU_DEBUG,*) 'DD(I), CC(I):', PRE%AUX(I), PRE%RHS(I)
       ENDDO TRIDIAGONAL_SOLVER_1
+      WRITE(MSG%LU_DEBUG,*) 'PRE%AUX: DIAG - IN BETWEEN '
+      WRITE(MSG%LU_DEBUG,'(8E14.6)') PRE%AUX
       PRE%RHS(NX_GLOBAL)  = PRE%RHS(NX_GLOBAL)/PRE%AUX(NX_GLOBAL)
+      WRITE(MSG%LU_DEBUG,*) '--->  CC(',NX_GLOBAL,'):', PRE%RHS(NX_GLOBAL), PRE%UP(NX_GLOBAL)
       TRIDIAGONAL_SOLVER_2: DO I=NX_GLOBAL-1,1,-1
+         WRITE(MSG%LU_DEBUG,*) '--------------------------- I :', I
          PRE%RHS(I) = (PRE%RHS(I) - PRE%UP(I)*PRE%RHS(I+1))/PRE%AUX(I)
+         WRITE(MSG%LU_DEBUG,*) 'CC(I), AA(I) CC(I+1):', PRE%RHS(I), PRE%UP(I), PRE%RHS(I+1)
       ENDDO TRIDIAGONAL_SOLVER_2
 
 #ifdef WITH_SCARC_DEBUG
@@ -4047,7 +4055,14 @@ WRITE(MSG%LU_DEBUG,*) 'II, (M%YF-M%YS)*(M%ZF-M%ZS), PRE%RHS(II):', II, (M%YF-M%Y
    ! The solution to the tri-diagonal linear system is PRE%RHS. Broadcast this to all the MPI processes.
 
    CALL MPI_BCAST(PRE%RHS,NX_GLOBAL,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+
       
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,'(A,I4,A,3E14.6)') '    ---> BEFORE: Final PRE%RHS(',II,')=', PRE%RHS(II), M%YF-M%YS, M%ZF-M%ZS
+#endif
+
+   PRE%RHS(II) = PRE%RHS(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
+
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A,I4,A,E14.6)') '    ---> AFTER : Final PRE%RHS(',II,')=', PRE%RHS(II)
 #endif
@@ -4057,6 +4072,7 @@ WRITE(MSG%LU_DEBUG,'(A,I4,A,E14.6)') '    ---> AFTER : Final PRE%RHS(',II,')=', 
          DO IZ = 1, L%NZ
             IC = G%CELL_NUMBER(IX, IY, IZ)
             V2(IC) = PRE%RHS(NX_OFFSET(NM)+IX)
+            WRITE(MSG%lu_debug,*) 'IX, IY, IZ, IC, V2(IC):', IX, IY, IZ, IC, V2(IC)
          ENDDO
       ENDDO
    ENDDO

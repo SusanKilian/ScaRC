@@ -167,6 +167,7 @@ INTEGER :: TYPE_VECTOR              = NSCARC_UNDEF_INT           !< Type of vect
  
 INTEGER :: NLEVEL_MIN, NLEVEL_MAX                           !< Minimum and maximum number of multigrid levels
 INTEGER :: NC_GLOBAL(20)  = 0                               !< Number of global cells
+INTEGER :: NX_GLOBAL      = 0                               !< Number of cells in x-direction on finest level
 INTEGER :: N_DIRIC_GLOBAL(20)  = 0                          !< Global number of Dirichlet BCs
 INTEGER :: N_STACK_TOTAL  = 0                               !< Maximum number of used solvers in stack
 INTEGER :: N_STACK_LAPLACE = 0                              !< Stack position of local MGM Laplace problems
@@ -178,6 +179,7 @@ INTEGER,  ALLOCATABLE, DIMENSION (:)  :: REQ                !< Request array for
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: COUNTS             !< Counter array for data exchange
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: DISPLS             !< Displacement array for data exchange
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: MESH_INT           !< Local integer data array for data exchange
+INTEGER,  ALLOCATABLE, DIMENSION (:)  :: NX_OFFSET          !< Offset array of offsets in x-direction
 REAL(EB), ALLOCATABLE, DIMENSION (:)  :: MESH_REAL          !< Local real data array for data exchange
 
 INTEGER  :: GLOBAL_INT,  RANK_INT

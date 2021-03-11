@@ -155,6 +155,18 @@ TYPE SCARC_OBST_TYPE
    INTEGER :: I1, I2, J1, J2, K1, K2                  !< Cell indices of obstructions
 END TYPE SCARC_OBST_TYPE
 
+!> \brief Preconditioning information for unidirection meanvalue preconditioning
+ 
+TYPE SCARC_PRECON_TYPE
+
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: DIAG        !< Main diagonal workspace for Twolevel-Xmean preconditioning
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: AUX         !< Auxiliary main diagonal workspace for Twolevel-Xmean preconditioning
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: LOW         !< Lower diagonal workspace for Twolevel-Xmean preconditioning
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: UP          !< Upper workspace for Twolevel-Xmean preconditioning
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: RHS         !< RHS workspace for Twolevel-Xmean preconditioning
+
+END TYPE SCARC_PRECON_TYPE
+
 !> \brief Compact matrix entries which will be exchanged during generation of condensed system
  
 TYPE SCARC_MATRIX_COMPACT_CONDENSED_TYPE
@@ -189,8 +201,8 @@ TYPE SCARC_CMATRIX_TYPE
 
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL         !< Values of matrix (real precision)
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: ILU         !< ILU-decomposition
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: DIAG         !< ILU-decomposition
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: RELAX       !< Workspace for relaxation
-   REAL(EB), ALLOCATABLE, DIMENSION (:) :: DIAG        !< Workspace for Twolevel-Xmean preconditioning
    REAL(EB), DIMENSION (-3:3)           :: STENCIL     !< Store basic stencil information in single precision
 
    REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB      !< Values of matrix (single precision)
@@ -573,6 +585,7 @@ TYPE SCARC_LEVEL_TYPE
    TYPE (SCARC_FFT_TYPE)       :: FFT                          !< FFT preconditioner based on CRAYFISHPAK
    TYPE (SCARC_MGM_TYPE)       :: MGM                          !< McKenney-Greengard-Mayo method 
    TYPE (SCARC_MULTIGRID_TYPE) :: MG                           !< Multigrid method information
+   TYPE (SCARC_PRECON_TYPE)    :: PRECON                       !< Preconditioning information
 
 #ifdef WITH_MKL
    TYPE (SCARC_MKL_TYPE)       :: MKL                          !< MKL preconditioner based on Intel MKL

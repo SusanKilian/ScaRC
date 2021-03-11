@@ -64,8 +64,9 @@ TYPE (SCARC_SOLVER_TYPE), POINTER:: SVP=>NULL()              !< Pointer to paren
 TYPE (SCARC_STAGE_TYPE),  POINTER:: ST=>NULL()               !< Pointer to solver stage structure
 TYPE (SCARC_STAGE_TYPE),  POINTER:: STP=>NULL()              !< Pointer to parent solver stage structure
 
-TYPE (SCARC_FFT_TYPE), POINTER:: FFT=>NULL()                 !< Pointer to FFT structure
-TYPE (SCARC_MGM_TYPE), POINTER:: MGM=>NULL()                 !< Pointer to McKeeney-Greengard-Mayo structure
+TYPE (SCARC_FFT_TYPE),    POINTER:: FFT=>NULL()              !< Pointer to FFT structure
+TYPE (SCARC_MGM_TYPE),    POINTER:: MGM=>NULL()              !< Pointer to McKeeney-Greengard-Mayo structure
+TYPE (SCARC_PRECON_TYPE), POINTER:: PRE=>NULL()              !< Pointer to preconditioning structure
 
 TYPE (SCARC_BMATRIX_TYPE), POINTER:: AB=>NULL()       !< Pointer to bandwise matrix structure
 TYPE (SCARC_BMATRIX_TYPE), POINTER:: OAB=>NULL()      !< Pointer to neighboring bandwise matrix structure
