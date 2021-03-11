@@ -2930,14 +2930,13 @@ CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V5', NL)
    ! ---------- Twolevel preconditioning using meanvalues in x-direction
  
    !CASE (NSCARC_TWOLEVEL_XMEAN_ADD)
-   CASE (NSCARC_TWOLEVEL_XMEAN)
-   !CASE (-99)
+   CASE (-99)
 
-      CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
+      CALL SCARC_VECTOR_COPY (R, Z, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-XMEAN B1', NL)
+CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN Z1', NL)
 #endif
-      CALL SCARC_RELAX_XMEAN (B, NL)
+      CALL SCARC_RELAX_XMEAN (R, Z, NL)
  
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
 #ifdef WITH_SCARC_DEBUG
@@ -2946,9 +2945,9 @@ CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V1', NL)
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V2', NL)
-CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-XMEAN B2', NL)
+CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN Z2', NL)
 #endif
-      CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, 1.0_EB, NL)            !  v^l := z^l + v^l
+      CALL SCARC_VECTOR_SUM (Z, V, 1.0_EB, 1.0_EB, NL)            !  v^l := z^l + v^l
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V3', NL)
 #endif
@@ -2959,7 +2958,7 @@ CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V3', NL)
    CASE (-100)
 
       CALL SCARC_VECTOR_COPY (R, Y, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
-      CALL SCARC_RELAX_XMEAN(Y, NL)
+      CALL SCARC_RELAX_XMEAN(R, Y, NL)
       CALL SCARC_MATVEC_PRODUCT (Y, Z, NL)                        !  z^l := A^l * y^l
 
       CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
@@ -2970,17 +2969,26 @@ CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V3', NL)
    ! ---------- Twolevel preconditioning using meanvalues in x-direction
  
    !CASE (NSCARC_TWOLEVEL_XMEAN_MUL2)
-   CASE (-101)
+   CASE (NSCARC_TWOLEVEL_XMEAN)
+   !CASE (-101)
 
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN-MUL2 V AFTER FFT', NL)
+#endif
       CALL SCARC_MATVEC_PRODUCT (V, Z, NL)                        !  z^l := A^{l} * v^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN-MUL2 Z AFTER MATVEC', NL)
+#endif
 
       CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN-MUL2 Z NEW DEFECT', NL)
+#endif
 
-      CALL SCARC_VECTOR_COPY (Z, V, 1.0_EB, NL)                   !  v^l := z^l
-      CALL SCARC_RELAX_XMEAN(V, NL)                               !  x^{l+1} := A^{l+1}^{-1}(b^{l+1})
-      CALL SCARC_VECTOR_SUM (Z, V, 1.0_EB, 1.0_EB, NL)            !  z^l := r^l - z^l
+      CALL SCARC_RELAX_XMEAN(Z, Z, NL)                            !  x^{l+1} := A^{l+1}^{-1}(b^{l+1})
+      CALL SCARC_VECTOR_SUM (Z, V, 0.8_EB, 1.0_EB, NL)            !  z^l := r^l - z^l
  
 
 END SELECT SELECT_PRECON_TYPE
@@ -3900,20 +3908,23 @@ END SUBROUTINE SCARC_RELAXATION
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Twolevel relaxation by meanvalues in x-direction
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_RELAX_XMEAN (NV2,NL)
-USE SCARC_POINTERS, ONLY: M, L, G, A, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_CMATRIX
-INTEGER, INTENT(IN) :: NV2, NL
+SUBROUTINE SCARC_RELAX_XMEAN (NV1, NV2, NL)
+USE SCARC_POINTERS, ONLY: M, L, G, A, V1, V2, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NV1, NV2, NL
 INTEGER :: II, IX, IY, IZ, IC, I, NM
 REAL(EB) :: SSS, RR
  
 MEAN1D_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+   V1 => SCARC_POINT_TO_VECTOR(NM, NL, NV1)
    V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'RELAX_MEAN1D: H_BAR BEFORE UPDATE GHOSTCELLS'
    WRITE(MSG%LU_DEBUG,'(8E14.6)') H_BAR
+   CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-MEAN1D: NV1 INIT ', NL)
    CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-MEAN1D: NV2 INIT ', NL)
 #endif
       
@@ -3931,28 +3942,58 @@ WRITE(MSG%LU_DEBUG,*) '============== IX : ', IX,' ============ II : ', II, M%DY
             IC = G%CELL_NUMBER(IX, IY, IZ)
             SSS = V2(IC)*M%DY(IY)*M%DZ(IZ)
             TP_CC(II) = TP_CC(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A,5I4,3E14.6)') 'IX, IY, IZ, II, IC, V2(IC), SUM, TP_CC(II):', &
                                       IX, IY, IZ, II, IC, V2(IC), SSS, TP_CC(II)
             TP_CC(II) = TP_CC(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
 #endif
          ENDDO
       ENDDO
-      TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS))  ! RHS linear system of equations
       TP_DD(II) = -M%RDX(IX)*(M%RDXN(IX)+M%RDXN(IX-1))  ! Diagonal of tri-diagonal matrix
       TP_AA(II) =  M%RDX(IX)*M%RDXN(IX)    ! Upper band of matrix
       TP_BB(II) =  M%RDX(IX)*M%RDXN(IX-1)  ! Lower band of matrix
    ENDDO
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'TP_CC: AFTER SUMMING'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+#endif
+   DO IX = 1, L%NX
+      II = I_OFFSET(NM) + IX  
+      TP_CC(II) = TP_CC(II)/((M%YF-M%YS)*(M%ZF-M%ZS)) 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'II, (M%YF-M%YS)*(M%ZF-M%ZS), TP_CC(II):', II, (M%YF-M%YS)*(M%ZF-M%ZS), TP_CC(II) 
+#endif
+      DO IY = 1, L%NY
+         DO IZ = 1, L%NZ
+            IC = G%CELL_NUMBER(IX, IY, IZ)
+            !V1(IC) = V1(IC) - TP_CC(II)
+            V1(IC) = V1(IC)
+         ENDDO
+      ENDDO
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'TP_CC: READY'
+   WRITE(MSG%LU_DEBUG,'(8E14.6)') TP_CC
+   CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-MEAN1D: NV1 FILTERED ', NL)
+#endif
 
    IF (MY_RANK>0) THEN  ! MPI processes greater than 0 send their matrix components to MPI process 0
       
+      CALL MPI_GATHERV(TP_AA(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_AA,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(TP_BB(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_BB,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(TP_DD(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_DD,COUNTS_TP,DISPLS_TP,&
+                       MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
       CALL MPI_GATHERV(TP_CC(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,TP_CC,COUNTS_TP,DISPLS_TP,&
                        MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
       
    ELSE  ! MPI process 0 receives matrix components and solves tri-diagonal linear system of equations.
       
-      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_CC,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,&
-                       0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_AA,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_BB,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_DD,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
+      CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,TP_CC,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
       
 !#ifdef WITH_SCARC_DEBUG
 !      WRITE(MSG%LU_DEBUG,*) 'TP_BB: AFTER MPI'

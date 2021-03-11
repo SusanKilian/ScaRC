@@ -412,8 +412,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    MGM => L%MGM
 
    IBAR0 = MIN (10, M%IBAR)
-   JBAR0 = MIN (10, M%IBAR)
-   KBAR0 = MIN (10, M%IBAR)
+   JBAR0 = MIN (10, M%JBAR)
+   KBAR0 = MIN (10, M%KBAR)
    WRITE(MSG%LU_DEBUG,*) ' -------------------------------------------------------------------- '
    WRITE(MSG%LU_DEBUG,*) ' -----       ', TRIM(CTEXT)
    WRITE(MSG%LU_DEBUG,*) ' -------------------------------------------------------------------- '
