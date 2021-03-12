@@ -2852,7 +2852,7 @@ SELECT_PRECON_TYPE: SELECT CASE (TYPE_TWOLEVEL)
  
    ! ---------- Additive two-level preconditioning
  
-   CASE (NSCARC_TWOLEVEL_ADD)
+   CASE (NSCARC_TWOLEVEL_COARSE_ADD)
 
       CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
 #ifdef WITH_SCARC_DEBUG
@@ -2917,7 +2917,7 @@ CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V5', NL)
    ! ---------- Multiplicative two-level preconditioning (fine first, coarse second):
    ! coarse level is one level away from finest one (one coarsening step)
  
-   CASE (NSCARC_TWOLEVEL_MUL2)
+   CASE (NSCARC_TWOLEVEL_COARSE_MUL2)
 
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)

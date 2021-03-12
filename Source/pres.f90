@@ -331,24 +331,6 @@ SELECT CASE(IPS)
 
 END SELECT
 
-IF (MY_RANK == 0) THEN
-   WRITE(*,*) 'PRES: ======================', DT
-   WRITE(*,*) 'BXS'
-   WRITE(*,'(8E12.4)') BXS
-   WRITE(*,*) 'BXF'
-   WRITE(*,'(8E12.4)') BXF
-   !WRITE(*,*) 'BYS'
-   !WRITE(*,'(8E12.4)') BYS
-   !WRITE(*,*) 'BYF'
-   !WRITE(*,'(8E12.4)') BYF
-   WRITE(*,*) 'BZS'
-   WRITE(*,'(8E12.4)') BZS
-   WRITE(*,*) 'BZF'
-   WRITE(*,'(8E12.4)') BZF
-   WRITE(*,*) 'PRHS'
-   WRITE(*,'(8E12.4)') PRHS
-ENDIF
-
 T_USED(5)=T_USED(5)+CURRENT_TIME()-TNOW
 END SUBROUTINE PRESSURE_SOLVER_COMPUTE_RHS
 

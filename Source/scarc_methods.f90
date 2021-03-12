@@ -2842,15 +2842,17 @@ INTEGER :: IL
 SELECT_PRECON_TYPE: SELECT CASE (TYPE_TWOLEVEL)
 
    ! ---------- Classical one-level preconditioning
+   ! Solve local fine Poisson problems by selected relaxation method (SSOR, FFT, PARDISO, etc.)
  
    CASE (NSCARC_TWOLEVEL_NONE)
 
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v := r
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v := Relax(r)
  
-   ! ---------- Additive two-level preconditioning
+   ! ---------- Additive two-level preconditioning : COARSE_ADD
+   ! Local fine Poisson problems and global coarse Poisson problem are based on same defect
  
-   CASE (NSCARC_TWOLEVEL_ADD)
+   CASE (NSCARC_TWOLEVEL_COARSE_ADD)
 
       CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
 #ifdef WITH_SCARC_DEBUG
@@ -2869,7 +2871,6 @@ CALL SCARC_DEBUG_LEVEL (B, 'PRECONDITIONER B2', IL+1)
 CALL SCARC_DEBUG_LEVEL (X, 'PRECONDITIONER X2', NLEVEL_MAX)
 CALL SCARC_DEBUG_LEVEL (Z, 'PRECONDITIONER Z2', NLEVEL_MAX)
 #endif
-
       DO IL = NLEVEL_MAX-1, NL, -1                                !  successively interpolate to finer levels up to finest
          CALL SCARC_PROLONGATION(Z, Z, IL+1, IL)                  !  z^l := Prolongation(z^{l+1})
 #ifdef WITH_SCARC_DEBUG
@@ -2889,12 +2890,12 @@ CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V4', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'PRECONDITIONER V5', NL)
 #endif
 
-   ! ---------- Multiplicative two-level preconditioning (coarse first, fine second)
+   ! ---------- Multiplicative two-level preconditioning : COARSE_MUL1
+   ! First solve global coarse Poisson problem, build new defect, then solve local fine Poisson problems
  
-   CASE (NSCARC_TWOLEVEL_MUL1)
+   CASE (NSCARC_TWOLEVEL_COARSE_MUL1)
 
       CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
-
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-MUL B FINE', NL)
 #endif
@@ -2904,13 +2905,10 @@ CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-MUL B FINE', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'TWOLEVEL-MUL B RESTRICT', IL+1)
 #endif
       ENDDO
-
-      CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)              !  solve A^L * x^L := b^L on coarsest level
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (X, 'TWOLEVEL-MUL X COARSE', NLEVEL_MAX)
 #endif
       CALL SCARC_VECTOR_COPY (X, Y, 1.0_EB, NLEVEL_MAX)           !  y^L := x^L
-
       DO IL = NLEVEL_MAX-1, NLEVEL_MIN, -1
          CALL SCARC_PROLONGATION (Y, Y, NL+1, NL)                 !  y^l := Prolongation(y^{l+1})
 #ifdef WITH_SCARC_DEBUG
@@ -2921,7 +2919,6 @@ CALL SCARC_DEBUG_LEVEL (Y, 'TWOLEVEL-MUL Y COARSE', NL)
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-MUL Z MATVEC', NL)
 #endif
-
       CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
       CALL SCARC_VECTOR_COPY (Z, V, 1.0_EB, NL)                   !  v^l := z^l
 #ifdef WITH_SCARC_DEBUG
@@ -2937,40 +2934,38 @@ CALL SCARC_DEBUG_LEVEL (Y, 'TWOLEVEL-MUL Y SEPARATE COARSE', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-MUL V FINAL', NL)
 #endif
 
-   ! ---------- Multiplicative two-level preconditioning (fine first, coarse second):
-   ! coarse level is one level away from finest one (one coarsening step)
- 
-   CASE (NSCARC_TWOLEVEL_MUL2)
+   ! ---------- Multiplicative two-level preconditioning : COARSE_MUL2
+   ! First solve local fine Poisson problems, build new defect, then solve global coarse Poisson problem
+
+   CASE (NSCARC_TWOLEVEL_COARSE_MUL2)
 
       CALL SCARC_VECTOR_COPY (R, V, 1.0_EB, NL)                   !  v^l := r^l
       CALL SCARC_RELAXATION (R, V, NS+1, NP, NL)                  !  v^l := Relax(r^l)
       CALL SCARC_MATVEC_PRODUCT (V, Z, NL)                        !  z^l := A^{l} * v^l
-
       CALL SCARC_VECTOR_SUM (R, Z, 1.0_EB, -1.0_EB, NL)           !  z^l := r^l - z^l
-
       CALL SCARC_RESTRICTION (Z, B, NL, NL+1)                     !  b^{l+1} := rest(R^{l})
       CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)              !  x^{l+1} := A^{l+1}^{-1}(b^{l+1})
       CALL SCARC_PROLONGATION (X, Z, NL+1, NL)                    !  v^l := Prolongation(x^{l+1})
       CALL SCARC_VECTOR_SUM (Z, V, SCARC_COARSE_OMEGA, 1.0_EB, NL)       !  z^l := r^l - z^l
  
-   ! ---------- Only coarse grid preconditioner
+   ! ---------- Only coarse grid preconditioner : COARSE_ONLY
+   ! Only solve global coarse Poisson problem
  
-   CASE (NSCARC_TWOLEVEL_COARSE)
+   CASE (NSCARC_TWOLEVEL_COARSE_ONLY)
 
       CALL SCARC_VECTOR_COPY (R, B, 1.0_EB, NL)                   !  Use r^l as right hand side for preconditioner
       DO IL = NL, NLEVEL_MAX-1                                    !  successively restrict to coarser levels up to coarsest
          CALL SCARC_RESTRICTION (B, B, IL, IL+1)                  !  b^{l+1} := Restriction(b^l)
       ENDDO
-
       CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)              !  solve A^L * x^L := b^L on coarsest level
       CALL SCARC_VECTOR_COPY (X, Y, 1.0_EB, NLEVEL_MAX)           !  y^L := x^L
-
       DO IL = NLEVEL_MAX-1, NL, -1                                !  successively interpolate to finer levels up to finest
          CALL SCARC_PROLONGATION (Y, Y, NL+1, NL)                 !  y^l := Prolongation(y^{l+1})
       ENDDO
       CALL SCARC_VECTOR_COPY (Y, V, 1.0_EB, NL)                   !  v^l := y^l
 
-   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction : XMEAN_ADD
+   ! Global 1D-meanvalue problem and local fine Poisson problems are based on same defect
  
    CASE (NSCARC_TWOLEVEL_XMEAN_ADD)
 
@@ -2988,12 +2983,13 @@ CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V1', NL)
 CALL SCARC_DEBUG_LEVEL (Z, 'XMEAN_ADD Z SEPARATE', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'FFT-ADD V SEPARATE', NL)
 #endif
-      CALL SCARC_VECTOR_SUM (Z, V, SCARC_COARSE_OMEGA, 1.0_EB, NL)     !  v := omega * z + v   
+      CALL SCARC_VECTOR_SUM (Z, V, SCARC_COARSE_OMEGA, 1.0_EB, NL) !                          (relax influence of 1D-meanvalues)
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN V3', NL)
 #endif
 
-   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction : XMEAN_MUL1
+   ! First solve global 1D-meanvalue problem, build new defect, then solve local fine Poisson problems
  
    CASE (NSCARC_TWOLEVEL_XMEAN_MUL1)
 
@@ -3020,12 +3016,13 @@ CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN-MUL1 Z2', NL)
 CALL SCARC_DEBUG_LEVEL (Y, 'XMEAN-MUL1 Y SEPARATE', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'FFT-MUL1 V SEPARATE', NL)
 #endif
-      CALL SCARC_VECTOR_SUM (Y, V, SCARC_COARSE_OMEGA, 1.0_EB, NL)      !  v := omega * y + v  
+      CALL SCARC_VECTOR_SUM (Y, V, SCARC_COARSE_OMEGA, 1.0_EB, NL) !                          (relax influence of 1D-meanvalues)
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (V, 'TWOLEVEL-XMEAN-MUL1 V FINAL', NL)
 #endif
 
-   ! ---------- Twolevel preconditioning using meanvalues in x-direction
+   ! ---------- Twolevel preconditioning using meanvalues in x-direction : XMEAN_MUL2
+   ! First solve local Poisson problems, build new defect, then solve global 1D-meanvalue problem
  
    CASE (NSCARC_TWOLEVEL_XMEAN_MUL2)
 
@@ -3047,7 +3044,7 @@ CALL SCARC_DEBUG_LEVEL (Z, 'TWOLEVEL-XMEAN-MUL2 Z NEW DEFECT', NL)
 CALL SCARC_DEBUG_LEVEL (Z, 'XMEAN-MUL2 Z SEPARATE', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'FFT-MUL2 V SEPARATE', NL)
 #endif
-      CALL SCARC_VECTOR_SUM (Z, V, SCARC_COARSE_OMEGA, 1.0_EB, NL)      !  v^l := omega * z  +  v
+      CALL SCARC_VECTOR_SUM (Z, V, SCARC_COARSE_OMEGA, 1.0_EB, NL) !                          (relax influence of 1D-meanvalues)
 
 END SELECT SELECT_PRECON_TYPE
 
@@ -3970,66 +3967,56 @@ SUBROUTINE SCARC_PRECON_XMEAN (NV2, NL)
 USE SCARC_POINTERS, ONLY: M, L, G, V2, PRE, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV2, NL
 INTEGER :: II, IX, IY, IZ, IC, I, NM
-REAL(EB) :: SSS, VAL
+REAL(EB) :: XMEAN, VAL
  
 MEAN1D_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
 
    PRE => L%PRECON
-
-   V2 => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
+   V2  => SCARC_POINT_TO_VECTOR(NM, NL, NV2)
 #ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-MEAN1D: NV1 INIT ', NL)
    CALL SCARC_DEBUG_LEVEL (NV2, 'RELAX-MEAN1D: NV2 INIT ', NL)
 #endif
       
    DO IX = 1, L%NX
-
-      II = NX_OFFSET(NM) + IX  ! Spatial index of the entire tunnel, not just this mesh
+      II = NX_OFFSET(NM) + IX  
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '============== IX : ', IX,' ============ II : ', II, M%DY(1), M%DZ(1), M%DY(1)*M%DZ(1)
 #endif
-
       PRE%RHS(II) = 0._EB
       DO IZ = 1, L%NZ
          DO IY = 1, L%NY
             IF (L%IS_SOLID(IX, IY, IZ)) CYCLE
             IC = G%CELL_NUMBER(IX, IY, IZ)
-            SSS = V2(IC)*M%DY(IY)*M%DZ(IZ)
+            XMEAN = V2(IC)*M%DY(IY)*M%DZ(IZ)
             PRE%RHS(II) = PRE%RHS(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A,5I4,3E14.6)') 'IX, IY, IZ, II, IC, V2(IC), SUM, PRE%RHS(II):', &
-                                      IX, IY, IZ, II, IC, V2(IC), SSS, PRE%RHS(II)
+                                      IX, IY, IZ, II, IC, V2(IC), XMEAN, PRE%RHS(II)
             PRE%RHS(II) = PRE%RHS(II) + V2(IC)*M%DY(IY)*M%DZ(IZ)
 #endif
          ENDDO
       ENDDO
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'PRE%RHS: AFTER SUMMING'
-   WRITE(MSG%LU_DEBUG,'(8E14.6)') PRE%RHS
-#endif
-   DO IX = 1, L%NX
-      II = NX_OFFSET(NM) + IX  
       PRE%RHS(II) = PRE%RHS(II)/((M%YF-M%YS)*(M%ZF-M%ZS)) 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'II, (M%YF-M%YS)*(M%ZF-M%ZS), PRE%RHS(II):', II, (M%YF-M%YS)*(M%ZF-M%ZS), PRE%RHS(II) 
 #endif
    ENDDO
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'PRE%RHS: READY'
+   WRITE(MSG%LU_DEBUG,*) 'PRE%RHS: AFTER SUMMING'
    WRITE(MSG%LU_DEBUG,'(8E14.6)') PRE%RHS
-   CALL SCARC_DEBUG_LEVEL (NV1, 'RELAX-MEAN1D: NV1 FILTERED ', NL)
 #endif
 
    ! If not MPI process 0 send RHS components to process 0
-   IF (MY_RANK>0) THEN  ! MPI processes greater than 0 send their matrix components to MPI process 0
+
+   IF (MY_RANK>0) THEN  
       
       CALL MPI_GATHERV(PRE%RHS(DISPLS_TP(MY_RANK)+1),COUNTS_TP(MY_RANK),MPI_DOUBLE_PRECISION,PRE%RHS,COUNTS_TP,DISPLS_TP,&
                        MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
       
    ! If MPI process 0 receive RHS components form slaves and solve tridiagonal Poisson system
+
    ELSE  
       
       CALL MPI_GATHERV(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,PRE%RHS,COUNTS_TP,DISPLS_TP,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERROR)
