@@ -1587,6 +1587,9 @@ CALL SCARC_DEBUG_LEVEL (R, 'CG-METHOD: R INIT1 ', NL)
 CALL SCARC_DEBUG_LEVEL (V, 'CG-METHOD: V INIT1 ', NL)
 WRITE(MSG%LU_DEBUG,*) 'SIGMA1=', SIGMA1
 #endif
+#ifdef WITH_SCARC_VERBOSE
+WRITE(MSG%LU_VERBOSE,*) 'SIGMA1=', SIGMA1,': RESIN=', RESIN,': RES=', RES
+#endif
    CALL SCARC_VECTOR_COPY (V, D, -1.0_EB, NL)                !  d^0 := -v^0
 ENDIF
 #ifdef WITH_SCARC_DEBUG
@@ -1611,6 +1614,9 @@ WRITE(MSG%LU_DEBUG,*) '========================> CG : ITE =', ITE
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'ALPHA0, SIGMA1=', ALPHA0, SIGMA1
 CALL SCARC_DEBUG_LEVEL (Y, 'CG-METHOD: Y AFTER MAT-VEC ', NL)
+#endif
+#ifdef WITH_SCARC_VERBOSE
+WRITE(MSG%LU_VERBOSE,*) 'ALPHA0=', ALPHA0,': SIGMA1=', SIGMA1
 #endif
    ALPHA0 = SIGMA1/ALPHA0                                      !  ALPHA0 := (r^k,v^k)/(d^k,A*d^k)
 
@@ -1638,6 +1644,10 @@ WRITE(MSG%LU_DEBUG,*) 'after precon'
    BETA0  = SIGMA0/SIGMA1                                      !  BETA0  := (r^{k+1},v^{k+1})/(r^k,v^k)
    SIGMA1 = SIGMA0                                             !  save last SIGMA0
 
+#ifdef WITH_SCARC_VERBOSE
+WRITE(MSG%LU_VERBOSE,*) 'SIGMA0=', SIGMA0,': SIGMA1=', SIGMA1,': BETA0=', BETA0
+#endif
+   IF (SIGMA1 < TWO_EPSILON_EB) EXIT CG_LOOP
    CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
