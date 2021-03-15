@@ -1647,7 +1647,6 @@ WRITE(MSG%LU_DEBUG,*) 'after precon'
 #ifdef WITH_SCARC_VERBOSE2
 WRITE(MSG%LU_VERBOSE,*) 'SIGMA0=', SIGMA0,': SIGMA1=', SIGMA1,': BETA0=', BETA0
 #endif
-   IF (SIGMA1 < TWO_EPSILON_EB) EXIT CG_LOOP
    CALL SCARC_VECTOR_SUM (V, D, -1.0_EB, BETA0, NL)            !  d^{k+1} := -v^{k+1} + BETA0 * d^{k+1}
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '======================> CG : ITE3 =', ITE
