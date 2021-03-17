@@ -390,6 +390,7 @@ TYPE SCARC_GRID_TYPE
    ! Matrices in different storage types
    TYPE (SCARC_BMATRIX_TYPE) :: POISSONB                       !< Poisson matrix in bandwise storage technique
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_VAR                    !< Poisson matrix in compact storage technique (variable entries)
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
 
 #ifdef WITH_MKL

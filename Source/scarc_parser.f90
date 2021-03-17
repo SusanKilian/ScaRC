@@ -434,6 +434,7 @@ ENDIF
 ! ------------ Set type of coarsening strategy in case of multi-level methods
 
 SELECT CASE (TRIM(SCARC_COARSENING))
+
    CASE ('AGGREGATED')
       TYPE_COARSENING = NSCARC_COARSENING_AGGREGATED
    CASE ('AGGREGATEDS')

@@ -1,18 +1,11 @@
-&HEAD CHID='dancing_eddies_10mesh_scarc_gmg2', TITLE='Simple 2D Tunnel test of ScaRC-GMG solver with 10 meshes'/ 
+&HEAD CHID='dancing_eddies_scarc_add_twolevel', TITLE='Simple 2D Tunnel test of structured ScaRC solver'/ 
 
-&MULT ID='mesh',DX=0.030,I_UPPER=9 /
-&MESH IJK=30,1,40, XB=0.0,0.030,-0.001,0.001,-0.02,0.020, MULT_ID='mesh' /
+&MULT ID='mesh',DX=0.075,I_UPPER=3 /
+&MESH IJK=75,1,40, XB=0.0,0.075,-0.001,0.001,-0.02,0.020, MULT_ID='mesh' /
 
-&PRES SOLVER                     = 'SCARC'
-      SCARC_METHOD               = 'MULTIGRID'
-      SCARC_COARSE               = 'DIRECT'
-      SCARC_MULTIGRID_ACCURACY   =  1E-8
-      SCARC_MULTIGRID_LEVEL      =  2
-      SCARC_MULTIGRID_ITERATIONS =  10
-      SCARC_SMOOTH               = 'SSOR'
-      SCARC_SMOOTH_ITERATIONS    =  2           /
+&PRES SOLVER = 'SCARC', SCARC_TWOLEVEL = 'ADDITIVE', SCARC_COARSE_LEVEL = 2, TUNNEL_PRECONDITIONER = .TRUE. /
 
-&TIME T_END=2.0 /
+&TIME T_END=0.1 /
 
 &MISC DNS=.TRUE., STRATIFICATION=.FALSE., NOISE=.FALSE. /
 
@@ -37,9 +30,10 @@
 &DEVC XYZ=0.,0.,0.,   QUANTITY='MAXIMUM VELOCITY ERROR', ID='error' /
 &DEVC XYZ=0.,0.,0.,   QUANTITY='PRESSURE ITERATIONS', ID='iter' /
 &DEVC XYZ=0.,0.,0.,   QUANTITY='CPU TIME', ID='cpu' /
-&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC ITERATIONS', ID='scarc-iter' /
-&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC RESIDUAL', ID='scarc-res' /
-&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC CONVERGENCE RATE', ID='scarc-rate' /
+&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC ITERATIONS', ID='SCARC_ITE' /
+&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC RESIDUAL', ID='SCARC_RES' /
+&DEVC XYZ=0.,0.,0.,   QUANTITY='SCARC CONVERGENCE RATE', ID='SCARC_CONV' /
+
 
 &TAIL /
 

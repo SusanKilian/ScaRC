@@ -6,6 +6,7 @@
 MODULE GLOBAL_CONSTANTS
 
 USE PRECISION_PARAMETERS
+USE MPI_F08
 USE ISO_FORTRAN_ENV, ONLY: ERROR_UNIT
 IMPLICIT NONE
 
@@ -369,7 +370,7 @@ INTEGER :: UPPER_MESH_INDEX=-1000000000                     !< Upper bound of me
 LOGICAL :: PROFILING=.FALSE.
 INTEGER, ALLOCATABLE, DIMENSION(:) :: PROCESS               !< The MPI process of the given mesh index
 INTEGER, ALLOCATABLE, DIMENSION(:) :: FILE_COUNTER          !< Counter for the number of output files currently opened
-INTEGER, ALLOCATABLE, DIMENSION(:) :: MPI_COMM_MESH         !< MPI communicator for the a given mesh and its neighbors
+TYPE (MPI_COMM), ALLOCATABLE, DIMENSION(:) :: MPI_COMM_MESH !< MPI communicator for the a given mesh and its neighbors
 INTEGER, ALLOCATABLE, DIMENSION(:) :: MPI_COMM_MESH_ROOT    !< The rank of the given mesh within the MPI communicator
 
 ! Time parameters
@@ -488,7 +489,7 @@ LOGICAL :: ITERATE_BAROCLINIC_TERM                               !< Flag indicat
 LOGICAL :: SUSPEND_PRESSURE_ITERATIONS=.TRUE.                    !< Flag for stopping pressure iterations
 REAL(EB) :: VELOCITY_TOLERANCE=0._EB                             !< Error tolerance for normal velocity at solids or boundaries
 REAL(EB) :: PRESSURE_TOLERANCE=0._EB                             !< Error tolerance for iteration of baroclinic pressure term
-REAL(EB) :: ITERATION_SUSPEND_FACTOR=0.9_EB                      !< If new velocity error is not this value of old, stop iteration
+REAL(EB) :: ITERATION_SUSPEND_FACTOR=0.95_EB                     !< If new velocity error is not this value of old, stop iteration
 REAL(EB), ALLOCATABLE, DIMENSION(:) :: VELOCITY_ERROR_MAX        !< Max velocity error of entire domain
 REAL(EB), ALLOCATABLE, DIMENSION(:) :: PRESSURE_ERROR_MAX        !< Max pressure error of entire domain
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: VELOCITY_ERROR_MAX_LOC   !< Indices of max velocity error
@@ -542,7 +543,7 @@ INTEGER                              :: LU_MASS,LU_HRR,LU_STEPS,LU_NOTREADY,LU_V
 INTEGER                              :: LU_EVACCSV,LU_EVACEFF,LU_EVACFED,LU_EVACXYZ,LU_EVACOUT,LU_HISTOGRAM,LU_EVAC_CB
 INTEGER                              :: LU_BNDC=-1,LU_GEOC=-1,LU_TGA,LU_INFO
 INTEGER, ALLOCATABLE, DIMENSION(:)   :: LU_PART,LU_PROF,LU_XYZ,LU_TERRAIN,LU_PL3D,LU_DEVC,LU_STATE,LU_CTRL,LU_CORE,LU_RESTART
-INTEGER, ALLOCATABLE, DIMENSION(:)   :: LU_VEG_OUT,LU_GEOM
+INTEGER, ALLOCATABLE, DIMENSION(:)   :: LU_VEG_OUT,LU_GEOM,LU_CFACE_GEOM
 INTEGER                              :: LU_GEOM_TRAN
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: LU_SLCF,LU_SLCF_GEOM,LU_BNDF,LU_BNDF_GEOM,LU_BNDG,LU_ISOF,LU_ISOF2, &
                                         LU_SMOKE3D,LU_RADF
@@ -554,7 +555,7 @@ CHARACTER(80)                              :: FN_MASS,FN_HRR,FN_STEPS,FN_SMV,FN_
 CHARACTER(80)                              :: FN_EVACCSV,FN_EVACEFF,FN_EVACFED,FN_EVACOUT,FN_LINE,FN_HISTOGRAM,FN_CUTCELL,FN_TGA
 CHARACTER(80)                              :: FN_EVACXYZ
 CHARACTER(80), ALLOCATABLE, DIMENSION(:)   :: FN_PART,FN_PROF,FN_XYZ,FN_TERRAIN,FN_PL3D,FN_DEVC,FN_STATE,FN_CTRL,FN_CORE,FN_RESTART
-CHARACTER(80), ALLOCATABLE, DIMENSION(:)   :: FN_VEG_OUT,FN_GEOM
+CHARACTER(80), ALLOCATABLE, DIMENSION(:)   :: FN_VEG_OUT,FN_GEOM, FN_CFACE_GEOM
 CHARACTER(80), ALLOCATABLE, DIMENSION(:,:) :: FN_SLCF,FN_SLCF_GEOM,FN_BNDF,FN_BNDF_GEOM,FN_BNDG, &
                                               FN_ISOF,FN_ISOF2,FN_SMOKE3D,FN_RADF,FN_GEOM_TRNF
 

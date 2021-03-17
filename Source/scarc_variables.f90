@@ -10,6 +10,7 @@ MODULE SCARC_VARIABLES
 USE PRECISION_PARAMETERS
 USE SCARC_CONSTANTS
 USE SCARC_TYPES
+USE MPI_F08
 
 IMPLICIT NONE
 
@@ -175,7 +176,7 @@ INTEGER :: N_STACK_LAPLACE = 0                              !< Stack position of
 INTEGER :: N_REQ, N_EXCHANGES, TAG                          !< Information for data exchange
 INTEGER :: SNODE, RNODE                                     !< Process Indicator for data exchange
 
-INTEGER,  ALLOCATABLE, DIMENSION (:)  :: REQ                !< Request array for data exchange
+TYPE (MPI_REQUEST),  ALLOCATABLE, DIMENSION (:)  :: REQ     !< Request array for data exchange
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: COUNTS             !< Counter array for data exchange
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: DISPLS             !< Displacement array for data exchange
 INTEGER,  ALLOCATABLE, DIMENSION (:)  :: MESH_INT           !< Local integer data array for data exchange
