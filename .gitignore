@@ -8,6 +8,7 @@ C++
 MyDoxyfile
 CMakeBuildIntel
 Source.bak
+FDS_Source
 
 .DS_Store
 .*.swp
