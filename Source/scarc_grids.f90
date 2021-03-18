@@ -281,7 +281,7 @@ END FUNCTION SCARC_GET_MAX_LEVEL
 !> \brief Setup discretization information
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_GRIDS
-USE SCARC_POINTERS, ONLY: M, S, L, G, XCOR, YCOR, ZCOR, XMID, YMID, ZMID, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &
+USE SCARC_POINTERS, ONLY: M, S, L, G, XMID, YMID, ZMID, &
                           SCARC_POINT_TO_MESH, SCARC_POINT_TO_GRID
 #ifdef WITH_SCARC_DEBUG
 USE SCARC_MESSAGES, ONLY: SCARC_DEBUG_FORMATS
@@ -353,10 +353,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          ! Point to already existing arrays from main FDS program
 
-         XCOR => M%X    ;  YCOR => M%Y    ;  ZCOR => M%Z
          XMID => M%XC   ;  YMID => M%YC   ;  ZMID => M%ZC
-         RDX  => M%RDX  ;  RDY  => M%RDY  ;  RDZ  => M%RDZ 
-         RDXN => M%RDXN ;  RDYN => M%RDYN ;  RDZN => M%RDZN
 
 #ifdef WITH_SCARC_DEBUG
          CALL SCARC_DEBUG_FORMATS(L%NX)
@@ -403,7 +400,6 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ENDDO
          L%ZMID(L%NZ+1) = S%ZF + 0.5_EB*L%DZ
 
-         XCOR => L%XCOR;  YCOR => L%YCOR;  ZCOR => L%ZCOR
          XMID => L%XMID;  YMID => L%YMID;  ZMID => L%ZMID
 
       ENDIF
@@ -452,7 +448,7 @@ ENDDO MESHES_LOOP1
  
 MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)               ! sets pointers M, L and G
+   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)  
 
    ! Set pointers to already existing cell and wall index arrays from main program (on finest level)
    CALL SCARC_SETUP_CELL_INDEX(L, M, NLEVEL_MIN)

@@ -744,7 +744,7 @@ END FUNCTION SCARC_CELL_WITHIN_MESH
 !    explanation to come ...
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON (NM, NL)
-USE SCARC_POINTERS, ONLY: S, L, G, A, AB, OA, OAB, &
+USE SCARC_POINTERS, ONLY: S, L, G, A, AB, OA, OAB, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
                           SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
@@ -769,6 +769,14 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
       CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+
+      IF (NL == NLEVEL_MIN) THEN
+         RDX  => M%RDX ;  RDY  => M%RDY ;  RDZ  => M%RDZ
+         RDXN => M%RDXN;  RDYN => M%RDYN;  RDZN => M%RDZN
+      ELSE
+         RDX  => L%RDX ;  RDY  => L%RDY ;  RDZ  => L%RDZ
+         RDXN => L%RDXN;  RDYN => L%RDYN;  RDZN => L%RDZN
+      ENDIF
 
       ! For every neighbor allocate small matrix on overlapping part of mesh
 
@@ -881,7 +889,7 @@ END SUBROUTINE SCARC_SETUP_POISSON
 !    explanation to come ...
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON_VAR (NM, NL)
-USE SCARC_POINTERS, ONLY: S, L, G, A, OA, & ! AB, OAB, &
+USE SCARC_POINTERS, ONLY: S, L, G, A, OA, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &     ! AB, OAB - not yet implemented for bandwise
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
                           SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
@@ -906,6 +914,14 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
       CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+
+      IF (NL == NLEVEL_MIN) THEN
+         RDX  => M%RDX ;  RDY  => M%RDY ;  RDZ  => M%RDZ
+         RDXN => M%RDXN;  RDYN => M%RDYN;  RDZN => M%RDZN
+      ELSE
+         RDX  => L%RDX ;  RDY  => L%RDY ;  RDZ  => L%RDZ
+         RDXN => L%RDXN;  RDYN => L%RDYN;  RDZN => L%RDZN
+      ENDIF
 
       ! For every neighbor allocate small matrix on overlapping part of mesh
 
