@@ -1501,7 +1501,7 @@ END FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
-USE SCARC_POINTERS, ONLY: L, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+USE SCARC_POINTERS, ONLY: A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
@@ -1538,13 +1538,13 @@ IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
          CASE (-1)
             A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
          CASE (3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1569,13 +1569,13 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
          CASE (-1)
             A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
          CASE (3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1594,7 +1594,7 @@ END SUBROUTINE SCARC_SETUP_SUBDIAG
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
-USE SCARC_POINTERS, ONLY: L, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+USE SCARC_POINTERS, ONLY: A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
@@ -1632,13 +1632,13 @@ IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
          CASE (-1)
             A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
          CASE (3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1663,13 +1663,13 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
          CASE (-1)
             A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
          CASE (3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
