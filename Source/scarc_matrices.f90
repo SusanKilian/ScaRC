@@ -1594,13 +1594,24 @@ END SUBROUTINE SCARC_SETUP_SUBDIAG
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
-USE SCARC_POINTERS, ONLY: A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+USE SCARC_POINTERS, ONLY: M, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
+REAL(EB) :: RXP, RXM, RYP, RYM, RZP, RZM
 
-A%VAL(IP) = - RDX(IX)*(RDXN(IX) + RDXN(IX-1))
-IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY) + RDYN(IY-1))
-A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ) + RDZN(IZ-1))
+RXP = 2.0_EB /(M%RHO(IX+1,IY  ,IZ  ) + M%RHO(IX  ,IY  ,IZ  ))
+RXM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX-1,IY  ,IZ  ))
+A%VAL(IP) = - RDX(IX)*(RDXN(IX)*RXP + RDXN(IX-1)*RXM)
+
+IF (.NOT.TWO_D) THEN
+   RYP = 2.0_EB /(M%RHO(IX  ,IY+1,IZ  ) + M%RHO(IX  ,IY  ,IZ  ))
+   RYM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX  ,IY-1,IZ  ))
+   A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY)*RYP + RDYN(IY-1)*RYM)
+ENDIF
+
+RZP = 2.0_EB /(M%RHO(IX  ,IY  ,IZ+1) + M%RHO(IX  ,IY  ,IZ  ))
+RZM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX  ,IY  ,IZ-1))
+A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ)*RZP + RDZN(IZ-1)*RZM)
 
 A%ROW(IC) = IP
 A%COL(IP) = IC
@@ -1615,30 +1626,33 @@ END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
-USE SCARC_POINTERS, ONLY: L, G, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+USE SCARC_POINTERS, ONLY: M, L, G, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
+REAL(EB) :: R2
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
+
+R2 = 2.0_EB /(M%RHO(IX1,IY1,IZ1) + M%RHO(IX2,IY2,IZ2))
 
 IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
    IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*R2
          CASE (-1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *R2
          CASE (2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*R2
          CASE (-2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *R2
          CASE (3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*R2
          CASE (-3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
       END SELECT
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1659,17 +1673,17 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
    IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*R2
          CASE (-1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *R2
          CASE (2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*R2
          CASE (-2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1)
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *R2
          CASE (3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*R2
          CASE (-3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
       END SELECT
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
