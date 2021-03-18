@@ -1459,30 +1459,6 @@ END SUBROUTINE SCARC_SETUP_LAPLACE_VAR
 
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Set main diagonal entry for Poisson matrix in compact storage technique
-! These values correspond to the full matrix of the global problem
-! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
-! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
-USE SCARC_POINTERS, ONLY: L, A
-INTEGER, INTENT(IN) :: IC, IX, IY, IZ
-INTEGER, INTENT(INOUT) :: IP
-
-A%VAL(IP) = - L%RDX(IX)*(L%RDXN(IX) + L%RDXN(IX-1))
-IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - L%RDY(IY)*(L%RDYN(IY) + L%RDYN(IY-1))
-A%VAL(IP) = A%VAL(IP) - L%RDZ(IZ)*(L%RDZN(IZ) + L%RDZN(IZ-1))
-
-A%ROW(IC) = IP
-A%COL(IP) = IC
-
-A%STENCIL(0) = A%VAL(IP)
-
-IP = IP + 1
-END SUBROUTINE SCARC_SETUP_MAINDIAG
-
-
-! --------------------------------------------------------------------------------------------------------------
 !> \brief Determine if cell has a neighbor and, if yes, return corresponding wall cell index
 ! --------------------------------------------------------------------------------------------------------------
 INTEGER FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)
@@ -1519,62 +1495,19 @@ END FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE
 
 
 ! --------------------------------------------------------------------------------------------------------------
-!> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
-! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SUBDIAG (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
-USE SCARC_POINTERS, ONLY: L, F, G, A
-USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
-INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
-INTEGER, INTENT(INOUT) :: IP
-INTEGER :: IW
-
-! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
-IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
-
-   IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
-      A%VAL(IP) = A%VAL(IP) + F%INCR_INSIDE
-      A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
-      A%STENCIL(-IOR0) = A%VAL(IP)
-      IP = IP + 1
-   ELSE
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2):', &
-                       IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2)
-#endif
-      CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
-   ENDIF
-
-! If IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
-
-ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
-
-   IW = SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)           ! get IW of a possibly suitable neighbor at face IOR0
-   IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
-      A%VAL(IP) = A%VAL(IP) + F%INCR_FACE
-      A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
-      A%STENCIL(-IOR0) = A%VAL(IP)
-      IP = IP + 1
-   ENDIF
-
-ENDIF
-
-END SUBROUTINE SCARC_SETUP_SUBDIAG
-
-
-! --------------------------------------------------------------------------------------------------------------
 !> \brief Set main diagonal entry for Poisson matrix in compact storage technique
 ! These values correspond to the full matrix of the global problem
 ! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
-USE SCARC_POINTERS, ONLY: L, A
+SUBROUTINE SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
+USE SCARC_POINTERS, ONLY: L, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
-A%VAL(IP) = - L%RDX(IX)*(L%RDXN(IX) + L%RDXN(IX-1))
-IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - L%RDY(IY)*(L%RDYN(IY) + L%RDYN(IY-1))
-A%VAL(IP) = A%VAL(IP) - L%RDZ(IZ)*(L%RDZN(IZ) + L%RDZN(IZ-1))
+A%VAL(IP) = - RDX(IX)*(RDXN(IX) + RDXN(IX-1))
+IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY) + RDYN(IY-1))
+A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ) + RDZN(IZ-1))
 
 A%ROW(IC) = IP
 A%COL(IP) = IC
@@ -1582,37 +1515,36 @@ A%COL(IP) = IC
 A%STENCIL(0) = A%VAL(IP)
 
 IP = IP + 1
-END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
+END SUBROUTINE SCARC_SETUP_MAINDIAG
 
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
-USE SCARC_POINTERS, ONLY: L, G, A
+SUBROUTINE SCARC_SETUP_SUBDIAG (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
+USE SCARC_POINTERS, ONLY: L, G, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
-
 IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
    IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
          CASE (-1)
-            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1-1)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
          CASE (3)
-            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1-1)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
       END SELECT
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1633,17 +1565,111 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
    IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
          CASE (-1)
-            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
          CASE (2)
-            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1-1)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
          CASE (-2)
-            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
          CASE (3)
-            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1-1)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
          CASE (-3)
-            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+      END SELECT
+      A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
+      A%STENCIL(-IOR0) = A%VAL(IP)
+      IP = IP + 1
+   ENDIF
+
+ENDIF
+
+END SUBROUTINE SCARC_SETUP_SUBDIAG
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Set main diagonal entry for Poisson matrix in compact storage technique
+! These values correspond to the full matrix of the global problem
+! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
+! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
+USE SCARC_POINTERS, ONLY: L, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+INTEGER, INTENT(IN) :: IC, IX, IY, IZ
+INTEGER, INTENT(INOUT) :: IP
+
+A%VAL(IP) = - RDX(IX)*(RDXN(IX) + RDXN(IX-1))
+IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY) + RDYN(IY-1))
+A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ) + RDZN(IZ-1))
+
+A%ROW(IC) = IP
+A%COL(IP) = IC
+
+A%STENCIL(0) = A%VAL(IP)
+
+IP = IP + 1
+END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
+USE SCARC_POINTERS, ONLY: L, G, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
+INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
+INTEGER, INTENT(INOUT) :: IP
+INTEGER :: IW
+
+! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
+
+IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
+
+   IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
+      SELECT CASE(IOR0)
+         CASE (1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
+         CASE (-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
+         CASE (2)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+         CASE (-2)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+         CASE (3)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+         CASE (-3)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
+      END SELECT
+      A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
+      A%STENCIL(-IOR0) = A%VAL(IP)
+      IP = IP + 1
+   ELSE
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2):', &
+                       IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2)
+#endif
+      CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
+   ENDIF
+
+! If IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
+
+ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
+
+   IW = SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)           ! get IW of a possibly suitable neighbor at face IOR0
+   IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
+      SELECT CASE(IOR0)
+         CASE (1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)
+         CASE (-1)
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)
+         CASE (2)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1-1)
+         CASE (-2)
+            A%VAL(IP) = RDX(IY1)*RDXN(IY1)
+         CASE (3)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1-1)
+         CASE (-3)
+            A%VAL(IP) = RDX(IZ1)*RDXN(IZ1)
       END SELECT
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
