@@ -31,17 +31,31 @@ CONTAINS
 ! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
 ! ------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEMS
-USE SCARC_POINTERS, ONLY: SCARC_POINT_TO_GRID
-#ifdef WITH_MKL
-USE SCARC_POINTERS, ONLY: L
-INTEGER :: TYPE_MKL_SAVE(0:1), TYPE_SCOPE_SAVE(0:1)
-#endif
-INTEGER :: NM, NL
   
-CROUTINE = 'SCARC_SETUP_SYSTEMS'
+CALL SCARC_SETUP_POISSON_DIMENSIONS
 
-! ------ Setup sizes for system matrices
-  
+SELECT_POISSON_TYPE: SELECT CASE (TYPE_POISSON)
+   CASE (NSCARC_POISSON_SEPARABLE)
+      CALL SCARC_SETUP_POISSON_SEPARABLE
+   CASE (NSCARC_POISSON_INSEPARABLE)
+      CALL SCARC_SETUP_POISSON_INSEPARABLE
+END SELECT SELECT_POISSON_TYPE
+
+CALL SCARC_SETUP_POISSON_GLOBAL
+
+#ifdef WITH_MKL
+CALL SCARC_SETUP_POISSON_SYMMETRIC
+#endif
+
+END SUBROUTINE SCARC_SETUP_SYSTEMS
+
+
+! ------------------------------------------------------------------------------------------------------------------
+!> \brief Setup sizes for Poisson matrices on requested grid levels
+! ------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_DIMENSIONS
+INTEGER :: NL
+
 SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
 
    ! -------- Global Krylov method
@@ -88,8 +102,15 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
    
 END SELECT SELECT_SCARC_METHOD_SIZES
 
-! ------ Assemble system matrices on requested grid levels and set boundary conditions
-  
+END SUBROUTINE SCARC_SETUP_POISSON_DIMENSIONS
+
+
+! ------------------------------------------------------------------------------------------------------------------
+!> \brief Assemble separable Poisson matrices on requested grid levels and set boundary conditions
+! ------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_SEPARABLE
+INTEGER :: NM, NL
+
 MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
@@ -163,7 +184,6 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDDO
          ENDIF
 
-
       ! ---------- McKenny-Greengard-Mayo method:
       ! Solving for the structured and unstructured Poisson matrix
       ! Assemble both, the structured and unstructured Poisson matrix
@@ -199,8 +219,134 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 ENDDO MESHES_POISSON_LOOP
 
-! Setup mappings for the global numbering of vectors and the Poisson matrix (compact storage technique only)
+END SUBROUTINE SCARC_SETUP_POISSON_SEPARABLE
+
+
+! ------------------------------------------------------------------------------------------------------------------
+!> \brief Assemble separable Poisson matrices on requested grid levels and set boundary conditions
+! ------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_INSEPARABLE
+INTEGER :: NM, NL
+
+MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   SELECT_SCARC_METHOD: SELECT CASE (TYPE_METHOD)
+
+      ! ---------- Krylov method (CG) as main solver, different preconditioners possible
+
+      CASE (NSCARC_METHOD_KRYLOV)
+
+         ! For all different possible Krylov variants, first setup Poisson matrix on finest level including BC's 
+
+         CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+
+         ! Depending on the requested preconditioner, also assemble the Poisson matrix with BC's on specific coarser levels
+
+         SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
+
+            ! In case of multigrid as preconditioner:
+            ! only build higher level structures in case of geometric multigrid (algebraic variant is done elsewhere)
+
+            CASE (NSCARC_RELAX_GMG)
+
+               IF (IS_CG_GMG) THEN
+                  DO NL = NLEVEL_MIN+1, NLEVEL_MAX
+                     CALL SCARC_SETUP_POISSON_VAR (NM, NL)
+                     CALL SCARC_SETUP_BOUNDARY(NM, NL)
+                  ENDDO
+               ENDIF
+
+#ifdef WITH_MKL
+            ! In case of LU-decomposition as preconditioner
+            ! locally acting: PARDISO from MKL as preconditioners on fine level with possible coarse grid correction
+
+            CASE (NSCARC_RELAX_MKL)
+
+               IF (TYPE_SCOPE(1) == NSCARC_SCOPE_LOCAL .AND. HAS_TWO_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
+                  CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MAX)
+                  CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MAX)
+               ENDIF
+#endif
+
+            ! in case of default preconditioners (JACOBI/SSOR/FFT/...):
+            ! if there is an additional coarse grid correction which is NOT AMG-based, 
+            ! then also assemble matrix on coarse grid level
+
+            CASE DEFAULT
+   
+               IF (HAS_TWO_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
+                  CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MAX)
+                  CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MAX)
+               ENDIF
+
+         END SELECT SELECT_KRYLOV_PRECON
+
+      ! ---------- Multigrid as main solver
+
+      CASE (NSCARC_METHOD_MULTIGRID)
+
+         ! For all different possible multigrid-variants, first setup Poisson matrix on finest level including BC's 
+
+         CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+
+         ! On case of a  geometric multigrid, assemble standard n-point-matrix hierarchy on all coarser levels, too
+         ! Note: in case of an algebraic multigrid, this will be done in a separate routine later
+
+         IF (TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC) THEN
+            DO NL = NLEVEL_MIN + 1, NLEVEL_MAX
+               CALL SCARC_SETUP_POISSON_VAR (NM, NL)
+               CALL SCARC_SETUP_BOUNDARY(NM, NL)
+            ENDDO
+         ENDIF
+
+      ! ---------- McKenny-Greengard-Mayo method:
+      ! Solving for the structured and unstructured Poisson matrix
+      ! Assemble both, the structured and unstructured Poisson matrix
+      ! temporarily they will be stored separately in matrices AC and ACU due to the different
+      ! settings along internal boundary cells,
+      ! in the medium term, a toggle mechanism will be implemented which only switches the corresponding
+      ! entries while keeping the entries which are the same for both discretization types
+
+      CASE (NSCARC_METHOD_MGM)
+   
+         ! First assemble structured matrix with inhomogeneous boundary conditions
+
+         TYPE_SCOPE(0) = NSCARC_SCOPE_GLOBAL
+         CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
+         CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+
+         ! Then assemble unstructured matrix with homogeneous Dirichlet boundary conditions along
+         ! external boundaries and special MGM BC-settings along mesh interfaces
+
+         CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
+         IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
+            CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
+            CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         ENDIF
+
+         TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
+         CALL SCARC_SETUP_LAPLACE_VAR (NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_WITH_INTERFACES(NM, NLEVEL_MIN) 
+         CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
+
+   END SELECT SELECT_SCARC_METHOD
+
+ENDDO MESHES_POISSON_LOOP
+
+END SUBROUTINE SCARC_SETUP_POISSON_INSEPARABLE
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Make Poisson matrix globally acting, that is, setup all overlapping information of global matrix
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_GLOBAL
+INTEGER :: NL
  
+! Setup mappings for the global numbering of vectors and the Poisson matrix (compact storage technique only)
+
 IF (TYPE_MATRIX == NSCARC_MATRIX_COMPACT) THEN
    IF (IS_MGM) THEN
 
@@ -239,8 +385,17 @@ MULTI_LEVEL_IF: IF (HAS_MULTIPLE_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
    ENDDO 
 ENDIF MULTI_LEVEL_IF
 
-! ------ If MKL-solver is used on specific levels, then setup symmetric Poisson matrix there
+END SUBROUTINE SCARC_SETUP_POISSON_GLOBAL
+
+
 #ifdef WITH_MKL
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Setup symmetric version of Poisson matrix needed for all types of IntelMKL preconditioning (MKL only)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_SYMMETRIC
+USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_GRID
+INTEGER :: NM, NL, TYPE_MKL_SAVE(0:1), TYPE_SCOPE_SAVE(0:1)
+
 IF (.NOT. IS_MGM) THEN
 
    DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -255,8 +410,8 @@ IF (.NOT. IS_MGM) THEN
       ENDIF
 
       IF (HAS_GMG_LEVELS) THEN
-         DO NL = NLEVEL_MIN+1, NLEVEL_MAX
-            CALL SCARC_POINT_TO_GRID (NM, NL)
+         DO NL = NLEVEL_MIN+1, NLEVEL_MIN
+            CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)
             IF (TYPE_PRECON == NSCARC_RELAX_OPTIMIZED .OR. TYPE_SMOOTH == NSCARC_RELAX_OPTIMIZED) THEN
                IF (.NOT.L%HAS_OBSTRUCTIONS) TYPE_MKL(NL) = NSCARC_MKL_NONE
             ENDIF
@@ -307,9 +462,9 @@ ELSE
    CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
 
 ENDIF
-#endif
 
-END SUBROUTINE SCARC_SETUP_SYSTEMS
+END SUBROUTINE SCARC_SETUP_POISSON_SYMMETRIC
+#endif
 
 
 ! --------------------------------------------------------------------------------------------------------------
@@ -714,6 +869,102 @@ END SUBROUTINE SCARC_SETUP_POISSON
 
 
 ! --------------------------------------------------------------------------------------------------------------
+!> \brief Allocate Poisson matrix for the usual 5-point-stencil (2D) or 7-point-stencil (3D)
+! Compact storage technique (POISSON)
+!    Compression technique to store sparse matrices, non-zero entries are stored
+!    in a 1D-vector B(.), row after row,
+!    Each row starts with its diagonal entry followed by the other non-zero entries
+!    In order to identify each element, pointer arrays ROW and COL are needed,
+!    ROW points to the several diagonal entries in vector B(.),
+!    COL points to the columns which non-zero entries in the matrix stencil
+! Bandwise storage technique (POISSONB)
+!    explanation to come ...
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_POISSON_VAR (NM, NL)
+USE SCARC_POINTERS, ONLY: S, L, G, A, OA, & ! AB, OAB, &
+                          SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
+                          SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
+                          SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
+INTEGER, INTENT(IN) :: NM, NL
+INTEGER :: IX, IY, IZ, IC, IP, INBR, NOM
+
+CROUTINE = 'SCARC_SETUP_POISSON'
+ 
+! Compute single matrix entries and corresponding row and column pointers
+! Along internal boundaries use placeholders for the neighboring matrix entries
+! which will be communicated in a following step
+ 
+SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
+
+ 
+   ! ---------- COMPACT Storage technique
+ 
+   CASE (NSCARC_MATRIX_COMPACT)
+   
+      ! Allocate main matrix on non-overlapping part of mesh
+
+      CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
+      CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+
+      ! For every neighbor allocate small matrix on overlapping part of mesh
+
+      DO INBR = 1, SCARC(NM)%N_NEIGHBORS
+         NOM = S%NEIGHBORS(INBR)
+         CALL SCARC_POINT_TO_OTHER_GRID (NM, NOM, NL)
+         OA => SCARC_POINT_TO_OTHER_CMATRIX (NSCARC_MATRIX_POISSON)
+         CALL SCARC_ALLOCATE_CMATRIX (OA, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'OG%POISSON', CROUTINE)
+      ENDDO
+
+      IP = 1
+      DO IZ = 1, L%NZ
+         DO IY = 1, L%NY
+            DO IX = 1, L%NX
+   
+               IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+               IC = G%CELL_NUMBER(IX, IY, IZ)
+
+               ! Main diagonal 
+
+               CALL SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
+   
+               ! Lower subdiagonals
+
+               IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX  , IY  , IZ-1, IP,  3)
+               IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX  , IY-1, IZ  , IP,  2)
+               IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX-1, IY  , IZ  , IP,  1)
+   
+               ! Upper subdiagonals
+
+               IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX+1, IY  , IZ  , IP, -1)
+               IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX  , IY+1, IZ  , IP, -2)
+               IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG_VAR(IC, IX, IY, IZ, IX  , IY  , IZ+1, IP, -3)
+   
+            ENDDO
+         ENDDO
+      ENDDO
+   
+      A%ROW(G%NC+1) = IP
+      A%N_VAL = IP
+   
+      CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
+
+#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
+#endif
+ 
+   ! ---------- bandwise storage technique
+ 
+   CASE (NSCARC_MATRIX_BANDWISE)
+   
+      WRITE(*,*) 'Bandwise storage technique for variable Poisson matrix not yet implemented'
+   
+END SELECT SELECT_STORAGE_TYPE
+
+END SUBROUTINE SCARC_SETUP_POISSON_VAR
+
+
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Assemble local unstructured Laplace matrices
 ! The grid numbering is permuted in such a way that all the nonzero entries of the RHS 
 ! are located of the end of the corresponding vector
@@ -953,6 +1204,245 @@ END SUBROUTINE SCARC_SETUP_LAPLACE
 
 
 ! --------------------------------------------------------------------------------------------------------------
+!> \brief Assemble local unstructured Laplace matrices
+! The grid numbering is permuted in such a way that all the nonzero entries of the RHS 
+! are located of the end of the corresponding vector
+! this concerns the entries along internal obstructions and in case of a multi-mesh computation
+! also the entries along the internal interfaces
+! All other entries of the RHS are zero for the local Laplace problems, such that the
+! forward substitution process Ly=b only must start from the nonzero entries on
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_LAPLACE_VAR (NM, NL)
+USE SCARC_POINTERS, ONLY: L, G, A, GWC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+INTEGER, INTENT(IN) :: NM, NL
+INTEGER :: IX, IY, IZ, IC, JC, KC, IOR0, IW, IP, KKC(-3:3), JJC(-3:3)
+INTEGER :: TYPE_SCOPE_SAVE
+
+CROUTINE = 'SCARC_SETUP_LAPLACE_VAR'
+TYPE_SCOPE_SAVE = TYPE_SCOPE(0)
+TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
+ 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SETUP_LAPLACE_VAR:B: TYPE_SCOPE:', TYPE_SCOPE(0)
+#endif
+
+! Point to unstructured grid
+
+CALL SCARC_SET_GRID_TYPE(NSCARC_GRID_UNSTRUCTURED)
+CALL SCARC_POINT_TO_GRID (NM, NL)              
+
+! Allocate permutation vectors 
+
+CALL SCARC_ALLOCATE_INT1 (G%PERM_FW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_FW', CROUTINE)
+CALL SCARC_ALLOCATE_INT1 (G%PERM_BW , 1, G%NC, NSCARC_INIT_ZERO, 'G%PERM_BW', CROUTINE)
+   
+! Obstruction cells are numbered last such that they appear at the end of a vector
+
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
+
+   JC = G%NC
+   DO IW = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
+      
+      GWC => G%WALL(IW)
+      
+      IX = GWC%IXW ;  IY = GWC%IYW ;  IZ = GWC%IZW
+      
+      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+      
+      IOR0 = GWC%IOR
+      IC   = G%CELL_NUMBER(IX, IY, IZ)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'IW, IX, IY, IZ, IOR0, IC:', IW, IX, IY, IZ, IOR0, IC
+      WRITE(MSG%LU_DEBUG,*) 'OBSTRUCTION: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
+#endif
+      G%PERM_FW(IC) = JC
+      G%PERM_BW(JC) = IC
+      JC = JC - 1
+
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_FW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+WRITE(MSG%LU_DEBUG,*) 'AFTER OBSTRUCTION: PERM_BW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+#endif
+
+   ! Interface cells are numbered second last
+
+   DO IW = 1, L%N_WALL_CELLS_EXT
+      
+      GWC => G%WALL(IW)
+      IF (GWC%BTYPE /= INTERNAL) CYCLE
+      
+      IX = GWC%IXW ;  IY = GWC%IYW ;  IZ = GWC%IZW
+      
+      IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+      
+      IOR0 = GWC%IOR
+      IC   = G%CELL_NUMBER(IX,IY,IZ)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) 'IW, IX, IY, IZ, IOR0, IC:', IW, IX, IY, IZ, IOR0, IC
+      WRITE(MSG%LU_DEBUG,*) 'INTERFACE: PERM_FW(', IC, ')=', G%PERM_FW(IC),', PERM_BW(', JC, ')=', G%PERM_BW(JC)
+#endif
+      IF (G%PERM_FW(IC) == 0) THEN
+         G%PERM_FW(IC) = JC
+         G%PERM_BW(JC) = IC
+         JC = JC - 1
+      ENDIF
+
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_FW:'
+   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+   WRITE(MSG%LU_DEBUG,*) 'AFTER INTERFACE: PERM_BW:'
+   WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+#endif
+
+   ! The rest is used from beginning to first interface cell
+
+   KC = 1
+   DO IC = 1, G%NC
+      IF (G%PERM_FW(IC) /= 0) CYCLE
+      G%PERM_BW(KC) = IC
+      G%PERM_FW(IC) = KC
+      KC = KC + 1
+   ENDDO
+   IF (KC /= JC + 1) THEN
+      WRITE(*,*) 'KC =', KC,': JC =', JC
+      CALL SCARC_ERROR(NSCARC_ERROR_MGM_PERMUTATION, SCARC_NONE, NSCARC_NONE)
+   ENDIF
+
+   G%NONZERO = KC
+
+ELSE
+
+   DO IC = 1, G%NC
+      G%PERM_BW(IC) = IC
+      G%PERM_FW(IC) = IC
+   ENDDO
+
+   G%NONZERO = 1
+
+ENDIF
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_FW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_FW
+WRITE(MSG%LU_DEBUG,*) 'AFTER FINAL FILL: PERM_BW:'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%PERM_BW
+WRITE(MSG%LU_DEBUG,*) 'G%ICX'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICX
+WRITE(MSG%LU_DEBUG,*) 'G%ICY'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICY
+WRITE(MSG%LU_DEBUG,*) 'G%ICZ'
+WRITE(MSG%LU_DEBUG,'(8I4)') G%ICZ
+DO IZ = 1, L%NZ
+   DO IY = 1, L%NY
+      WRITE(MSG%LU_DEBUG,*) (L%IS_SOLID(IX, IY, IZ), IX=1, L%NX)
+   ENDDO
+ENDDO
+#endif
+
+! Allocate Laplace matrix on non-overlapping part of mesh
+
+A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_LAPLACE)
+CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%LAPLACE', CROUTINE)
+
+! Assemble Laplace matrix with grid permutation based on MGM-method 
+
+IP = 1
+IF (TYPE_MGM_LAPLACE == NSCARC_MGM_LAPLACE_LUPERM) THEN
+
+   DO IC = 1, G%NC
+
+      JJC = -1
+      KKC = -1
+
+      JJC(0) = G%PERM_BW(IC);  KKC(0) = G%PERM_FW(JJC(0))
+      
+      IX = G%ICX(JJC(0)); IY = G%ICY(JJC(0)); IZ = G%ICZ(JJC(0))
+
+      JJC(-3) = G%CELL_NUMBER(IX  , IY, IZ+1)     ; KKC(-3) = GET_PERM(JJC(-3))  
+      JJC(-1) = G%CELL_NUMBER(IX+1, IY, IZ  )     ; KKC(-1) = GET_PERM(JJC(-1))   
+      JJC( 1) = G%CELL_NUMBER(IX-1, IY, IZ  )     ; KKC( 1) = GET_PERM(JJC( 1))    
+      JJC( 3) = G%CELL_NUMBER(IX  , IY, IZ-1)     ; KKC( 3) = GET_PERM(JJC( 3))     
+      IF (.NOT.TWO_D) THEN
+        JJC(-2) = G%CELL_NUMBER(IX, IY+1, IZ)     ; KKC(-2) = GET_PERM(JJC(-2))     
+        JJC( 2) = G%CELL_NUMBER(IX, IY-1, IZ)     ; KKC( 2) = GET_PERM(JJC( 2))     
+      ENDIF
+
+      ! Main diagonal 
+      CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
+#ifdef WITH_SCARC_DEBUG
+         WRITE(MSG%LU_DEBUG,*) '======================================='
+         WRITE(MSG%LU_DEBUG,*) 'JJC = ', JJC
+         WRITE(MSG%LU_DEBUG,*) 'KKC = ', KKC
+         WRITE(MSG%LU_DEBUG,*) 'IX, IY, IZ=', IX, IY, IZ
+#endif
+         
+      ! Lower subdiagonals
+
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ-1, KKC( 3), IP,  3)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY-1, IZ  , KKC( 2), IP,  2)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX-1, IY  , IZ  , KKC( 1), IP,  1)
+
+      ! Upper subdiagonals
+
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX+1, IY  , IZ  , KKC(-1), IP, -1)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY+1, IZ  , KKC(-2), IP, -2)
+      IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG_PERM(IX, IY, IZ, IX  , IY  , IZ+1, KKC(-3), IP, -3)
+
+   ENDDO
+      
+! Assemble Laplace matrix without grid permutation 
+
+ELSE
+
+   DO IZ = 1, L%NZ
+      DO IY = 1, L%NY
+         DO IX = 1, L%NX
+
+            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
+            IC = G%CELL_NUMBER(IX, IY, IZ)
+
+            ! Main diagonal 
+
+            CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
+
+            ! Lower subdiagonals
+
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ-1, IP,  3)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY-1, IZ  , IP,  2)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ,  1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX-1, IY  , IZ  , IP,  1)
+
+            ! Upper subdiagonals
+
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -1)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX+1, IY  , IZ  , IP, -1)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -2)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY+1, IZ  , IP, -2)
+            IF (IS_VALID_DIRECTION(IX, IY, IZ, -3)) CALL SCARC_SETUP_SUBDIAG(IC, IX, IY, IZ, IX  , IY  , IZ+1, IP, -3)
+
+         ENDDO
+      ENDDO
+   ENDDO
+      
+ENDIF
+
+A%ROW(G%NC+1) = IP
+A%N_VAL = IP
+      
+CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
+
+TYPE_SCOPE(0) = TYPE_SCOPE_SAVE
+
+#ifdef WITH_SCARC_DEBUG2
+CALL SCARC_DEBUG_CMATRIX (A, 'LAPLACE', 'SETUP_LAPLACE_VAR: NO BDRY')
+#endif
+ 
+END SUBROUTINE SCARC_SETUP_LAPLACE_VAR
+
+
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Set main diagonal entry for Poisson matrix in compact storage technique
 ! These values correspond to the full matrix of the global problem
 ! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
@@ -1071,6 +1561,91 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
 ENDIF
 
 END SUBROUTINE SCARC_SETUP_SUBDIAG
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Set main diagonal entry for Poisson matrix in compact storage technique
+! These values correspond to the full matrix of the global problem
+! In case of an equidistant grid, we get the usual 5-point (2d) and 7-point (3d) stencil
+! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
+USE SCARC_POINTERS, ONLY: L, A
+INTEGER, INTENT(IN) :: IC, IX, IY, IZ
+INTEGER, INTENT(INOUT) :: IP
+
+A%VAL(IP) = - 1.0_EB/((L%DXL(IX+1)*(L%XCOR(IX)-L%XCOR(IX-1)) - 1.0_EB/((L%DXL(IX)*(L%XCOR(IX)-L%XCOR(IX-1)) 
+IF (.NOT.TWO_D) &
+   A%VAL(IP) = - 1.0_EB/((L%DYL(IY+1)*(L%YCOR(IY)-L%YCOR(IY-1)) - 1.0_EB/((L%DYL(IY)*(L%YCOR(IY)-L%YCOR(IY-1)) 
+A%VAL(IP) = - 1.0_EB/((L%DZL(IZ+1)*(L%ZCOR(IZ)-L%ZCOR(IZ-1)) - 1.0_EB/((L%DZL(IZ)*(L%ZCOR(IZ)-L%ZCOR(IZ-1)) 
+
+A%ROW(IC) = IP
+A%COL(IP) = IC
+
+A%STENCIL(0) = A%VAL(IP)
+
+IP = IP + 1
+END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
+USE SCARC_POINTERS, ONLY: L, F, G, A
+INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
+INTEGER, INTENT(INOUT) :: IP
+INTEGER :: IW
+LOGICAL :: IS_INTERNAL_CELL
+
+! Decide wheter cell is interior or exterior cell
+
+F => L%FACE(IOR0)
+SELECT CASE (IOR0)
+   CASE ( 1)
+      IS_INTERNAL_CELL = IX1 > 1
+   CASE (-1)
+      IS_INTERNAL_CELL = IX1 < F%NOP
+   CASE ( 2)
+      IS_INTERNAL_CELL = IY1 > 1
+   CASE (-2)
+      IS_INTERNAL_CELL = IY1 < F%NOP
+   CASE ( 3)
+      IS_INTERNAL_CELL = IZ1 > 1
+   CASE (-3)
+      IS_INTERNAL_CELL = IZ1 < F%NOP
+END SELECT
+
+! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
+IF (IS_INTERNAL_CELL) THEN
+
+   IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
+      A%VAL(IP) = A%VAL(IP) + F%INCR_INSIDE
+      A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
+      A%STENCIL(-IOR0) = A%VAL(IP)
+      IP = IP + 1
+   ELSE
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2):', &
+                       IX1, IY1, IZ1, IX2, IY2, IZ2, L%IS_SOLID(IX2, IY2, IZ2)
+#endif
+      CALL SCARC_ERROR(NSCARC_ERROR_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
+   ENDIF
+
+! If IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
+
+ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
+
+   IW = SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)           ! get IW of a possibly suitable neighbor at face IOR0
+   IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
+      A%VAL(IP) = A%VAL(IP) + F%INCR_FACE
+      A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
+      A%STENCIL(-IOR0) = A%VAL(IP)
+      IP = IP + 1
+   ENDIF
+
+ENDIF
+
+END SUBROUTINE SCARC_SETUP_SUBDIAG_VAR
 
 
 ! --------------------------------------------------------------------------------------------------------------
