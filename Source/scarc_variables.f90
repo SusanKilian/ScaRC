@@ -19,9 +19,9 @@ IMPLICIT NONE
 CHARACTER(40) :: SCARC_GRID               = 'STRUCTURED'         !< Type of discretization (STRUCTURED/UNSTRUCTURED)
 CHARACTER(40) :: SCARC_METHOD             = 'NONE'               !< Type of global ScaRC solver (Krylov/MULTIGRID)
 CHARACTER(40) :: SCARC_MATRIX             = 'NONE'               !< Type of matrix storage (COMPACT/BANDWISE)
+CHARACTER(40) :: SCARC_POISSON            = 'SEPARABLE'          !< Type of Poisson equation (INSEPARABLE/SEPARABLE)
 CHARACTER(40) :: SCARC_STENCIL            = 'VARIABLE'           !< Type of matrix stencil (CONSTANT/VARIABLE)
 CHARACTER(40) :: SCARC_TWOLEVEL           = 'NONE'               !< Type of two-level method (NONE/ADDITIVE/MULTIPLICATIVE)
-CHARACTER(40) :: SCARC_POISSON            = 'SEPARABLE'          !< Type of Poisson equation (INSEPARABLE/SEPARABLE)
 
 ! ---------- General iteration parameters
  
@@ -228,12 +228,13 @@ PUBLIC :: SCARC_MULTIGRID_POSTSMOOTH      !< Number of postesmoothing iterations
 PUBLIC :: SCARC_MULTIGRID_RELAXING        !< Relaxing of nullspace
 PUBLIC :: SCARC_MULTIGRID_THETA           !< Optional relaxation parameter for multigrid
 
-PUBLIC :: SCARC_MGM_BC                    !< Interface boundary conditions for Laplace problems of MGM method
 PUBLIC :: SCARC_MGM_ACCURACY              !< Requested accuracy for velocity error of MGM method
-PUBLIC :: SCARC_MGM_INTERPOLATION         !< Interpolation type for BC definition
-PUBLIC :: SCARC_MGM_ITERATIONS            !< Maximum number of allowed Laplace iterations for MGM method
+PUBLIC :: SCARC_MGM_BC                    !< Interface boundary conditions for Laplace problems of MGM method
 PUBLIC :: SCARC_MGM_CHECK_LAPLACE         !< Requested check of Laplace solutions against ScaRC-UScaRC difference 
 PUBLIC :: SCARC_MGM_EXACT_INITIAL         !< Exact Laplace solution for initialization of interface BC's is used
+PUBLIC :: SCARC_MGM_INTERPOLATION         !< Interpolation type for BC definition
+PUBLIC :: SCARC_MGM_ITERATIONS            !< Maximum number of allowed Laplace iterations for MGM method
+PUBLIC :: SCARC_MGM_LAPLACE_SOLVER        !< Type of solver for local homogeneous unstructured Laplace problems
 PUBLIC :: SCARC_MGM_USE_FFT               !< If local mesh is structured, use FFT as Laplace solver
 
 PUBLIC :: SCARC_PRECON                    !< Selection parameter for preconditioner
