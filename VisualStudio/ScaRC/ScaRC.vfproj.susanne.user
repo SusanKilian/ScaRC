@@ -3,7 +3,7 @@
 	<Configurations>
 		<Configuration Name="Debug|Win32"/>
 		<Configuration Name="Release|Win32"/>
-		<Configuration Name="Debug|x64" CommandArguments="dancing_eddies_mgm_opt2.fds" WorkingDirectory="$(ProjectDir)..\..\Verification\Pressure_Solver"/>
+		<Configuration Name="Debug|x64" CommandArguments="Wu_Bakar_Tunnel_A_scarc_twolevel.fds" WorkingDirectory="$(ProjectDir)..\..\Validation\Tunnel_Ventilation\FDS_Input_Files"/>
 		<Configuration Name="Release|x64"/>
 		<Configuration Name="Release_Qipo|Win32"/>
 		<Configuration Name="Release_Qipo|x64"/></Configurations></VisualStudioUserFile>

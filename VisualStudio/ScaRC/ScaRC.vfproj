@@ -101,6 +101,7 @@
 		<File RelativePath="..\..\Source\scarc_fft.f90"/>
 		<File RelativePath="..\..\Source\scarc_gmg.f90"/>
 		<File RelativePath="..\..\Source\scarc_grids.f90"/>
+		<File RelativePath="..\..\Source\scarc_header.f90"/>
 		<File RelativePath="..\..\Source\scarc_matrices.f90"/>
 		<File RelativePath="..\..\Source\scarc_messages.f90"/>
 		<File RelativePath="..\..\Source\scarc_methods.f90"/>
