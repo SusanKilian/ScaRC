@@ -129,6 +129,14 @@ REAL(EB), POINTER, DIMENSION(:):: XMID=>NULL()              !< Pointer to vector
 REAL(EB), POINTER, DIMENSION(:):: YMID=>NULL()              !< Pointer to vector of cell midpoints in y-direction
 REAL(EB), POINTER, DIMENSION(:):: ZMID=>NULL()              !< Pointer to vector of cell midpoints in z-direction
 
+REAL(EB), POINTER, DIMENSION(:):: RDX=>NULL()               !< Pointer to reciprocal withs between grid points in x-direction
+REAL(EB), POINTER, DIMENSION(:):: RDY=>NULL()               !< Pointer to reciprocal withs between grid points in y-direction
+REAL(EB), POINTER, DIMENSION(:):: RDZ=>NULL()               !< Pointer to reciprocal withs between grid points in z-direction
+
+REAL(EB), POINTER, DIMENSION(:):: RDXN=>NULL()              !< Pointer to reciprocal withs between midpoints in x-direction
+REAL(EB), POINTER, DIMENSION(:):: RDYN=>NULL()              !< Pointer to reciprocal withs between midpoints in y-direction
+REAL(EB), POINTER, DIMENSION(:):: RDZN=>NULL()              !< Pointer to reciprocal withs between midpoints in z-direction
+
 REAL(EB), POINTER, DIMENSION(:,:):: BXS=>NULL()             !< Pointer to boundary values at x-min face
 REAL(EB), POINTER, DIMENSION(:,:):: BXF=>NULL()             !< Pointer to boundary values at x-max face
 REAL(EB), POINTER, DIMENSION(:,:):: BYS=>NULL()             !< Pointer to boundary values at y-min face

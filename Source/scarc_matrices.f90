@@ -1453,9 +1453,9 @@ USE SCARC_POINTERS, ONLY: L, A
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
-A%VAL(IP) = - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
-IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
-A%VAL(IP) = A%VAL(IP) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
+A%VAL(IP) = - L%RDX(IX)*(L%RDXN(IX) + L%RDXN(IX-1))
+IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - L%RDY(IY)*(L%RDYN(IY) + L%RDYN(IY-1))
+A%VAL(IP) = A%VAL(IP) - L%RDZ(IZ)*(L%RDZN(IZ) + L%RDZN(IZ-1))
 
 A%ROW(IC) = IP
 A%COL(IP) = IC
@@ -1507,31 +1507,13 @@ END FUNCTION SCARC_ASSIGN_SUBDIAG_TYPE
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAG (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
 USE SCARC_POINTERS, ONLY: L, F, G, A
+USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
-LOGICAL :: IS_INTERNAL_CELL
-
-! Decide wheter cell is interior or exterior cell
-
-F => L%FACE(IOR0)
-SELECT CASE (IOR0)
-   CASE ( 1)
-      IS_INTERNAL_CELL = IX1 > 1
-   CASE (-1)
-      IS_INTERNAL_CELL = IX1 < F%NOP
-   CASE ( 2)
-      IS_INTERNAL_CELL = IY1 > 1
-   CASE (-2)
-      IS_INTERNAL_CELL = IY1 < F%NOP
-   CASE ( 3)
-      IS_INTERNAL_CELL = IZ1 > 1
-   CASE (-3)
-      IS_INTERNAL_CELL = IZ1 < F%NOP
-END SELECT
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
-IF (IS_INTERNAL_CELL) THEN
+IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
    IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
       A%VAL(IP) = A%VAL(IP) + F%INCR_INSIDE
@@ -1574,10 +1556,9 @@ USE SCARC_POINTERS, ONLY: L, A
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
-A%VAL(IP) = - 1.0_EB/((L%DXL(IX+1)*(L%XCOR(IX)-L%XCOR(IX-1)) - 1.0_EB/((L%DXL(IX)*(L%XCOR(IX)-L%XCOR(IX-1)) 
-IF (.NOT.TWO_D) &
-   A%VAL(IP) = - 1.0_EB/((L%DYL(IY+1)*(L%YCOR(IY)-L%YCOR(IY-1)) - 1.0_EB/((L%DYL(IY)*(L%YCOR(IY)-L%YCOR(IY-1)) 
-A%VAL(IP) = - 1.0_EB/((L%DZL(IZ+1)*(L%ZCOR(IZ)-L%ZCOR(IZ-1)) - 1.0_EB/((L%DZL(IZ)*(L%ZCOR(IZ)-L%ZCOR(IZ-1)) 
+A%VAL(IP) = - L%RDX(IX)*(L%RDXN(IX) + L%RDXN(IX-1))
+IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - L%RDY(IY)*(L%RDYN(IY) + L%RDYN(IY-1))
+A%VAL(IP) = A%VAL(IP) - L%RDZ(IZ)*(L%RDZN(IZ) + L%RDZN(IZ-1))
 
 A%ROW(IC) = IP
 A%COL(IP) = IC
@@ -1587,39 +1568,36 @@ A%STENCIL(0) = A%VAL(IP)
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set subdigonal entries for Poisson matrix in compact storage technique on specified face
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
-USE SCARC_POINTERS, ONLY: L, F, G, A
+USE SCARC_POINTERS, ONLY: L, G, A
+USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
-LOGICAL :: IS_INTERNAL_CELL
-
-! Decide wheter cell is interior or exterior cell
-
-F => L%FACE(IOR0)
-SELECT CASE (IOR0)
-   CASE ( 1)
-      IS_INTERNAL_CELL = IX1 > 1
-   CASE (-1)
-      IS_INTERNAL_CELL = IX1 < F%NOP
-   CASE ( 2)
-      IS_INTERNAL_CELL = IY1 > 1
-   CASE (-2)
-      IS_INTERNAL_CELL = IY1 < F%NOP
-   CASE ( 3)
-      IS_INTERNAL_CELL = IZ1 > 1
-   CASE (-3)
-      IS_INTERNAL_CELL = IZ1 < F%NOP
-END SELECT
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
-IF (IS_INTERNAL_CELL) THEN
+
+IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
    IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
-      A%VAL(IP) = A%VAL(IP) + F%INCR_INSIDE
+      SELECT CASE(IOR0)
+         CASE (1)
+            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1-1)
+         CASE (-1)
+            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1)
+         CASE (2)
+            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1-1)
+         CASE (-2)
+            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1)
+         CASE (3)
+            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1-1)
+         CASE (-3)
+            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1)
+      END SELECT
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1
@@ -1637,7 +1615,20 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
 
    IW = SCARC_ASSIGN_SUBDIAG_TYPE (IC, IOR0)           ! get IW of a possibly suitable neighbor at face IOR0
    IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
-      A%VAL(IP) = A%VAL(IP) + F%INCR_FACE
+      SELECT CASE(IOR0)
+         CASE (1)
+            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1-1)
+         CASE (-1)
+            A%VAL(IP) = L%RDX(IX1)*L%RDXN(IX1)
+         CASE (2)
+            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1-1)
+         CASE (-2)
+            A%VAL(IP) = L%RDX(IY1)*L%RDXN(IY1)
+         CASE (3)
+            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1-1)
+         CASE (-3)
+            A%VAL(IP) = L%RDX(IZ1)*L%RDXN(IZ1)
+      END SELECT
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1

@@ -281,7 +281,7 @@ END FUNCTION SCARC_GET_MAX_LEVEL
 !> \brief Setup discretization information
 ! --------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_GRIDS
-USE SCARC_POINTERS, ONLY: M, S, L, G, XCOR, YCOR, ZCOR, XMID, YMID, ZMID, &
+USE SCARC_POINTERS, ONLY: M, S, L, G, XCOR, YCOR, ZCOR, XMID, YMID, ZMID, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &
                           SCARC_POINT_TO_MESH, SCARC_POINT_TO_GRID
 #ifdef WITH_SCARC_DEBUG
 USE SCARC_MESSAGES, ONLY: SCARC_DEBUG_FORMATS
@@ -353,8 +353,10 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
          ! Point to already existing arrays from main FDS program
 
-         XCOR => M%X ;  YCOR => M%Y ;  ZCOR => M%Z
-         XMID => M%XC;  YMID => M%YC;  ZMID => M%ZC
+         XCOR => M%X    ;  YCOR => M%Y    ;  ZCOR => M%Z
+         XMID => M%XC   ;  YMID => M%YC   ;  ZMID => M%ZC
+         RDX  => M%RDX  ;  RDY  => M%RDY  ;  RDZ  => M%RDZ 
+         RDXN => M%RDXN ;  RDYN => M%RDYN ;  RDZN => M%RDZN
 
 #ifdef WITH_SCARC_DEBUG
          CALL SCARC_DEBUG_FORMATS(L%NX)
@@ -411,6 +413,15 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL SCARC_ALLOCATE_REAL1 (L%DXL, 0, L%NX, NSCARC_INIT_ZERO, 'L%DXL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1 (L%DYL, 0, L%NY, NSCARC_INIT_ZERO, 'L%DYL', CROUTINE)
       CALL SCARC_ALLOCATE_REAL1 (L%DZL, 0, L%NZ, NSCARC_INIT_ZERO, 'L%DZL', CROUTINE)
+
+      CALL SCARC_ALLOCATE_REAL1 (L%RDX, 0, L%NX, NSCARC_INIT_ZERO, 'L%RDX', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (L%RDY, 0, L%NY, NSCARC_INIT_ZERO, 'L%RDY', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (L%RDZ, 0, L%NZ, NSCARC_INIT_ZERO, 'L%RDZ', CROUTINE)
+
+      CALL SCARC_ALLOCATE_REAL1 (L%RDXN, 0, L%NX, NSCARC_INIT_ZERO, 'L%RDXN', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (L%RDYN, 0, L%NY, NSCARC_INIT_ZERO, 'L%RDYN', CROUTINE)
+      CALL SCARC_ALLOCATE_REAL1 (L%RDZN, 0, L%NZ, NSCARC_INIT_ZERO, 'L%RDZN', CROUTINE)
+
 
       ! Set step sizes between cell midpoints, use interior step sizes for ghost cells as initial values
       ! correct sizes for ghost cells are exchanged later

@@ -58,6 +58,68 @@ IF (ARE_FACE_NEIGHBORS (NM, NOM) .OR. ARE_DIAG_NEIGHBORS (NM, NOM)) ARE_NEIGHBOR
 END FUNCTION ARE_NEIGHBORS
 
 
+! --------------------------------------------------------------------------------------------------------------------------
+!> \brief Check if two meshes are diagonal neighbors
+! --------------------------------------------------------------------------------------------------------------------------
+LOGICAL FUNCTION IS_INTERNAL_CELL(IX, IY, IZ, IOR0)
+USE SCARC_POINTERS, ONLY: L, F
+INTEGER, INTENT(IN) :: IX, IY, IZ, IOR0
+
+F => L%FACE(IOR0)
+SELECT CASE (IOR0)
+   CASE ( 1)
+      IS_INTERNAL_CELL = IX > 1
+   CASE (-1)
+      IS_INTERNAL_CELL = IX < F%NOP
+   CASE ( 2)
+      IS_INTERNAL_CELL = IY > 1
+   CASE (-2)
+      IS_INTERNAL_CELL = IY < F%NOP
+   CASE ( 3)
+      IS_INTERNAL_CELL = IZ > 1
+   CASE (-3)
+      IS_INTERNAL_CELL = IZ < F%NOP
+END SELECT
+
+END FUNCTION IS_INTERNAL_CELL
+
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Determine if cell has a neighbor and, if yes, return corresponding wall cell index
+! --------------------------------------------------------------------------------------------------------------
+INTEGER FUNCTION SCARC_SET_SUBDIAG_TYPE (IC, IOR0)
+USE SCARC_POINTERS, ONLY: L, G, F, GWC
+INTEGER, INTENT(IN) :: IC, IOR0
+INTEGER :: IXW, IYW, IZW
+INTEGER :: IXG, IYG, IZG
+INTEGER :: IW
+
+SCARC_SET_SUBDIAG_TYPE = -1
+
+F => L%FACE(IOR0)
+SEARCH_WALL_CELLS_LOOP: DO IW = F%NCW0, F%NCW0 + F%NCW - 1
+
+   GWC => G%WALL(IW)
+
+   IF (GWC%NOM == 0) CYCLE
+   IXW = GWC%IXW
+   IYW = GWC%IYW
+   IZW = GWC%IZW
+
+   IF (G%CELL_NUMBER(IXW, IYW, IZW) /= IC) CYCLE
+   IXG = GWC%IXG
+   IYG = GWC%IYG
+   IZG = GWC%IZG
+
+   IF (IS_UNSTRUCTURED.AND.L%IS_SOLID(IXG, IYG, IZG)) RETURN
+   SCARC_SET_SUBDIAG_TYPE = IW
+   RETURN
+
+ENDDO SEARCH_WALL_CELLS_LOOP
+
+END FUNCTION SCARC_SET_SUBDIAG_TYPE
+
+
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Assign handles to currently used grid type
 !  This routine assumes, that L already points to the correct level NL of mesh NL and

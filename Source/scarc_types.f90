@@ -595,10 +595,12 @@ TYPE SCARC_LEVEL_TYPE
    TYPE (SCARC_PRESSURE_TYPE)  :: PRESSURE                     !< Postprocessing of pressure information
 #endif
 
-   ! Coordinate information
+   ! Coordinate information (arrays only allocated for coarser levels, otherwise pointing to official values)
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: XCOR, YCOR, ZCOR    !< Coordinate vectors in x-, y- and z-direction
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: XMID, YMID, ZMID    !< Midpoint vectors in x-, y- and z-direction
    REAL(EB), ALLOCATABLE, DIMENSION (:) :: DXL, DYL, DZL       !< Step size vectors in x-, y- and z-direction
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: RDX, RDY, RDZ       !< Reciprocal of step widths between grid points 
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: RDXN, RDYN, RDZN    !< Reciprocal of step widths between midpoints
    REAL(EB) :: DX , DY , DZ                                    !< Step sizes in x-, y- and z-direction
    REAL(EB) :: DX2, DY2, DZ2                                   !< Half step sizes in x-, y- and z-direction
    REAL(EB) :: DXH, DYH, DZH                                   !< Half step sizes in x-, y- and z-direction
