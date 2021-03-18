@@ -203,6 +203,7 @@ PUBLIC :: SCARC_ITERATIONS                !< Final number of needed iterations f
 PUBLIC :: SCARC_MATRIX                    !< Selection parameter for requested matrix storage technique (compact/bandwise)
 PUBLIC :: SCARC_METHOD                    !< Selection parameter for requested ScaRC variant (Krylov/Multigrid/LU)
 PUBLIC :: SCARC_MKL_PRECISION             !< Selection parameter for requested MKL precision (double/single)
+PUBLIC :: SCARC_POISSON                   !< Selection of Poisson type (separable/inseparable)
 PUBLIC :: SCARC_RESIDUAL                  !< Final residual after call of ScaRC solver
 PUBLIC :: SCARC_TWOLEVEL                  !< Selection parameter for possible twolevel variant (additive/multiplicative)
 
