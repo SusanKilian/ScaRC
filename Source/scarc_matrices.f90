@@ -744,7 +744,7 @@ END FUNCTION SCARC_CELL_WITHIN_MESH
 !    explanation to come ...
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON (NM, NL)
-USE SCARC_POINTERS, ONLY: S, L, G, A, AB, OA, OAB, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &
+USE SCARC_POINTERS, ONLY: M, S, L, G, A, AB, OA, OAB, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
                           SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
@@ -889,7 +889,7 @@ END SUBROUTINE SCARC_SETUP_POISSON
 !    explanation to come ...
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_POISSON_VAR (NM, NL)
-USE SCARC_POINTERS, ONLY: S, L, G, A, OA, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &     ! AB, OAB - not yet implemented for bandwise
+USE SCARC_POINTERS, ONLY: M, S, L, G, A, OA, RDX, RDY, RDZ, RDXN, RDYN, RDZN, &     ! AB, OAB - not yet implemented for bandwise
                           SCARC_POINT_TO_GRID,    SCARC_POINT_TO_OTHER_GRID, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_OTHER_CMATRIX, &
                           SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_OTHER_BMATRIX
