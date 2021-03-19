@@ -29,7 +29,7 @@ CONTAINS
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup sizes for Poisson matrices on requested grid levels
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_METHOD_REQUIREMENTS
+SUBROUTINE SCARC_SETUP_POISSON_REQUIREMENTS
 INTEGER :: NL
 
 SELECT CASE (TYPE_METHOD)
@@ -78,7 +78,7 @@ SELECT CASE (TYPE_METHOD)
    
 END SELECT 
 
-END SUBROUTINE SCARC_SETUP_METHOD_REQUIREMENTS
+END SUBROUTINE SCARC_SETUP_POISSON_REQUIREMENTS
 
 
 ! ------------------------------------------------------------------------------------------------------------------
@@ -886,7 +886,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
    CASE (NSCARC_MATRIX_COMPACT)
    
       ! Allocate main matrix on non-overlapping part of mesh
-
+ 
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
       A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_VAR)
       IF (ITE_PRES == 1) &

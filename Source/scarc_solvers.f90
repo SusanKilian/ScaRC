@@ -25,7 +25,7 @@ CONTAINS
 SUBROUTINE SCARC_SETUP
 USE SCARC_PARSER
 USE SCARC_GRIDS
-USE SCARC_MATRICES, ONLY: SCARC_SETUP_METHOD_REQUIREMENTS, SCARC_SETUP_POISSON_SEPARABLE, SCARC_SETUP_POISSON_GLOBAL
+USE SCARC_MATRICES, ONLY: SCARC_SETUP_POISSON_REQUIREMENTS, SCARC_SETUP_POISSON_SEPARABLE, SCARC_SETUP_POISSON_GLOBAL
 #ifdef WITH_MKL
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_POISSON_SYMMETRIC
 USE SCARC_MKL, ONLY: SCARC_SETUP_MKL_ENVIRONMENT
@@ -71,14 +71,14 @@ ENDIF
 CALL SCARC_SETUP_EXCHANGES
 
 ! Setup information for Poisson matrices on all levels of requested solver:
-! First : - the matrix memory requirement of the entire method is determined
-! Second: - the Poisson matrices must be built for all included grid levels 
-!         - their overlapping parts must be exchanged such that they are globally acting,
-!         - and - in case of MKL preconditioning - their symmetric versions must be built, too
+! First : - determine memory requirement for Poisson matrices on all required grid levels
+! Second: - build Poisson matrices on all required grid levels 
+!         - exchange their overlapping parts such that they are globally acting
+!         - and - in case of MKL preconditioning - also build their symmetric versions
 ! If the separable Poisson system is chosen, then the second part is immediately done once at this point 
 ! If the inseparable Poisson system is chosen, then it is performed in each time step when calling the chosen solver
  
-CALL SCARC_SETUP_METHOD_REQUIREMENTS                               ; IF (STOP_STATUS==SETUP_STOP) RETURN
+CALL SCARC_SETUP_POISSON_REQUIREMENTS                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
 IF (IS_SEPARABLE) THEN
    CALL SCARC_SETUP_POISSON_SEPARABLE                              ; IF (STOP_STATUS==SETUP_STOP) RETURN
    CALL SCARC_SETUP_POISSON_GLOBAL
