@@ -388,11 +388,14 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_WALL_TYPE), ALLOCATABLE, DIMENSION(:) :: WALL   !< wall information
 
    ! Matrices in different storage types
-   TYPE (SCARC_BMATRIX_TYPE) :: POISSONB                       !< Poisson matrix in bandwise storage technique
-   TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
-   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_VAR                    !< Poisson matrix in compact storage technique (variable entries)
-   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
-   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE_VAR                    !< Laplace matrix in compact storage technique (variable entries)
+   TYPE (SCARC_BMATRIX_TYPE) :: POISSONB                       !< Poisson matrix in bandwise storage 
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage (default)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_VAR                    !< Poisson matrix in compact storage (variable entries)
+   TYPE (SCARC_CMATRIX_TYPE) :: POISSON_VAR_SYM                !< Poisson matrix in compact storage (variable entries, symmetric)
+
+   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage 
+   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE_VAR                    !< Laplace matrix in compact storage (variable entries)
+   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE_VAR_SYM                !< Laplace matrix in compact storage (variable entries, symmetric)
 
 #ifdef WITH_MKL
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix 
