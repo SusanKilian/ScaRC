@@ -789,6 +789,7 @@ INTEGER :: NDUMMY
 A%CNAME = TRIM(CID)
 A%NTYPE = NTYPE
 A%NPREC = NPREC
+A%EXISTING = .TRUE.
 NDUMMY = NL
 
 #ifdef WITH_SCARC_DEBUG
@@ -831,6 +832,7 @@ A%NTYPE       = 0
 A%NPREC       = 0
 A%STENCIL     = 0
 A%POS         = 0
+A%EXISTING    = .FALSE.
 
 CALL SCARC_UPDATE_STORAGE(NSCARC_DATA_CMATRIX, NSCARC_STORAGE_REMOVE, -1, -1, -1, -1, -1, -1, -1, -1, CID, CSCOPE)
 
@@ -841,6 +843,7 @@ IF (ALLOCATED(A%COLG))  CALL SCARC_DEALLOCATE_INT1  (A%COLG,  'A%COLG' , CSCOPE)
 IF (ALLOCATED(A%RELAX)) CALL SCARC_DEALLOCATE_REAL1 (A%RELAX, 'A%RELAX', CSCOPE)
 
 END SUBROUTINE SCARC_DEALLOCATE_CMATRIX
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Insert value at specified position in matrix of compact storage format

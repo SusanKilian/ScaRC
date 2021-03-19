@@ -105,6 +105,8 @@ LOGICAL :: SCARC_DUMP  = .FALSE.                                 !< Dump out sev
   
 LOGICAL :: IS_STRUCTURED         = .FALSE.                       !< Flag for structured discretization
 LOGICAL :: IS_UNSTRUCTURED       = .FALSE.                       !< Flag for unstructured discretization
+LOGICAL :: IS_SEPARABLE          = .TRUE.                        !< Flag for separable Poisson system
+LOGICAL :: IS_INSEPARABLE        = .TRUE.                        !< Flag for inseparable Poisson system
 LOGICAL :: IS_PURE_NEUMANN       = .FALSE.                       !< Flag for pure Neumann system
 LOGICAL :: IS_MG                 = .FALSE.                       !< Flag for Multigrid-method
 LOGICAL :: IS_AMG                = .FALSE.                       !< Flag for Algebraic Multigrid-method

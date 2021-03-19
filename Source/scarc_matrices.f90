@@ -27,36 +27,12 @@ CONTAINS
 
 
 ! ------------------------------------------------------------------------------------------------------------------
-!> \brief Setup system of equations (Poisson matrix + BC's) for different variants of ScaRC
-! Define matrix stencils and initialize matrices and boundary conditions on all needed levels
-! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_SYSTEMS
-  
-CALL SCARC_SETUP_POISSON_DIMENSIONS
-
-SELECT_POISSON_TYPE: SELECT CASE (TYPE_POISSON)
-   CASE (NSCARC_POISSON_SEPARABLE)
-      CALL SCARC_SETUP_POISSON_SEPARABLE
-   CASE (NSCARC_POISSON_INSEPARABLE)
-      CALL SCARC_SETUP_POISSON_INSEPARABLE
-END SELECT SELECT_POISSON_TYPE
-
-CALL SCARC_SETUP_POISSON_GLOBAL
-
-#ifdef WITH_MKL
-CALL SCARC_SETUP_POISSON_SYMMETRIC
-#endif
-
-END SUBROUTINE SCARC_SETUP_SYSTEMS
-
-
-! ------------------------------------------------------------------------------------------------------------------
 !> \brief Setup sizes for Poisson matrices on requested grid levels
 ! ------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_POISSON_DIMENSIONS
+SUBROUTINE SCARC_SETUP_METHOD_REQUIREMENTS
 INTEGER :: NL
 
-SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
+SELECT CASE (TYPE_METHOD)
 
    ! -------- Global Krylov method
 
@@ -100,9 +76,9 @@ SELECT_SCARC_METHOD_SIZES: SELECT CASE (TYPE_METHOD)
          CALL SCARC_SETUP_POISSON_SIZES (NLEVEL_MIN)            ! ... for global Poisson matrix (only if requested)
       CALL SCARC_SETUP_LOCAL_LAPLACE_SIZES (NLEVEL_MIN)         ! ... for local Laplace matrices
    
-END SELECT SELECT_SCARC_METHOD_SIZES
+END SELECT 
 
-END SUBROUTINE SCARC_SETUP_POISSON_DIMENSIONS
+END SUBROUTINE SCARC_SETUP_METHOD_REQUIREMENTS
 
 
 ! ------------------------------------------------------------------------------------------------------------------
@@ -912,8 +888,12 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
       ! Allocate main matrix on non-overlapping part of mesh
 
       CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
-      CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON_VAR)
+      IF (A%EXISTING) THEN
+         A%VAL = 0.0_EB
+      ELSE
+         CALL SCARC_ALLOCATE_CMATRIX (A, NL, NSCARC_PRECISION_DOUBLE, NSCARC_MATRIX_FULL, 'G%POISSON', CROUTINE)
+      ENDIF
 
       IF (NL == NLEVEL_MIN) THEN
          RDX  => M%RDX ;  RDY  => M%RDY ;  RDZ  => M%RDZ
@@ -1599,18 +1579,18 @@ INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 REAL(EB) :: RXP, RXM, RYP, RYM, RZP, RZM
 
-RXP = 2.0_EB /(M%RHO(IX+1,IY  ,IZ  ) + M%RHO(IX  ,IY  ,IZ  ))
-RXM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX-1,IY  ,IZ  ))
+RXP = 2.0_EB /(M%RHO(IX+1,IY,IZ) + M%RHO(IX  ,IY,IZ))
+RXM = 2.0_EB /(M%RHO(IX  ,IY,IZ) + M%RHO(IX-1,IY,IZ))
 A%VAL(IP) = - RDX(IX)*(RDXN(IX)*RXP + RDXN(IX-1)*RXM)
 
 IF (.NOT.TWO_D) THEN
-   RYP = 2.0_EB /(M%RHO(IX  ,IY+1,IZ  ) + M%RHO(IX  ,IY  ,IZ  ))
-   RYM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX  ,IY-1,IZ  ))
+   RYP = 2.0_EB /(M%RHO(IX,IY+1,IZ) + M%RHO(IX,IY  ,IZ))
+   RYM = 2.0_EB /(M%RHO(IX,IY  ,IZ) + M%RHO(IX,IY-1,IZ))
    A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY)*RYP + RDYN(IY-1)*RYM)
 ENDIF
 
-RZP = 2.0_EB /(M%RHO(IX  ,IY  ,IZ+1) + M%RHO(IX  ,IY  ,IZ  ))
-RZM = 2.0_EB /(M%RHO(IX  ,IY  ,IZ  ) + M%RHO(IX  ,IY  ,IZ-1))
+RZP = 2.0_EB /(M%RHO(IX,IY,IZ+1) + M%RHO(IX,IY,IZ  ))
+RZM = 2.0_EB /(M%RHO(IX,IY,IZ  ) + M%RHO(IX,IY,IZ-1))
 A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ)*RZP + RDZN(IZ-1)*RZM)
 
 A%ROW(IC) = IP
