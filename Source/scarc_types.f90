@@ -226,8 +226,6 @@ TYPE SCARC_CMATRIX_TYPE
 
    CHARACTER(40) :: CNAME                              !< Name of matrix
 
-   LOGICAL :: EXISTING = .FALSE.
-
 END TYPE SCARC_CMATRIX_TYPE
 
 !> \brief Bandwise storage technique for matrices
