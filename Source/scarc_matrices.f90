@@ -1595,8 +1595,8 @@ A%ROW(IC) = IP
 A%COL(IP) = IC
 
 A%STENCIL(0) = A%VAL(IP)
-
 IP = IP + 1
+
 END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
 
 
@@ -1612,8 +1612,9 @@ INTEGER :: IW
 REAL(EB) :: R2
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
+! E.g.: ABS(IOR0)=1: then IX2 is either IX1-1 or IX1+1, so build corresponding meanvalue for RHO
 
-R2 = 2.0_EB /(M%RHO(IX1,IY1,IZ1) + M%RHO(IX2,IY2,IZ2))
+R2 = 2.0_EB /(M%RHO(IX1, IY1, IZ1) + M%RHO(IX2, IY2, IZ2))
 
 IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
