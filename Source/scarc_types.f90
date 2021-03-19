@@ -392,6 +392,7 @@ TYPE SCARC_GRID_TYPE
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON                        !< Poisson matrix in compact storage technique (default)
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON_VAR                    !< Poisson matrix in compact storage technique (variable entries)
    TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE                        !< Laplace matrix in compact storage technique
+   TYPE (SCARC_CMATRIX_TYPE) :: LAPLACE_VAR                    !< Laplace matrix in compact storage technique (variable entries)
 
 #ifdef WITH_MKL
    TYPE (SCARC_CMATRIX_TYPE) :: POISSON_SYM                    !< Symmetric part of compact Poisson matrix 
