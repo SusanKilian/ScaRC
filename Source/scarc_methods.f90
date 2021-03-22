@@ -1144,7 +1144,7 @@ USE SCARC_POINTERS, ONLY: PRES
 #endif
 USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL
-REAL(EB) :: VAL
+REAL(EB) :: VAL, DIFF, B_SAVE
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 
 #ifdef WITH_SCARC_DEBUG
@@ -1197,14 +1197,23 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
          !$OMP END PARALLEL DO
 
          IF (IS_INSEPARABLE) THEN
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES IN WORKSPACE-INSEP')
+#endif
             DO IC = 1, G%NC
                I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
-               ST%B(IC) = ST%B(IC) - ((M%KRES(I+1,J,K) - M%KRES(I,J,K))*M%RDXN(I) -              &
+               B_SAVE = ST%B(IC)
+               DIFF =              - ((M%KRES(I+1,J,K) - M%KRES(I,J,K))*M%RDXN(I) -              &
                                       (M%KRES(I,J,K) - M%KRES(I-1,J,K))*M%RDXN(I-1))*M%RDX(I)    &
                                    - ((M%KRES(I,J+1,K) - M%KRES(I,J,K))*M%RDYN(J) -              &
                                       (M%KRES(I,J,K) - M%KRES(I,J-1,K))*M%RDYN(J-1))*M%RDY(J)    &
                                    - ((M%KRES(I,J,K+1) - M%KRES(I,J,K))*M%RDZN(K) -              &
                                       (M%KRES(I,J,K) - M%KRES(I,J,K-1))*M%RDZN(K-1))*M%RDZ(K)
+               ST%B(IC) = ST%B(IC) - DIFF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SAVE, ST%B(IC)
+#endif
             ENDDO                         
          ENDIF
 
@@ -1692,6 +1701,7 @@ WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
    CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
    CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+   IF (IS_INSEPARABLE) CALL SCARC_UPDATE_HP(NLEVEL_MIN)
 #ifdef WITH_SCARC_POSTPROCESSING
    IF (SCARC_DUMP) THEN
       CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
@@ -2683,7 +2693,9 @@ SUBROUTINE SCARC_UPDATE_MAINCELLS(NL)
 USE SCARC_POINTERS, ONLY: M, G, L, ST, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, IC 
-INTEGER :: I, J, K
+#ifdef WITH_SCARC_DEBUG
+INTEGER :: I, K
+#endif
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -2703,27 +2715,15 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
 
    HP = 0.0_EB
 
-   IF (IS_SEPARABLE) THEN
-      !!$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-      DO IC = 1, G%NC
-         HP (G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = ST%X(IC)
+   !!$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+   DO IC = 1, G%NC
+      HP (G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = ST%X(IC)
 #ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS-SEP: IC, IX, IY, IZ, HP(IC):', &
-                                                IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
+      WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS-SEP: IC, IX, IY, IZ, HP(IC):', &
+                                             IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
 #endif
-      ENDDO
-      !!$OMP END PARALLEL DO 
-
-   ELSE
-      DO IC = 1, G%NC
-         I = G%ICX(IC) ;  J = G%ICY(IC) ;  K = G%ICZ(IC)
-         HP (I,J,K) = ST%X(IC)/M%RHO(I,J,K) + M%KRES(I,J,K)
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS-INSEP: IC, IX, IY, IZ, HP(IC):', &
-                                                IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
-#endif
-      ENDDO
-   ENDIF
+   ENDDO
+   !!$OMP END PARALLEL DO 
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'UPDATE_MAIN_CELLS:2: HP'
@@ -2857,6 +2857,55 @@ ENDDO
    
 END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
    
+! ----------------------------------------------------------------------------------------------------------------------
+!> \brief Reset HP
+! ----------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UPDATE_HP(NL)
+USE SCARC_POINTERS, ONLY: M, L, ST, HP, SCARC_POINT_TO_GRID
+INTEGER, INTENT(IN) :: NL
+INTEGER :: NM
+INTEGER :: I, J, K
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   ST  => L%STAGE(NSCARC_STAGE_ONE)
+
+   IF (PREDICTOR) THEN
+      HP => M%H
+   ELSE
+      HP => M%HS
+   ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'UPDATE_MAIN_CELLS:1: HP'
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP BEFORE UPDATE_HP')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE UPDATE_HP')
+#endif
+
+   !!$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+   DO K = 1, L%NZ
+      DO J = 1, L%NY
+         DO I = 1, L%NX
+            HP (I,J,K) = HP(I,J,K)/M%RHO(I,J,K) + M%KRES(I,J,K)
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,'(A, 3I6, E14.6)') 'UPDATE_MAIN_CELLS-INSEP: IC, IX, IY, IZ, HP:', &
+                                             I,J,K, HP(I,J,K)
+#endif
+         ENDDO
+      ENDDO
+   ENDDO
+   !!$OMP END PARALLEL DO 
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'UPDATE_HP:2: HP'
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP AFTER UPDATE_HP')
+#endif
+
+ENDDO
+
+END SUBROUTINE SCARC_UPDATE_HP
+
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Preconditioning method which is based on the following input and output convention:
 !  - the residual which has to be preconditioned is passed in via vector R

@@ -2252,7 +2252,7 @@ END SUBROUTINE SCARC_SETUP_MATRIX_MKL
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY (NM, NL)
-USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
 
@@ -2264,7 +2264,7 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
  
    CASE (NSCARC_MATRIX_COMPACT)
 
-      A => G%POISSON
+      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
 
       ! Setup condensing if there are no Dirichlet BC's 
 
@@ -2412,7 +2412,7 @@ END SUBROUTINE SCARC_SETUP_BOUNDARY
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY_VAR (NM, NL)
-USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 USE SCARC_POINTERS, ONLY: RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
@@ -2426,7 +2426,7 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
  
    CASE (NSCARC_MATRIX_COMPACT)
 
-      A => G%POISSON
+      A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
 
 #ifdef WITH_SCARC_DEBUG
       CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITHOUT BDRY')
