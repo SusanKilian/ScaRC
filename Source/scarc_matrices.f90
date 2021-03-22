@@ -2521,7 +2521,54 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
 
          ELSE IF (GWC%BTYPE == NEUMANN) THEN
             IP = A%ROW(IC)
-            A%VAL(IP) = A%VAL(IP) + F%INCR_BOUNDARY
+            SCAL = -1.0_EB
+            IF (TWO_D) THEN
+               SELECT CASE (IOR0)
+                  CASE (1)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)),A%VAL(IP)
+#endif
+                  CASE (-1)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)), A%VAL(IP)
+#endif
+                  CASE (3)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)), A%VAL(IP)
+#endif
+                  CASE (-3)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)), A%VAL(IP)
+#endif
+               END SELECT
+            ELSE
+               SELECT CASE (IOR0)
+                  CASE (1)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                  CASE (-1)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                  CASE (2)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(M%RHO(I,J-1,K) + M%RHO(I,J,K)))
+                  CASE (-2)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J+1,K)))
+                  CASE (3)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                  CASE (-3)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+               END SELECT
+            ENDIF
          ENDIF
 
       ENDDO 
