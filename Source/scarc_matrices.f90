@@ -215,7 +215,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ! For all different possible Krylov variants, first setup Poisson matrix on finest level including BC's 
 
          CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
-         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_VAR(NM, NLEVEL_MIN)
 
          ! Depending on the requested preconditioner, also assemble the Poisson matrix with BC's on specific coarser levels
 
@@ -229,21 +229,9 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IF (IS_CG_GMG) THEN
                   DO NL = NLEVEL_MIN+1, NLEVEL_MAX
                      CALL SCARC_SETUP_POISSON_VAR (NM, NL)
-                     CALL SCARC_SETUP_BOUNDARY(NM, NL)
+                     CALL SCARC_SETUP_BOUNDARY_VAR(NM, NL)
                   ENDDO
                ENDIF
-
-#ifdef WITH_MKL
-            ! In case of LU-decomposition as preconditioner
-            ! locally acting: PARDISO from MKL as preconditioners on fine level with possible coarse grid correction
-
-            CASE (NSCARC_RELAX_MKL)
-
-               IF (TYPE_SCOPE(1) == NSCARC_SCOPE_LOCAL .AND. HAS_TWO_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
-                  CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MAX)
-                  CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MAX)
-               ENDIF
-#endif
 
             ! in case of default preconditioners (JACOBI/SSOR/FFT/...):
             ! if there is an additional coarse grid correction which is NOT AMG-based, 
@@ -253,7 +241,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    
                IF (HAS_TWO_LEVELS .AND. .NOT.HAS_AMG_LEVELS) THEN
                   CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MAX)
-                  CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MAX)
+                  CALL SCARC_SETUP_BOUNDARY_VAR(NM, NLEVEL_MAX)
                ENDIF
 
          END SELECT SELECT_KRYLOV_PRECON
@@ -265,7 +253,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          ! For all different possible multigrid-variants, first setup Poisson matrix on finest level including BC's 
 
          CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
-         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_VAR(NM, NLEVEL_MIN)
 
          ! On case of a  geometric multigrid, assemble standard n-point-matrix hierarchy on all coarser levels, too
          ! Note: in case of an algebraic multigrid, this will be done in a separate routine later
@@ -273,7 +261,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          IF (TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC) THEN
             DO NL = NLEVEL_MIN + 1, NLEVEL_MAX
                CALL SCARC_SETUP_POISSON_VAR (NM, NL)
-               CALL SCARC_SETUP_BOUNDARY(NM, NL)
+               CALL SCARC_SETUP_BOUNDARY_VAR(NM, NL)
             ENDDO
          ENDIF
 
@@ -292,7 +280,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          TYPE_SCOPE(0) = NSCARC_SCOPE_GLOBAL
          CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
          CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
-         CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+         CALL SCARC_SETUP_BOUNDARY_VAR(NM, NLEVEL_MIN)
 
          ! Then assemble unstructured matrix with homogeneous Dirichlet boundary conditions along
          ! external boundaries and special MGM BC-settings along mesh interfaces
@@ -300,7 +288,7 @@ MESHES_POISSON_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
          IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
             CALL SCARC_SETUP_POISSON_VAR (NM, NLEVEL_MIN)
-            CALL SCARC_SETUP_BOUNDARY(NM, NLEVEL_MIN)
+            CALL SCARC_SETUP_BOUNDARY_VAR(NM, NLEVEL_MIN)
          ENDIF
 
          TYPE_SCOPE(0) = NSCARC_SCOPE_LOCAL
@@ -771,6 +759,9 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
                IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
                IC = G%CELL_NUMBER(IX, IY, IZ)
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '================ IC = ', IC
+#endif
                ! Main diagonal 
 
                CALL SCARC_SETUP_MAINDIAG (IC, IX, IY, IZ, IP)
@@ -918,6 +909,9 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
                IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(IX, IY, IZ)) CYCLE
                IC = G%CELL_NUMBER(IX, IY, IZ)
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '================ IC = ', IC
+#endif
                ! Main diagonal 
 
                CALL SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
@@ -1484,8 +1478,14 @@ INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 
 A%VAL(IP) = - RDX(IX)*(RDXN(IX) + RDXN(IX-1))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, 3E12.4)') 'MAIN-X: IC, IX , IY , IZ , IP, A%VAL(IP):', IC, IX, IY, IZ, IP, A%VAL(IP)
+#endif
 IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY) + RDYN(IY-1))
 A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ) + RDZN(IZ-1))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, 3E12.4)') 'MAIN-Z: IC, IX , IY , IZ , IP, A%VAL(IP):', IC, IX, IY, IZ, IP, A%VAL(IP)
+#endif
 
 A%ROW(IC) = IP
 A%COL(IP) = IC
@@ -1524,6 +1524,9 @@ IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
          CASE (-3)
             A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I4, 3E12.4)') 'SUB-I : IC, IX1, IY1, IZ1, IP, IOR0, A%VAL(IP):', IC, IX1, IY1, IZ1, IP, IOR0, A%VAL(IP)
+#endif
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1
@@ -1555,6 +1558,9 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
          CASE (-3)
             A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)
       END SELECT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I4, 3E12.4)') 'SUB-E : IC, IX1, IY1, IZ1, IP, IOR0, A%VAL(IP):', IC, IX1, IY1, IZ1, IP, IOR0, A%VAL(IP)
+#endif
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1
@@ -1581,6 +1587,10 @@ RXP = 2.0_EB /(M%RHO(IX+1,IY,IZ) + M%RHO(IX  ,IY,IZ))
 RXM = 2.0_EB /(M%RHO(IX  ,IY,IZ) + M%RHO(IX-1,IY,IZ))
 A%VAL(IP) = - RDX(IX)*(RDXN(IX)*RXP + RDXN(IX-1)*RXM)
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, 3E12.4)') 'MAIN-X: IC, IX , IY , IZ , IP, RXP, RXM, A%VAL(IP):', IC, IX, IY, IZ, IP, RXP, RXM, A%VAL(IP)
+#endif
+
 IF (.NOT.TWO_D) THEN
    RYP = 2.0_EB /(M%RHO(IX,IY+1,IZ) + M%RHO(IX,IY  ,IZ))
    RYM = 2.0_EB /(M%RHO(IX,IY  ,IZ) + M%RHO(IX,IY-1,IZ))
@@ -1591,6 +1601,9 @@ RZP = 2.0_EB /(M%RHO(IX,IY,IZ+1) + M%RHO(IX,IY,IZ  ))
 RZM = 2.0_EB /(M%RHO(IX,IY,IZ  ) + M%RHO(IX,IY,IZ-1))
 A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ)*RZP + RDZN(IZ-1)*RZM)
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, 3E12.4)') 'MAIN-Z: IC, IX , IY , IZ , IP, RZP, RZM, A%VAL(IP):', IC, IX, IY, IZ, IP, RZP, RZM, A%VAL(IP)
+#endif
 A%ROW(IC) = IP
 A%COL(IP) = IC
 
@@ -1633,6 +1646,10 @@ IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
          CASE (-3)
             A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
       END SELECT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-I : IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP):', &
+                                               IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP)
+#endif
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1
@@ -1664,6 +1681,10 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
          CASE (-3)
             A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
       END SELECT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-E : IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP):', &
+                                               IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP)
+#endif
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
       IP = IP + 1
@@ -2377,6 +2398,215 @@ WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:'
 END SELECT 
 
 END SUBROUTINE SCARC_SETUP_BOUNDARY
+
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Insert correct boundary conditions into system matrix
+
+! If A is a pure Neumann matrix, get neighboring cell indices of communicated stencil legs for 
+! condensed system, also save values and column indices of last matrix row of last mesh
+
+! Set correct boundary conditions for system matrix
+! Take care of whether the structured or unstructured discretization is used
+
+! If there are no Dirichlet BC's transform sytem into condensed one by replacing the
+! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_SETUP_BOUNDARY_VAR (NM, NL)
+USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: RDX, RDY, RDZ, RDXN, RDYN, RDZN
+INTEGER, INTENT(IN) :: NM, NL
+INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
+REAL(EB) :: SCAL=1.0_EB, ASAVE
+
+CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+SELECT CASE (SET_MATRIX_TYPE(NL))
+
+   ! ---------- Matrix in compact storage technique
+ 
+   CASE (NSCARC_MATRIX_COMPACT)
+
+      A => G%POISSON
+
+#ifdef WITH_SCARC_DEBUG
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITHOUT BDRY')
+#endif
+      ! Setup condensing if there are no Dirichlet BC's 
+
+      IF (IS_PURE_NEUMANN) CALL SCARC_SETUP_CMATRIX_CONDENSED(NM)
+
+      ! Set correct boundary conditions 
+
+      DO IW = 1, G%NW
+
+         GWC => G%WALL(IW)
+         IOR0 = GWC%IOR
+         IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
+
+         F  => L%FACE(IOR0)
+
+         I = GWC%IXW
+         J = GWC%IYW
+         K = GWC%IZW
+
+         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+
+         NOM = GWC%NOM
+         IC  = G%CELL_NUMBER(I, J, K)
+         GWC%ICW = IC
+
+         ! SPD-matrix with mixture of Dirichlet and Neumann BC's according to BTYPE
+
+         IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0) THEN
+
+            IP = A%ROW(IC)
+            SELECT CASE (GWC%BTYPE)
+               CASE (DIRICHLET)
+                  SCAL =  1.0_EB
+               CASE (NEUMANN)
+                  SCAL = -1.0_EB
+            END SELECT
+
+            IF (GWC%BTYPE == DIRICHLET .OR. GWC%BTYPE == NEUMANN) THEN
+            IF (TWO_D) THEN
+               SELECT CASE (IOR0)
+                  CASE (1)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)),A%VAL(IP)
+#endif
+                  CASE (-1)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)), A%VAL(IP)
+#endif
+                  CASE (3)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)), A%VAL(IP)
+#endif
+                  CASE (-3)
+                     ASAVE = A%VAL(IP)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)), A%VAL(IP)
+#endif
+               END SELECT
+            ELSE
+               SELECT CASE (IOR0)
+                  CASE (1)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                  CASE (-1)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                  CASE (2)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(M%RHO(I,J-1,K) + M%RHO(I,J,K)))
+                  CASE (-2)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J+1,K)))
+                  CASE (3)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                  CASE (-3)
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+               END SELECT
+            ENDIF
+         ENDIF
+
+         ! Purely Neumann matrix
+
+         ELSE IF (GWC%BTYPE == NEUMANN) THEN
+            IP = A%ROW(IC)
+            A%VAL(IP) = A%VAL(IP) + F%INCR_BOUNDARY
+         ENDIF
+
+      ENDDO 
+
+      ! Transform into condensed system, if there are no Dirichlet BC's 
+
+      IF (IS_PURE_NEUMANN) THEN
+         DO ICO = 1, A%N_CONDENSED
+            ACO => A%CONDENSED(ICO)
+            DO ICOL = 1, ACO%N_COL
+               IP = ACO%PTR(ICOL)
+               A%VAL(IP) = ACO%VAL2(ICOL)
+            ENDDO
+         ENDDO
+      ENDIF 
+
+#ifdef WITH_SCARC_DEBUG
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY')
+#endif
+ 
+   ! ---------- Matrix in bandwise storage technique
+ 
+   CASE (NSCARC_MATRIX_BANDWISE)
+
+      ! Preset matrix switch if no Dirichlet BC's available
+
+      AB => G%POISSONB
+      IF (IS_PURE_NEUMANN) CALL SCARC_SETUP_BMATRIX_CONDENSED(NM)
+
+      ! Set right boundary conditions 
+
+      DO IW = 1, G%NW
+
+         GWC => G%WALL(IW)
+         IOR0 = GWC%IOR
+         IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE     
+
+         F  => L%FACE(IOR0)
+
+         I = GWC%IXW
+         J = GWC%IYW
+         K = GWC%IZW
+
+         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+
+         NOM  = GWC%NOM
+         GWC%ICW =G%CELL_NUMBER(I, J, K)
+         IC = G%CELL_NUMBER(I, J, K)
+
+         ! SPD-matrix with mixture of Dirichlet and Neumann BC's according to the SETTING of BTYPE
+
+         IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0) THEN
+
+            SELECT CASE (GWC%BTYPE)
+               CASE (DIRICHLET)
+                  AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) - F%INCR_BOUNDARY
+               CASE (NEUMANN)
+                  AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) + F%INCR_BOUNDARY
+            END SELECT
+
+         ! Purely Neumann matrix
+
+         ELSE
+            IF (GWC%BTYPE == NEUMANN) AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) + F%INCR_BOUNDARY
+         ENDIF
+
+      ENDDO 
+   
+      ! Transform into condensed system, if there are no Dirichlet BC's 
+
+      IF (IS_PURE_NEUMANN) THEN
+         DO ICO = 1, AB%N_CONDENSED
+            ABCO => AB%CONDENSED(ICO)
+            IF (ICO == 1) THEN
+               AB%VAL(ABCO%ICO, 1:AB%N_STENCIL) = ABCO%VAL2(1:AB%N_STENCIL)
+            ELSE
+               IP = AB%POS(ABCO%IOR0)
+               AB%VAL(ABCO%ICO, IP) = ABCO%VAL2(IP)
+            ENDIF
+         ENDDO
+      ENDIF 
+ 
+END SELECT 
+
+END SUBROUTINE SCARC_SETUP_BOUNDARY_VAR
 
 
 #ifdef WITH_MKL

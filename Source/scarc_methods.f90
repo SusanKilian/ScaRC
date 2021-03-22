@@ -1190,10 +1190,23 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
 
          !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
          DO IC = 1, G%NC
-            ST%X(IC) = HP(G%ICX(IC), G%ICY(IC), G%ICZ(IC))        ! use last iterate as initial solution
-            ST%B(IC) = PRHS(G%ICX(IC), G%ICY(IC), G%ICZ(IC))      ! get new RHS from surrounding code
+            I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
+            ST%X(IC) = HP(I, J, K)                              ! use last iterate as initial solution
+            ST%B(IC) = PRHS(I, J, K)                            ! get new RHS from surrounding code
          ENDDO                         
          !$OMP END PARALLEL DO
+
+         IF (IS_INSEPARABLE) THEN
+            DO IC = 1, G%NC
+               I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
+               ST%B(IC) = ST%B(IC) - ((M%KRES(I+1,J,K) - M%KRES(I,J,K))*M%RDXN(I) -              &
+                                      (M%KRES(I,J,K) - M%KRES(I-1,J,K))*M%RDXN(I-1))*M%RDX(I)    &
+                                   - ((M%KRES(I,J+1,K) - M%KRES(I,J,K))*M%RDYN(J) -              &
+                                      (M%KRES(I,J,K) - M%KRES(I,J-1,K))*M%RDYN(J-1))*M%RDY(J)    &
+                                   - ((M%KRES(I,J,K+1) - M%KRES(I,J,K))*M%RDZN(K) -              &
+                                      (M%KRES(I,J,K) - M%KRES(I,J,K-1))*M%RDZN(K-1))*M%RDZ(K)
+            ENDDO                         
+         ENDIF
 
          !!$OMP PARALLEL 
          MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
@@ -2670,9 +2683,7 @@ SUBROUTINE SCARC_UPDATE_MAINCELLS(NL)
 USE SCARC_POINTERS, ONLY: M, G, L, ST, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, IC 
-#ifdef WITH_SCARC_DEBUG
-INTEGER :: I, K
-#endif
+INTEGER :: I, J, K
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -2691,15 +2702,28 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
 #endif
 
    HP = 0.0_EB
-   !!$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
-   DO IC = 1, G%NC
-      HP (G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = ST%X(IC)
-#ifdef WITH_SCARC_DEBUG2
-      WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS: IC, IX, IY, IZ, HP(IC):', &
-                                             IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
+
+   IF (IS_SEPARABLE) THEN
+      !!$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
+      DO IC = 1, G%NC
+         HP (G%ICX(IC), G%ICY(IC), G%ICZ(IC)) = ST%X(IC)
+#ifdef WITH_SCARC_DEBUG
+         WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS-SEP: IC, IX, IY, IZ, HP(IC):', &
+                                                IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
 #endif
-   ENDDO
-   !!$OMP END PARALLEL DO 
+      ENDDO
+      !!$OMP END PARALLEL DO 
+
+   ELSE
+      DO IC = 1, G%NC
+         I = G%ICX(IC) ;  J = G%ICY(IC) ;  K = G%ICZ(IC)
+         HP (I,J,K) = ST%X(IC)/M%RHO(I,J,K) + M%KRES(I,J,K)
+#ifdef WITH_SCARC_DEBUG
+         WRITE(MSG%LU_DEBUG,'(A, 4I6, E14.6)') 'UPDATE_MAIN_CELLS-INSEP: IC, IX, IY, IZ, HP(IC):', &
+                                                IC, G%ICX(IC), G%ICY(IC), G%ICZ(IC), ST%X(IC)
+#endif
+      ENDDO
+   ENDIF
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'UPDATE_MAIN_CELLS:2: HP'
