@@ -1,20 +1,19 @@
-&HEAD CHID='scarc_insep_2mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
+&HEAD CHID='scarc_insep_8mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
-&MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
-&MESH IJK=8,1,8  XB=0.8,1.6,-0.01,0.01,0.0,0.8 /
+&MESH IJK=8,1,8, XB=0.0,0.8,-0.01,0.01,0.0,0.8, MULT_ID='mesh' /
+&MULT ID='mesh', DX=0.8, DY=0.02, DZ=0.8, I_UPPER=7, J_UPPER=0, K_UPPER=0 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'SCARC' , SCARC_POISSON = 'INSEPARABLE', SCARC_MATRIX = 'COMPACT' /
+&PRES SOLVER = 'SCARC', SCARC_MATRIX = 'COMPACT', SCARC_POISSON = 'INSEPARABLE', CHECK_POISSON = .TRUE./
 
 &TIME T_END=0.01, DT=0.002 /
 
+&SURF ID='INFLOW',VEL=-2.0, RAMP_V='IN' /
 &SPEC ID='SCALAR',MW=10,VISCOSITY=0.001,SPECIFIC_HEAT=1./ RHO_1=1
 
-&SURF ID='INFLOW',VEL=-1.0, RAMP_V='IN' /
-
-&VENT MB='XMIN', SURF_ID='INFLOW' /
+&VENT XB=0.0,0.0,-0.01,0.01,0.3,0.5 SURF_ID='INFLOW' /
 &VENT MB='XMAX', SURF_ID='OPEN' /
 
 &OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
@@ -34,6 +33,15 @@
 &DEVC XYZ=0.00,0.00,0.00, QUANTITY='SCARC RESIDUAL',ID='scarc-res' /
 
 &RAMP ID='IN', T=  0.00,  F=  0.00 /
-&RAMP ID='IN', T=  1.00,  F=  0.10 /
+&RAMP ID='IN', T=  0.05,  F=  0.31 /
+&RAMP ID='IN', T=  0.10,  F=  0.59 /
+&RAMP ID='IN', T=  0.15,  F=  0.81 /
+&RAMP ID='IN', T=  0.20,  F=  0.95 /
+&RAMP ID='IN', T=  0.25,  F=  1.00 /
+&RAMP ID='IN', T=  0.30,  F=  0.95 /
+&RAMP ID='IN', T=  0.35,  F=  0.81 /
+&RAMP ID='IN', T=  0.40,  F=  0.59 /
+&RAMP ID='IN', T=  0.45,  F=  0.31 /
+&RAMP ID='IN', T=  0.50,  F=  0.00 /
  
 &TAIL /
