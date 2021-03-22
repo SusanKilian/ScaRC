@@ -26,7 +26,7 @@ CONTAINS
 !> \brief POSTPROCESSING version only: Dump matrix and vectors belonging to current pressure system 
 ! ----------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_SYSTEM (NSTACK, ITYPE)
-USE SCARC_POINTERS, ONLY: SV, ST, S, L, G, A, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: SV, ST, S, L, G, A, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN):: NSTACK, ITYPE
 INTEGER  :: NM, IC, JC, JCG, IP, IW, IOR0, N
 INTEGER  :: COLUMNSL(7), COLUMNSG(7)
@@ -64,7 +64,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       CASE(NSCARC_DUMP_A)          
 
-         A => G%POISSON
+         A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
          MSG%LU_POST1 = GET_FILE_NUMBER() 
          MSG%LU_POST2 = GET_FILE_NUMBER() 
          MSG%LU_POST3 = GET_FILE_NUMBER() 

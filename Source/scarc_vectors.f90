@@ -600,7 +600,7 @@ SELECT_MATRIX_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
             MESHES_BANDWISE_CONSTANT_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          
                CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-               AB => G%POISSONB
+               AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
          
                V1 => SCARC_POINT_TO_VECTOR (NM, NL, NV1)               ! point to X-vector
                V2 => SCARC_POINT_TO_VECTOR (NM, NL, NV2)               ! point to Y-vector

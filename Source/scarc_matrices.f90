@@ -1919,11 +1919,11 @@ END SUBROUTINE SCARC_SETUP_BOUNDARY_WITH_INTERFACES
 ! If two meshes with different step sizes meet, we get a weighted stencil along internal wall cells
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAGB (IC, IX, IY, IZ)
-USE SCARC_POINTERS, ONLY: L, G, AB
+USE SCARC_POINTERS, ONLY: L, AB, SCARC_POINT_TO_BMATRIX
 INTEGER, INTENT(IN)  :: IC, IX, IY, IZ
 INTEGER :: ID
 
-AB => G%POISSONB
+AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
 ID = AB%POS(0)               ! get column vector corresponding to matrix diagonal
 
 AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
@@ -1939,7 +1939,7 @@ END SUBROUTINE SCARC_SETUP_MAINDIAGB
 !> \brief Set subdigonal entries for Poisson matrix in bandwise storage technique on specified face
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SUBDIAGB (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0)
-USE SCARC_POINTERS, ONLY: L, F, G, AB
+USE SCARC_POINTERS, ONLY: L, F, AB, SCARC_POINT_TO_BMATRIX
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER :: IW, ID
 LOGICAL  :: IS_INTERNAL_CELL
@@ -1948,7 +1948,7 @@ F => L%FACE(IOR0)
 
 ! Decide wheter cell is interior or exterior cell
  
-AB => G%POISSONB
+AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
 ID = AB%POS(IOR0)                                
 SELECT CASE (IOR0)
    CASE ( 1)
@@ -2252,7 +2252,8 @@ END SUBROUTINE SCARC_SETUP_MATRIX_MKL
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY (NM, NL)
-USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: L, G, F, GWC, A, AB, ACO, ABCO, &
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
 
@@ -2342,7 +2343,7 @@ WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:'
 
       ! Preset matrix switch if no Dirichlet BC's available
 
-      AB => G%POISSONB
+      AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
       IF (IS_PURE_NEUMANN) CALL SCARC_SETUP_BMATRIX_CONDENSED(NM)
 
       ! Set right boundary conditions 
@@ -2415,7 +2416,8 @@ END SUBROUTINE SCARC_SETUP_BOUNDARY
 ! matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BOUNDARY_VAR (NM, NL)
-USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, AB, ACO, ABCO, SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX
+USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, ACO, & !AB, ABCO
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX
 USE SCARC_POINTERS, ONLY: RDX, RDY, RDZ, RDXN, RDYN, RDZN
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
@@ -2596,64 +2598,8 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
  
    CASE (NSCARC_MATRIX_BANDWISE)
 
-      ! Preset matrix switch if no Dirichlet BC's available
+      WRITE(*,*) 'Variable boundary conditions vor BMATRIX not yet implemented'
 
-      AB => G%POISSONB
-      IF (IS_PURE_NEUMANN) CALL SCARC_SETUP_BMATRIX_CONDENSED(NM)
-
-      ! Set right boundary conditions 
-
-      DO IW = 1, G%NW
-
-         GWC => G%WALL(IW)
-         IOR0 = GWC%IOR
-         IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE     
-
-         F  => L%FACE(IOR0)
-
-         I = GWC%IXW
-         J = GWC%IYW
-         K = GWC%IZW
-
-         IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-
-         NOM  = GWC%NOM
-         GWC%ICW =G%CELL_NUMBER(I, J, K)
-         IC = G%CELL_NUMBER(I, J, K)
-
-         ! SPD-matrix with mixture of Dirichlet and Neumann BC's according to the SETTING of BTYPE
-
-         IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0) THEN
-
-            SELECT CASE (GWC%BTYPE)
-               CASE (DIRICHLET)
-                  AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) - F%INCR_BOUNDARY
-               CASE (NEUMANN)
-                  AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) + F%INCR_BOUNDARY
-            END SELECT
-
-         ! Purely Neumann matrix
-
-         ELSE
-            IF (GWC%BTYPE == NEUMANN) AB%VAL(IC, AB%POS(0)) = AB%VAL(IC, AB%POS(0)) + F%INCR_BOUNDARY
-         ENDIF
-
-      ENDDO 
-   
-      ! Transform into condensed system, if there are no Dirichlet BC's 
-
-      IF (IS_PURE_NEUMANN) THEN
-         DO ICO = 1, AB%N_CONDENSED
-            ABCO => AB%CONDENSED(ICO)
-            IF (ICO == 1) THEN
-               AB%VAL(ABCO%ICO, 1:AB%N_STENCIL) = ABCO%VAL2(1:AB%N_STENCIL)
-            ELSE
-               IP = AB%POS(ABCO%IOR0)
-               AB%VAL(ABCO%ICO, IP) = ABCO%VAL2(IP)
-            ENDIF
-         ENDDO
-      ENDIF 
- 
 END SELECT 
 
 END SUBROUTINE SCARC_SETUP_BOUNDARY_VAR
@@ -2748,11 +2694,12 @@ END SUBROUTINE SCARC_SETUP_BOUNDARY_MKL
 ! Define switch entries for toggle between original and condensed values
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_CMATRIX_CONDENSED (NM)
-USE SCARC_POINTERS, ONLY: L, G, A, ACO, GWC
+USE SCARC_POINTERS, ONLY: L, G, A, ACO, GWC, SCARC_POINT_TO_CMATRIX
 INTEGER, INTENT(IN) :: NM
-INTEGER :: ICO = 0, NC, NOM, IP, IC, JC, ICE, ICN, ICOL, IOR0, IW, I, J, K
+INTEGER :: ICO, NC, NOM, IP, IC, JC, ICE, ICN, ICOL, IOR0, IW, I, J, K
 
-A => G%POISSON
+A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
+ICO = 0
 LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
 
    NC = G%NC_LOCAL(NMESHES)
@@ -2784,9 +2731,15 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
    ! for each direction only one value has to be stored
  
    JC = NC - 1
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '===========> ACO1: JC, ROW1, ROW2:', JC, A%ROW(JC)+1, A%ROW(JC+1)-1
+#endif
    DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
       IF (A%COL(IP) == NC) THEN
          ICO = ICO + 1
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '         IP, A%COL(IP), ICO', IP, A%COL(IP), ICO
+#endif
          ACO => A%CONDENSED(ICO)
          ACO%PTR(1)  = IP
          ACO%COL(1)  = JC
@@ -2798,9 +2751,15 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
    ENDDO
 
    JC = NC - L%NX
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '===========> ACO2: JC, ROW1, ROW2:', JC, A%ROW(JC)+1, A%ROW(JC+1)-1
+#endif
    DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
       IF (A%COL(IP) == NC) THEN
          ICO = ICO + 1
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '         IP, A%COL(IP), ICO', IP, A%COL(IP), ICO
+#endif
          ACO => A%CONDENSED(ICO)
          ACO%PTR(1)  = IP
          ACO%COL(1)  = JC
@@ -2813,6 +2772,9 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
 
    IF (.NOT.TWO_D) THEN
       JC = NC - L%NX * L%NY
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '===========> ACO3: JC, ROW1, ROW2:', JC, A%ROW(JC)+1, A%ROW(JC+1)-1
+#endif
       DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
          IF (A%COL(IP) == NC) THEN
             ICO = ICO + 1
@@ -2883,11 +2845,11 @@ END SUBROUTINE SCARC_SETUP_CMATRIX_CONDENSED
 ! Define switch entries for toggle between original and condensed values
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_BMATRIX_CONDENSED (NM)
-USE SCARC_POINTERS, ONLY: L, G, AB, ABCO, GWC
+USE SCARC_POINTERS, ONLY: L, G, AB, ABCO, GWC, SCARC_POINT_TO_BMATRIX
 INTEGER, INTENT(IN) :: NM
 INTEGER :: ICO = 0, NC, NOM, IOR0, IC, JC, ICE, ICN, IW, I, J, K
 
-AB => G%POISSONB
+AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
 LAST_CELL_IN_LAST_MESH_BANDWISE_IF: IF (NM == NMESHES) THEN
 
    NC = G%NC_LOCAL(NMESHES)
@@ -3001,7 +2963,8 @@ END SUBROUTINE SCARC_SETUP_BMATRIX_CONDENSED
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_SYSTEM_CONDENSED (NV, NL, ITYPE)
 USE SCARC_POINTERS, ONLY: L, G, OG, F, OL, VC, A, ACO, AB, ABCO, &
-                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, SCARC_POINT_TO_VECTOR
+                          SCARC_POINT_TO_GRID, SCARC_POINT_TO_OTHER_GRID, &
+                          SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL, ITYPE
 INTEGER :: NM, NOM, IFACE, ICN, ICE, ICW, JC, NC, ICO, IOR0, IP, ICG, INBR
 
@@ -3025,7 +2988,7 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
    SELECT CASE (SET_MATRIX_TYPE(NL))
 
       CASE (NSCARC_MATRIX_COMPACT)
-         A => G%POISSON
+         A => SCARC_POINT_TO_CMATRIX (NSCARC_MATRIX_POISSON)
          DO ICO = 2, A%N_CONDENSED
             ACO => A%CONDENSED(ICO)
             JC = ACO%COL(1)
@@ -3033,7 +2996,7 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
          ENDDO
 
       CASE (NSCARC_MATRIX_BANDWISE)
-         AB => G%POISSONB
+         AB => SCARC_POINT_TO_BMATRIX (NSCARC_MATRIX_POISSON)
          DO ICO = 2, AB%N_CONDENSED
             ABCO => AB%CONDENSED(ICO)
             IP = AB%POS(ABCO%IOR0)
