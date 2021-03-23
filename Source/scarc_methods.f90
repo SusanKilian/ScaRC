@@ -2892,7 +2892,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             HP (I,J,K) = HP(I,J,K)/M%RHO(I,J,K) + M%KRES(I,J,K)
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_MAIN_CELLS-INSEP: IC, IX, IY, IZ, HP:', &
-                                             I,J,K, HP_SAVE, M%RHO(I,J,K), M%KRES(I,J,K), HP(I,J,K)
+                                              I,J,K, HP_SAVE, M%RHO(I,J,K), M%KRES(I,J,K), HP(I,J,K)
 #endif
          ENDDO
       ENDDO
