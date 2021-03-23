@@ -1,15 +1,16 @@
-&HEAD CHID='scarc_sep_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
+&HEAD CHID='uscarc_insep_1mesh',TITLE='UScaRC-MGM method with mean interface BCs and CG as Laplace solver on 2 meshes' /
 
 &MESH IJK=8,1,8  XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER = 'SCARC' 
-      BAROCLINIC = .TRUE.
+&PRES SOLVER = 'USCARC'    
+      BAROCLINIC = .FALSE.
+      CHECK_POISSON = .TRUE.
       SCARC_PRECON = 'SSOR'
       SCARC_KRYLOV_ACCURACY = 1.0E-15
-      SCARC_POISSON = 'SEPARABLE'
+      SCARC_POISSON = 'INSEPARABLE'
       SCARC_MATRIX = 'COMPACT' /
 
 &TIME T_END=0.1 /

@@ -633,6 +633,7 @@ IF (CHECK_POISSON) THEN
    ENDDO
    !$OMP END PARALLEL DO
    POIS_ERR = MAXVAL(RESIDUAL)
+   WRITE(*,*) 'POIS_ERR=',POIS_ERR
 ENDIF
 
 ! Mandatory check of how well the computed pressure satisfies the inseparable Poisson equation:
