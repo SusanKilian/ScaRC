@@ -903,7 +903,11 @@ SELECT_STORAGE_TYPE: SELECT CASE (SET_MATRIX_TYPE(NL))
 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) 'SETUP POISSON_VAR: TPI', TOTAL_PRESSURE_ITERATIONS
-CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE SETUP_POISSON_VAR')
+IF (PREDICTOR) THEN
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE SETUP_POISSON_VAR')
+ELSE
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHOS, NM, 'RHOS BEFORE SETUP_POISSON_VAR')
+ENDIF
 #endif
       IP = 1
       DO IZ = 1, L%NZ
@@ -1583,12 +1587,18 @@ END SUBROUTINE SCARC_SETUP_SUBDIAG
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MAINDIAG_VAR (IC, IX, IY, IZ, IP)
 USE SCARC_POINTERS, ONLY: M, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
+REAL(EB), DIMENSION(:,:,:), POINTER :: RHOP
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ
 INTEGER, INTENT(INOUT) :: IP
 REAL(EB) :: RXP, RXM, RYP, RYM, RZP, RZM
 
-RXP = 2.0_EB /(M%RHO(IX+1,IY,IZ) + M%RHO(IX  ,IY,IZ))
-RXM = 2.0_EB /(M%RHO(IX  ,IY,IZ) + M%RHO(IX-1,IY,IZ))
+IF (PREDICTOR) THEN
+   RHOP => M%RHO
+ELSE
+   RHOP => M%RHOS
+ENDIF
+RXP = 2.0_EB /(RHOP(IX+1,IY,IZ) + RHOP(IX  ,IY,IZ))
+RXM = 2.0_EB /(RHOP(IX  ,IY,IZ) + RHOP(IX-1,IY,IZ))
 A%VAL(IP) = - RDX(IX)*(RDXN(IX)*RXP + RDXN(IX-1)*RXM)
 
 #ifdef WITH_SCARC_DEBUG
@@ -1596,13 +1606,13 @@ WRITE(MSG%LU_DEBUG,'(A,5I4, 3E12.4)') 'MAIN-X: IC, IX , IY , IZ , IP, RXP, RXM, 
 #endif
 
 IF (.NOT.TWO_D) THEN
-   RYP = 2.0_EB /(M%RHO(IX,IY+1,IZ) + M%RHO(IX,IY  ,IZ))
-   RYM = 2.0_EB /(M%RHO(IX,IY  ,IZ) + M%RHO(IX,IY-1,IZ))
+   RYP = 2.0_EB /(RHOP(IX,IY+1,IZ) + RHOP(IX,IY  ,IZ))
+   RYM = 2.0_EB /(RHOP(IX,IY  ,IZ) + RHOP(IX,IY-1,IZ))
    A%VAL(IP) = A%VAL(IP) - RDY(IY)*(RDYN(IY)*RYP + RDYN(IY-1)*RYM)
 ENDIF
 
-RZP = 2.0_EB /(M%RHO(IX,IY,IZ+1) + M%RHO(IX,IY,IZ  ))
-RZM = 2.0_EB /(M%RHO(IX,IY,IZ  ) + M%RHO(IX,IY,IZ-1))
+RZP = 2.0_EB /(RHOP(IX,IY,IZ+1) + RHOP(IX,IY,IZ  ))
+RZM = 2.0_EB /(RHOP(IX,IY,IZ  ) + RHOP(IX,IY,IZ-1))
 A%VAL(IP) = A%VAL(IP) - RDZ(IZ)*(RDZN(IZ)*RZP + RDZN(IZ-1)*RZM)
 
 #ifdef WITH_SCARC_DEBUG
@@ -1623,6 +1633,7 @@ END SUBROUTINE SCARC_SETUP_MAINDIAG_VAR
 SUBROUTINE SCARC_SETUP_SUBDIAG_VAR (IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IP, IOR0)
 USE SCARC_POINTERS, ONLY: M, L, G, A, RDX, RDY, RDZ, RDXN, RDYN, RDZN
 USE SCARC_UTILITIES, ONLY: IS_INTERNAL_CELL
+REAL(EB), DIMENSION(:,:,:), POINTER :: RHOP
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
@@ -1631,7 +1642,13 @@ REAL(EB) :: R2
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
 ! E.g.: ABS(IOR0)=1: then IX2 is either IX1-1 or IX1+1, so build corresponding meanvalue for RHO
 
-R2 = 2.0_EB /(M%RHO(IX1, IY1, IZ1) + M%RHO(IX2, IY2, IZ2))
+IF (PREDICTOR) THEN
+   RHOP => M%RHO
+ELSE
+   RHOP => M%RHOS
+ENDIF
+
+R2 = 2.0_EB /(RHOP(IX1, IY1, IZ1) + RHOP(IX2, IY2, IZ2))
 
 IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
@@ -2423,11 +2440,17 @@ SUBROUTINE SCARC_SETUP_BOUNDARY_VAR (NM, NL)
 USE SCARC_POINTERS, ONLY: M, L, G, F, GWC, A, ACO, & !AB, ABCO
                           SCARC_POINT_TO_GRID, SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX
 USE SCARC_POINTERS, ONLY: RDX, RDY, RDZ, RDXN, RDYN, RDZN
+REAL(EB), DIMENSION(:,:,:), POINTER :: RHOP
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: I, J, K, IOR0, IW, IC, NOM, IP, ICO, ICOL
 REAL(EB) :: SCAL=1.0_EB, ASAVE
 
 CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+IF (PREDICTOR) THEN
+   RHOP => M%RHO
+ELSE
+   RHOP => M%RHOS
+ENDIF
 
 SELECT CASE (SET_MATRIX_TYPE(NL))
 
@@ -2481,47 +2504,47 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
                SELECT CASE (IOR0)
                   CASE (1)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)),A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)),A%VAL(IP)
 #endif
                   CASE (-1)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)), A%VAL(IP)
 #endif
                   CASE (3)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)), A%VAL(IP)
 #endif
                   CASE (-3)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)), A%VAL(IP)
 #endif
                END SELECT
             ELSE
                SELECT CASE (IOR0)
                   CASE (1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
                   CASE (-1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
                   CASE (2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(M%RHO(I,J-1,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(RHOP(I,J-1,K) + RHOP(I,J,K)))
                   CASE (-2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J+1,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J+1,K)))
                   CASE (3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
                   CASE (-3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
                END SELECT
             ENDIF
          ENDIF
@@ -2535,47 +2558,47 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                SELECT CASE (IOR0)
                   CASE (1)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)),A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)),A%VAL(IP)
 #endif
                   CASE (-1)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)), A%VAL(IP)
 #endif
                   CASE (3)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)), A%VAL(IP)
 #endif
                   CASE (-3)
                      ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)), A%VAL(IP)
+                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)), A%VAL(IP)
 #endif
                END SELECT
             ELSE
                SELECT CASE (IOR0)
                   CASE (1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(M%RHO(I-1,J,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
                   CASE (-1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I+1,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
                   CASE (2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(M%RHO(I,J-1,K) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(RHOP(I,J-1,K) + RHOP(I,J,K)))
                   CASE (-2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J+1,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J+1,K)))
                   CASE (3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(M%RHO(I,J,K-1) + M%RHO(I,J,K)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
                   CASE (-3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(M%RHO(I,J,K) + M%RHO(I,J,K+1)))
+                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
                END SELECT
             ENDIF
          ENDIF

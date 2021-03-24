@@ -1548,10 +1548,11 @@ SUBROUTINE VELOCITY_PREDICTOR(T,DT,DT_NEW,NM)
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
+USE SCRC, ONLY : SCARC_POISSON
 
 ! Estimates the velocity components at the next time step
 
-REAL(EB) :: T_NOW,XHAT,ZHAT
+REAL(EB) :: T_NOW,XHAT,ZHAT,VAL
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1573,29 +1574,61 @@ FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    WS = W
 ELSE FREEZE_VELOCITY_IF
 
-   DO K=1,KBAR
-      DO J=1,JBAR
-         DO I=0,IBAR
-            US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
-         ENDDO
-      ENDDO
-   ENDDO
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
 
-   DO K=1,KBAR
-      DO J=0,JBAR
-         DO I=1,IBAR
-            VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
+      DO K=1,KBAR
+         DO J=1,JBAR
+            DO I=0,IBAR
+               VAL = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + U(I,J,K) + VAL)
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
 
-   DO K=0,KBAR
-      DO J=1,JBAR
-         DO I=1,IBAR
-            WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
+      DO K=1,KBAR
+         DO J=0,JBAR
+            DO I=1,IBAR
+               VAL = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + V(I,J,K) + VAL)
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
+
+      DO K=0,KBAR
+         DO J=1,JBAR
+            DO I=1,IBAR
+               VAL = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + W(I,J,K) + VAL)
+            ENDDO
+         ENDDO
+      ENDDO
+
+   ELSE
+
+      DO K=1,KBAR
+         DO J=1,JBAR
+            DO I=0,IBAR
+               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
+            ENDDO
+         ENDDO
+      ENDDO
+
+      DO K=1,KBAR
+         DO J=0,JBAR
+            DO I=1,IBAR
+               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
+            ENDDO
+         ENDDO
+      ENDDO
+
+      DO K=0,KBAR
+         DO J=1,JBAR
+            DO I=1,IBAR
+               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
+            ENDDO
+         ENDDO
+      ENDDO
+   ENDIF
 
    IF (PRES_METHOD == 'GLMAT' .OR. PRES_METHOD == 'USCARC') CALL WALL_VELOCITY_NO_GRADH(DT,.FALSE.)
    IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.FALSE.)
@@ -1645,10 +1678,11 @@ SUBROUTINE VELOCITY_CORRECTOR(T,DT,NM)
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
+USE SCRC, ONLY : SCARC_POISSON
 
 ! Correct the velocity components
 
-REAL(EB) :: T_NOW,XHAT,ZHAT
+REAL(EB) :: T_NOW,XHAT,ZHAT, VAL
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1679,29 +1713,62 @@ ELSE FREEZE_VELOCITY_IF
       IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.TRUE.)       ! Store velocities on GEOM SOLID faces.
    ENDIF
 
-   DO K=1,KBAR
-      DO J=1,JBAR
-         DO I=0,IBAR
-            U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
-         ENDDO
-      ENDDO
-   ENDDO
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
 
-   DO K=1,KBAR
-      DO J=0,JBAR
-         DO I=1,IBAR
-            V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
+      DO K=1,KBAR
+         DO J=1,JBAR
+            DO I=0,IBAR
+               VAL = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + US(I,J,K) + VAL))
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
+   
+      DO K=1,KBAR
+         DO J=0,JBAR
+            DO I=1,IBAR
+               VAL = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + VS(I,J,K) + VAL))
+            ENDDO
+         ENDDO
+      ENDDO
+   
+      DO K=0,KBAR
+         DO J=1,JBAR
+            DO I=1,IBAR
+               VAL = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + WS(I,J,K) + VAL))
+            ENDDO
+         ENDDO
+      ENDDO
 
-   DO K=0,KBAR
-      DO J=1,JBAR
-         DO I=1,IBAR
-            W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
+   ELSE
+
+      DO K=1,KBAR
+         DO J=1,JBAR
+            DO I=0,IBAR
+               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
+   
+      DO K=1,KBAR
+         DO J=0,JBAR
+            DO I=1,IBAR
+               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
+            ENDDO
+         ENDDO
+      ENDDO
+   
+      DO K=0,KBAR
+         DO J=1,JBAR
+            DO I=1,IBAR
+               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
+            ENDDO
+         ENDDO
+      ENDDO
+
+   ENDIF
 
    IF (PRES_METHOD == 'GLMAT' .OR. PRES_METHOD == 'USCARC') THEN
       CALL WALL_VELOCITY_NO_GRADH(DT,.FALSE.)

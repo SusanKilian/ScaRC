@@ -2863,20 +2863,28 @@ END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
 SUBROUTINE SCARC_UPDATE_HP(NL)
 USE SCARC_POINTERS, ONLY: M, L, ST, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
+REAL(EB), DIMENSION(:,:,:), POINTER :: FVX, FVY, FVZ, KRES, RHOP, DP
 INTEGER :: NM
 INTEGER :: I, J, K
-REAL(EB) :: HP_SAVE
+REAL(EB) :: HP_SAVE, RHSS, LHSS, RESS
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
    ST  => L%STAGE(NSCARC_STAGE_ONE)
 
+   DP => M%DDDT
    IF (PREDICTOR) THEN
       HP => M%H
+      RHOP => M%RHO
    ELSE
       HP => M%HS
+      RHOP => M%RHOS
    ENDIF
+   FVX => M%FVX
+   FVY => M%FVY
+   FVZ => M%FVZ
+   KRES => M%KRES
 
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) 'UPDATE_MAIN_CELLS:1: HP'
@@ -2885,11 +2893,50 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE UPDATE_HP')
 #endif
 
+   DO K=1,M%KBAR
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
+#endif
+        DO J=1,M%JBAR
+           DO I=1,M%IBAR
+
+              IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+              RHSS = ( (FVX(I-1,J,K)) - (FVX(I,J,K)) )*M%RDX(I) &
+                   + ( (FVY(I,J-1,K)) - (FVY(I,J,K)) )*M%RDY(J) &
+                   + ( (FVZ(I,J,K-1)) - (FVZ(I,J,K)) )*M%RDZ(K) &
+                   - DP(I,J,K)
+              LHSS = ((HP(I+1,J,K)-HP(I,J,K))*M%RDXN(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) -         &
+                      (HP(I,J,K)-HP(I-1,J,K))*M%RDXN(I-1)  *2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*M%RDX(I) &
+                   + ((HP(I,J+1,K)-HP(I,J,K))*M%RDYN(J)    *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) -         &
+                      (HP(I,J,K)-HP(I,J-1,K))*M%RDYN(J-1)  *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*M%RDY(J) &
+                   + ((HP(I,J,K+1)-HP(I,J,K))*M%RDZN(K)    *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) -         &
+                      (HP(I,J,K)-HP(I,J,K-1))*M%RDZN(K-1)  *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*M%RDZ(K) &
+                   + ((KRES(I+1,J,K)-KRES(I,J,K))*M%RDXN(I) - (KRES(I,J,K)-KRES(I-1,J,K))*M%RDXN(I-1))*M%RDX(I)*M%RRN(I) &
+                   + ((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J) - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1))*M%RDY(J)        &
+                   + ((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K) - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1))*M%RDZ(K)
+              RESS = ABS(RHSS-LHSS)
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_MAIN_CELLS-INSEP: I, J, K, RHSS, LHSS, RES:',&
+                                              I,J,K, RHSS, LHSS, RESS
+#endif
+           ENDDO
+        ENDDO
+     ENDDO
+
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) '========================================'
+#endif
+
    DO K = 0, L%NZ+1
+#ifdef WITH_SCARC_DEBUG
+      WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K
+#endif
       DO J = 0, L%NY+1
          DO I = 0, L%NX+1
             HP_SAVE = HP(I,J,K)
-            HP (I,J,K) = HP(I,J,K)/M%RHO(I,J,K) + M%KRES(I,J,K)
+            !HP (I,J,K) = HP(I,J,K)/RHOP(I,J,K) + M%KRES(I,J,K)
+            HP (I,J,K) = HP(I,J,K)
 #ifdef WITH_SCARC_DEBUG
       WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_MAIN_CELLS-INSEP: IC, IX, IY, IZ, HP:', &
                                               I,J,K, HP_SAVE, M%RHO(I,J,K), M%KRES(I,J,K), HP(I,J,K)

@@ -615,9 +615,11 @@ ENDIF
 ! Optional check of the accuracy of the separable pressure solution, del^2 H = -del dot F - dD/dt
 
 IF (CHECK_POISSON) THEN
+IF (NM==1) WRITE(*,*) '======================= CHECK_POISSON'
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
    !$OMP PARALLEL DO PRIVATE(I,J,K,RHSS,LHSS) SCHEDULE(STATIC)
    DO K=1,KBAR
+IF (NM==1) WRITE(*,*) ' -------------------- K =', K
       DO J=1,JBAR
          DO I=1,IBAR
             RHSS = ( R(I-1)*FVX(I-1,J,K) - R(I)*FVX(I,J,K) )*RDX(I)*RRN(I) &
@@ -628,6 +630,9 @@ IF (CHECK_POISSON) THEN
                  + ((HP(I,J+1,K)-HP(I,J,K))*RDYN(J)      - (HP(I,J,K)-HP(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
                  + ((HP(I,J,K+1)-HP(I,J,K))*RDZN(K)      - (HP(I,J,K)-HP(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+IF (NM==1) THEN
+   WRITE(*,'(A,3I5,3E12.4)') 'I,J,K, LHSS, RHSS, RES:', I,J,K,LHSS, RHSS, RESIDUAL(I,J,K)
+ENDIF
          ENDDO
       ENDDO
    ENDDO
