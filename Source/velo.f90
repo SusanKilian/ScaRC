@@ -1330,10 +1330,11 @@ SUBROUTINE NO_FLUX(DT,NM)
 ! Set FVX,FVY,FVZ inside and on the surface of solid obstructions to maintain no flux
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
+USE SCRC, ONLY: MSG, SCARC_POISSON
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: DT
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP=>NULL(),OM_HP=>NULL()
-REAL(EB) :: RFODT,H_OTHER,DUUDT,DVVDT,DWWDT,UN,T_NOW,DHFCT
+REAL(EB) :: RFODT,H_OTHER,DUUDT,DVVDT,DWWDT,UN,T_NOW,DHFCT, VAL_KRES, VAL_P
 INTEGER  :: IC2,IC1,N,I,J,K,IW,II,JJ,KK,IOR,N_INT_CELLS,IIO,JJO,KKO,NOM
 TYPE (OBSTRUCTION_TYPE), POINTER :: OB=>NULL()
 TYPE (WALL_TYPE), POINTER :: WC=>NULL()
@@ -1398,7 +1399,17 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DUUDT = -RFODT*(U(I,J,K)+US(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               FVX(I,J,K) = -VAL_KRES - VAL_P - DUUDT
+   ELSE
                FVX(I,J,K) = -RDXN(I)*(HP(I+1,J,K)-HP(I,J,K)) - DUUDT
+   ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVX:', I,J,K,FVX(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1415,7 +1426,16 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DVVDT = -RFODT*(V(I,J,K)+VS(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               FVY(I,J,K) = -VAL_KRES - VAL_P - DVVDT
+   ELSE
                FVY(I,J,K) = -RDYN(J)*(HP(I,J+1,K)-HP(I,J,K)) - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVY:', I,J,K,FVY(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1432,7 +1452,16 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DWWDT = -RFODT*(W(I,J,K)+WS(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               FVZ(I,J,K) = -VAL_KRES - VAL_P - DWWDT
+   ELSE
                FVZ(I,J,K) = -RDZN(K)*(HP(I,J,K+1)-HP(I,J,K)) - DWWDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVZ:', I,J,K,FVZ(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1480,42 +1509,108 @@ WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS
             ELSE
                DUUDT = 2._EB*RFODT*(UN-0.5_EB*(U(II,JJ,KK)+US(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II+1,JJ,KK)-KRES(II,JJ,KK))*RDXN(II)
+            VAL_P    = 2.0_EB/(RHO(II+1,JJ,KK)+RHO(II,JJ,KK))*(H(II+1,JJ,KK)-H(II,JJ,KK))*RDXN(II)
+            FVX(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX 1: I, J, K, FVX:', II,JJ,KK, FVX(II,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVX(II,JJ,KK) = -RDXN(II)*(HP(II+1,JJ,KK)-HP(II,JJ,KK))*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX 1: I, J, K, FVX:', II,JJ,KK, FVX(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE(-1)
             IF (PREDICTOR) THEN
                DUUDT = RFODT*(UN-U(II-1,JJ,KK))
             ELSE
                DUUDT = 2._EB*RFODT*(UN-0.5_EB*(U(II-1,JJ,KK)+US(II-1,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II-1,JJ,KK))*RDXN(II-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II-1,JJ,KK))*(H(II,JJ,KK)-H(II-1,JJ,KK))*RDXN(II-1)
+            FVX(II-1,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A: NO_FLUX-1: I-1, J, K, FVX:', II-1, JJ, KK, FVX(II-1,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVX(II-1,JJ,KK) = -RDXN(II-1)*(HP(II,JJ,KK)-HP(II-1,JJ,KK))*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B: NO_FLUX-1: I-1, J, K, FVX:', II-1, JJ, KK, FVX(II-1,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE( 2)
             IF (PREDICTOR) THEN
                DVVDT = RFODT*(UN-V(II,JJ,KK))
             ELSE
                DVVDT = 2._EB*RFODT*(UN-0.5_EB*(V(II,JJ,KK)+VS(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ+1,KK)-KRES(II,JJ,KK))*RDYN(JJ)
+            VAL_P    = 2.0_EB/(RHO(II,JJ+1,KK)+RHO(II,JJ,KK))*(H(II,JJ+1,KK)-H(II,JJ,KK))*RDYN(JJ)
+            FVY(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DVVDT
+   ELSE
             FVY(II,JJ,KK) = -RDYN(JJ)*(HP(II,JJ+1,KK)-HP(II,JJ,KK))*DHFCT - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX 2: I, J, K, FVY:', II, JJ, KK, FVY(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
          CASE(-2)
             IF (PREDICTOR) THEN
                DVVDT = RFODT*(UN-V(II,JJ-1,KK))
             ELSE
                DVVDT = 2._EB*RFODT*(UN-0.5_EB*(V(II,JJ-1,KK)+VS(II,JJ-1,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II,JJ-1,KK))*RDYN(JJ-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II,JJ-1,KK))*(H(II,JJ,KK)-H(II,JJ-1,KK))*RDYN(JJ-1)
+            FVY(II,JJ-1,KK) = -(VAL_KRES + VAL_P)*DHFCT - DVVDT
+   ELSE
             FVY(II,JJ-1,KK) = -RDYN(JJ-1)*(HP(II,JJ,KK)-HP(II,JJ-1,KK))*DHFCT - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX-2: I, J-1, K, FVY:', II, JJ-1, KK, FVY(II,JJ-1,KK), DHFCT, SCARC_POISSON
+#endif
          CASE( 3)
             IF (PREDICTOR) THEN
                DWWDT = RFODT*(UN-W(II,JJ,KK))
             ELSE
                DWWDT = 2._EB*RFODT*(UN-0.5_EB*(W(II,JJ,KK)+WS(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK+1)-KRES(II,JJ,KK))*RDZN(KK)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK+1)+RHO(II,JJ,KK))*(H(II,JJ,KK+1)-H(II,JJ,KK))*RDZN(KK)
+            FVZ(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX 3: I, J, K, FVZ:', II, JJ, KK, FVZ(II,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVZ(II,JJ,KK) = -RDZN(KK)*(HP(II,JJ,KK+1)-HP(II,JJ,KK))*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX 3: I, J, K, FVZ:', II, JJ, KK, FVZ(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE(-3)
             IF (PREDICTOR) THEN
                DWWDT = RFODT*(UN-W(II,JJ,KK-1))
             ELSE
                DWWDT = 2._EB*RFODT*(UN-0.5_EB*(W(II,JJ,KK-1)+WS(II,JJ,KK-1)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II,JJ,KK-1))*RDZN(KK-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II,JJ,KK-1))*(H(II,JJ,KK)-H(II,JJ,KK-1))*RDZN(KK-1)
+            FVZ(II,JJ,KK-1) = -(VAL_KRES - VAL_P)*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX-3: I, J, K-1, FVZ:', II, JJ, KK-1, FVZ(II,JJ,KK-1), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVZ(II,JJ,KK-1) = -RDZN(KK-1)*(HP(II,JJ,KK)-HP(II,JJ,KK-1))*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX-3: I, J, K-1, FVZ:', II, JJ, KK-1, FVZ(II,JJ,KK-1), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
       END SELECT
    ENDIF
 
@@ -1548,11 +1643,11 @@ SUBROUTINE VELOCITY_PREDICTOR(T,DT,DT_NEW,NM)
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
-USE SCRC, ONLY : SCARC_POISSON
+USE SCRC, ONLY : SCARC_POISSON, MSG
 
 ! Estimates the velocity components at the next time step
 
-REAL(EB) :: T_NOW,XHAT,ZHAT,VAL
+REAL(EB) :: T_NOW,XHAT,ZHAT,VAL_KRES, VAL_P
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1574,13 +1669,17 @@ FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    WS = W
 ELSE FREEZE_VELOCITY_IF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
 
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
-               VAL = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
-               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + U(I,J,K) + VAL)
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + VAL_KRES + VAL_P)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, U, FVX, VAL, US:', I,J,K,U(I,J,K), FVX(I,J,K), VAL_KRES, VAL_P, US(I,J,K)
+#endif
             ENDDO
          ENDDO
       ENDDO
@@ -1588,8 +1687,12 @@ ELSE FREEZE_VELOCITY_IF
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
-               VAL = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
-               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + V(I,J,K) + VAL)
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + VAL_KRES + VAL_P)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, V, FVY, VAL, VS:', I,J,K,V(I,J,K), FVY(I,J,K), VAL_KRES, VAL_P, VS(I,J,K)
+#endif
             ENDDO
          ENDDO
       ENDDO
@@ -1597,8 +1700,12 @@ ELSE FREEZE_VELOCITY_IF
       DO K=0,KBAR
          DO J=1,JBAR
             DO I=1,IBAR
-               VAL = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
-               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + W(I,J,K) + VAL)
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + VAL_KRES + VAL_P)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, V, FVZ, VAL, WS:', I,J,K,W(I,J,K), FVZ(I,J,K), VAL_KRES, VAL_P, WS(I,J,K)
+#endif
             ENDDO
          ENDDO
       ENDDO
@@ -1682,7 +1789,7 @@ USE SCRC, ONLY : SCARC_POISSON
 
 ! Correct the velocity components
 
-REAL(EB) :: T_NOW,XHAT,ZHAT, VAL
+REAL(EB) :: T_NOW,XHAT,ZHAT, VAL_KRES, VAL_P
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1713,13 +1820,14 @@ ELSE FREEZE_VELOCITY_IF
       IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.TRUE.)       ! Store velocities on GEOM SOLID faces.
    ENDIF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
 
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
-               VAL = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
-               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + US(I,J,K) + VAL))
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + VAL_KRES + VAL_P))
             ENDDO
          ENDDO
       ENDDO
@@ -1727,8 +1835,9 @@ ELSE FREEZE_VELOCITY_IF
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
-               VAL = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
-               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + VS(I,J,K) + VAL))
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + VAL_KRES + VAL_P))
             ENDDO
          ENDDO
       ENDDO
@@ -1736,8 +1845,9 @@ ELSE FREEZE_VELOCITY_IF
       DO K=0,KBAR
          DO J=1,JBAR
             DO I=1,IBAR
-               VAL = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
-               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + WS(I,J,K) + VAL))
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + VAL_KRES + VAL_P))
             ENDDO
          ENDDO
       ENDDO
@@ -3102,6 +3212,7 @@ SUBROUTINE BAROCLINIC_CORRECTION(T,NM)
 ! Add baroclinic term to the momentum equation
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
+USE SCRC, ONLY: MSG
 REAL(EB), INTENT(IN) :: T
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: UU=>NULL(),VV=>NULL(),WW=>NULL(),RHOP=>NULL(),HP=>NULL(),RHMK=>NULL(),RRHO=>NULL()
@@ -3208,6 +3319,9 @@ DO K=1,KBAR
       DO I=0,IBAR
          FVX_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I+1,J,K)+RHMK(I+1,J,K)*RHOP(I,J,K))*(RRHO(I+1,J,K)-RRHO(I,J,K))*RDXN(I)/ &
                          (RHOP(I+1,J,K)+RHOP(I,J,K))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVX_B:', I,J,K,FVX_B(I,J,K)
+#endif
          FVX(I,J,K) = FVX(I,J,K) + FVX_B(I,J,K)
       ENDDO
    ENDDO
@@ -3224,6 +3338,9 @@ IF (.NOT.TWO_D) THEN
             FVY_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J+1,K)+RHMK(I,J+1,K)*RHOP(I,J,K))*(RRHO(I,J+1,K)-RRHO(I,J,K))*RDYN(J)/ &
                             (RHOP(I,J+1,K)+RHOP(I,J,K))
             FVY(I,J,K) = FVY(I,J,K) + FVY_B(I,J,K)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVY_B:', I,J,K,FVX_B(I,J,K)
+#endif
          ENDDO
       ENDDO
    ENDDO
@@ -3239,6 +3356,9 @@ DO K=0,KBAR
          FVZ_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J,K+1)+RHMK(I,J,K+1)*RHOP(I,J,K))*(RRHO(I,J,K+1)-RRHO(I,J,K))*RDZN(K)/ &
                          (RHOP(I,J,K+1)+RHOP(I,J,K))
          FVZ(I,J,K) = FVZ(I,J,K) + FVZ_B(I,J,K)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVZ_B:', I,J,K,FVX_B(I,J,K)
+#endif
       ENDDO
    ENDDO
 ENDDO

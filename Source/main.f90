@@ -1355,6 +1355,7 @@ END SUBROUTINE MPI_INITIALIZATION_CHORES
 
 
 SUBROUTINE PRESSURE_ITERATION_SCHEME
+USE SCRC, ONLY: MSG
 
 ! Iterate calls to pressure solver until velocity tolerance is satisfied
 
@@ -1374,6 +1375,9 @@ PRESSURE_ITERATION_LOOP: DO
    PRESSURE_ITERATIONS = PRESSURE_ITERATIONS + 1
    TOTAL_PRESSURE_ITERATIONS = TOTAL_PRESSURE_ITERATIONS + 1
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '-------------> STARTING PRESSURE_ITERATION :', TOTAL_PRESSURE_ITERATIONS, PRESSURE_ITERATIONS
+#endif
    ! The following loops and exchange always get executed the first pass through the PRESSURE_ITERATION_LOOP.
    ! If we need to iterate the baroclinic torque term, the loop is executed each time.
 
@@ -1423,6 +1427,10 @@ PRESSURE_ITERATION_LOOP: DO
          CALL COPY_H_OMESH_TO_MESH
    END SELECT
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '!!!!!!!!!!!!!!! AFTER PRESSURE_SOLVER'
+#endif
+
    ! Check the residuals of the Poisson solution
 
    DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
@@ -1435,6 +1443,9 @@ PRESSURE_ITERATION_LOOP: DO
       ENDIF
    ENDDO
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '!!!!!!!!!!!!!!! AFTER CHECK_RESIDUALS'
+#endif
 
    IF (.NOT.ITERATE_PRESSURE) EXIT PRESSURE_ITERATION_LOOP
 
@@ -1448,6 +1459,9 @@ PRESSURE_ITERATION_LOOP: DO
       IF (CC_IBM) CALL CCIBM_COMPUTE_VELOCITY_ERROR(DT,NM) ! Inside solids respect to zero velocity.
    ENDDO
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '!!!!!!!!!!!!!!! AFTER COMPUTE_VELOCITY_ERROR'
+#endif
    ! Make all MPI processes aware of the maximum velocity error to decide if another pressure iteration is needed.
 
    IF (N_MPI_PROCESSES>1) THEN
@@ -1479,10 +1493,16 @@ PRESSURE_ITERATION_LOOP: DO
 
    IF (MAXVAL(PRESSURE_ERROR_MAX)<PRESSURE_TOLERANCE) ITERATE_BAROCLINIC_TERM = .FALSE.
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '!!!!!!!!!!!!!!! ITERATE_BAROCLINIC_TERM =', ITERATE_BAROCLINIC_TERM
+#endif
    IF ((MAXVAL(PRESSURE_ERROR_MAX)<PRESSURE_TOLERANCE .AND. &
         MAXVAL(VELOCITY_ERROR_MAX)<VELOCITY_TOLERANCE) .OR. PRESSURE_ITERATIONS>=MAX_PRESSURE_ITERATIONS) &
       EXIT PRESSURE_ITERATION_LOOP
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '!!!!!!!!!!!!!!! LEFT PRESSURE_ITERATION_LOOP'
+#endif
    ! Exit the iteration loop if satisfactory progress is not achieved
 
    IF (SUSPEND_PRESSURE_ITERATIONS .AND. ICYC>10) THEN
