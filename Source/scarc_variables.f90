@@ -251,6 +251,7 @@ PUBLIC :: SCARC_SMOOTH_ITERATIONS         !< Maximum number of allowed iteration
 PUBLIC :: SCARC_SMOOTH_OMEGA              !< Relaxation parameter for smoother
 PUBLIC :: SCARC_SMOOTH_SCOPE              !< Scope of activity for smoother (global/local)
 
+
 ! ---------- Type declarations
   
 TYPE (SCARC_TYPE)      , SAVE, DIMENSION(:), ALLOCATABLE, TARGET :: SCARC       !< Main ScaRC data structure
@@ -272,6 +273,8 @@ TYPE (SCARC_SOLVER_TYPE),  SAVE, TARGET :: COARSE_PRECON                        
 TYPE (SCARC_STORAGE_TYPE), SAVE, TARGET :: STORAGE                              !< Structure for ScaRC storage administration
 TYPE (SCARC_MESSAGE_TYPE), SAVE, TARGET :: MSG                                  !< Structure for verbose and debug messages
 TYPE (SCARC_SUBDIVISION_TYPE), SAVE, TARGET :: SUBDIVISION                      !< Structure for information about subdivision
+
+PUBLIC :: MSG                             !< TODO: ONLY TEMPORARILY
 
 END MODULE SCARC_VARIABLES
 
