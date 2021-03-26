@@ -612,7 +612,7 @@ USE SCRC, ONLY: MSG
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP,RHOP,P,RESIDUAL
 INTEGER :: I,J,K
-REAL(EB) :: LHSS,RHSS,TNOW
+REAL(EB) :: LHSS,RHSS,TNOW, LHSS1, LHSS2
 
 IF (SOLID_PHASE_ONLY) RETURN
 IF (FREEZE_VELOCITY)  RETURN
@@ -628,6 +628,10 @@ ELSE
    RHOP => RHOS
 ENDIF
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'HP BEFORE CHECK:'
+WRITE(MSG%LU_DEBUG,'(8E14.6)') ((HP(I,1,K),I=1,IBAR),K=KBAR,1,-1)
+#endif
 ! Optional check of the accuracy of the separable pressure solution, del^2 H = -del dot F - dD/dt
 
 IF (CHECK_POISSON) THEN
@@ -675,6 +679,15 @@ ENDIF
                  + (        (FVY(I,J-1,K)-FVY_B(I,J-1,K)) -      (FVY(I,J,K)-FVY_B(I,J,K)) )*RDY(J)        &
                  + (        (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -      (FVZ(I,J,K)-FVZ_B(I,J,K)) )*RDZ(K)        &
                  - DDDT(I,J,K)
+            LHSS1 = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
+                    (P(I,J,K)-P(I-1,J,K))*RDXN(I-1)*R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*RDX(I)*RRN(I) &
+                 + ((P(I,J+1,K)-P(I,J,K))*RDYN(J)         *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
+                    (P(I,J,K)-P(I,J-1,K))*RDYN(J-1)       *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*RDY(J)        &
+                 + ((P(I,J,K+1)-P(I,J,K))*RDZN(K)         *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
+                    (P(I,J,K)-P(I,J,K-1))*RDZN(K-1)       *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*RDZ(K)        
+          LHSS2=  ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
+                 + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
+                 + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
             LHSS = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I-1,J,K))*RDXN(I-1)*R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*RDX(I)*RRN(I) &
                  + ((P(I,J+1,K)-P(I,J,K))*RDYN(J)         *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
@@ -686,7 +699,8 @@ ENDIF
                  + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,'(A,3I5,3E12.4)') 'ITERATE_BAROCLINIC_TERM: I,J,K, LHSS, RHSS, RES:', I,J,K,LHSS, RHSS, RESIDUAL(I,J,K)
+ WRITE(MSG%LU_DEBUG,'(A,3I5,5E12.4)') 'ITERATE_BAROCLINIC_TERM: I,J,K, LHSS, LHSS1, LHSS2, RHSS, RES:', &
+    I,J,K,LHSS, LHSS1, LHSS2, RHSS, RESIDUAL(I,J,K)
 #endif
          ENDDO
       ENDDO

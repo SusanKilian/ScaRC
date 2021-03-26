@@ -3034,6 +3034,9 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
    END SELECT
 
    MESH_REAL(NMESHES) = VC(NC)     ! store last entry of RHS
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CONDENSING:  STORE LAST ENTRY OF RHS ', VC(NC)
+#endif
    VC(NC) = 0.0_EB                 ! set last entry of last mesh to zero
 
 ENDIF
@@ -3047,6 +3050,9 @@ IF (N_MPI_PROCESSES > 1) &
 
 DO NM = 1, NMESHES
    SCARC(NM)%RHS_END = MESH_REAL(NMESHES)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SCARC(',NM,')%RHS_END :', SCARC(NM)%RHS_END
+#endif
 ENDDO
 
 ! Only in case of periodic BC's:
@@ -3087,6 +3093,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             IF (ICN /= SCARC(NMESHES)%NC) CYCLE            ! if no relation to last cell in last mesh, cycle
 
             VC(ICW) = VC(ICW) - F%INCR_FACE * SCARC(NM)%RHS_END
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) ' HALLO I AM HERE TOO ', IFACE, ICG, ICW
+#endif
 
          ENDDO
 

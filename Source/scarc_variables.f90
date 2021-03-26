@@ -194,6 +194,8 @@ INTEGER :: FACE_ORIENTATION(6)  = (/1,-1,2,-2,3,-3/)        !< Coordinate direct
 
 CHARACTER(60) :: CNAME, CROUTINE
 
+REAL(EB) :: GLOBAL_MEAN_VALUE
+
 ! ---------- Public variables
   
 PUBLIC :: SCARC_ACCURACY                  !< Requested accuracy for ScaRC solver

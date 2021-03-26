@@ -355,7 +355,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
             IC = G%CELL_NUMBER(I,J,K)
             VC(IC) = VC(IC) - GLOBAL_REAL
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'FILTER_MEANVALUE: IC, VC(IC) :', IC, VC(IC)
 #endif
          ENDDO
@@ -364,6 +364,40 @@ WRITE(MSG%LU_DEBUG,*) 'FILTER_MEANVALUE: IC, VC(IC) :', IC, VC(IC)
 ENDDO
 
 END SUBROUTINE FILTER_MEANVALUE
+
+! ------------------------------------------------------------------------------------------------------------------
+!> \brief Filter out mean value
+! ------------------------------------------------------------------------------------------------------------------
+REAL(EB) FUNCTION FILTER_MEANVALUE_KRES(NL)
+USE SCARC_POINTERS, ONLY: M, L, SCARC_POINT_TO_GRID
+INTEGER, INTENT(IN) :: NL
+INTEGER :: NM, I, J, K
+
+MESH_REAL = 0.0_EB
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   DO K=1,L%NZ
+      DO J=1,L%NY
+         DO I=1,L%NX
+            MESH_REAL(NM) = MESH_REAL(NM) + M%KRES(I,J,K)
+         ENDDO
+      ENDDO
+   ENDDO
+ENDDO
+
+IF (N_MPI_PROCESSES > 1) &
+   CALL MPI_ALLGATHERV(MPI_IN_PLACE,1,MPI_INTEGER,MESH_REAL,COUNTS,DISPLS,&
+                       MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IERROR)
+
+GLOBAL_REAL = SUM(MESH_REAL(1:NMESHES))/REAL(NC_GLOBAL(NL))
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'FILTER_MEANVALUE: GLOBAL_REAL :', GLOBAL_REAL
+#endif
+
+FILTER_MEANVALUE_KRES = GLOBAL_REAL
+
+END FUNCTION FILTER_MEANVALUE_KRES
 
 
 ! --------------------------------------------------------------------------------------------------------------
