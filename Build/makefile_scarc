@@ -103,7 +103,7 @@ endif
 endif # OS test
 endif # MKLROOT test
 
-#FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
+FFLAGS_SCARC_NODEBUG  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
 FFLAGS_SCARC  = -DWITH_SCARC_VERBOSE -DWITH_SCARC_DEBUG -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
 #FFLAGS_SCARC  = -DWITH_SCARC_AMG
 #FFLAGS_SCARC  = -DWITH_SCARC_POSTPROCESSING -DWITH_SCARC_AMG
@@ -203,6 +203,19 @@ impi_intel_linux_scarc_db : FOPENMPFLAGS = -qopenmp -qopenmp-link static -liomp5
 impi_intel_linux_scarc_db : obj = fds_impi_intel_linux_scarc_db
 impi_intel_linux_scarc_db : setup $(obj_all) 
 #impi_intel_linux_scarc_db : setup $(obj_all) libscarc
+	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
+	#$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_fds1) $(obj_fds2) $(LFLAGSMKL)
+
+impi_intel_linux_scarc_log : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_NODEBUG)
+impi_intel_linux_scarc_log : FFLAGS += -warn noexternals
+impi_intel_linux_scarc_log : LFLAGSMKL = $(LFLAGSMKL_INTEL)
+impi_intel_linux_scarc_log : LFLAGS = -static-intel 
+#impi_intel_linux_scarc_log : LFLAGS = -static-intel libscarc.a
+impi_intel_linux_scarc_log : FCOMPL = mpiifort
+impi_intel_linux_scarc_log : FOPENMPFLAGS = -qopenmp -qopenmp-link static -liomp5
+impi_intel_linux_scarc_log : obj = fds_impi_intel_linux_scarc_log
+impi_intel_linux_scarc_log : setup $(obj_all) 
+#impi_intel_linux_scarc_log : setup $(obj_all) libscarc
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 	#$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_fds1) $(obj_fds2) $(LFLAGSMKL)
 

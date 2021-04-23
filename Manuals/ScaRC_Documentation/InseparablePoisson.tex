@@ -84,17 +84,23 @@
 
 
 \begin{document}
+\section{Separable Poisson equation}
 
-\include{00_basic_new}
-\include{01_mgm}
-\include{02_true}
-%\include{02_cases}
+$\cH \equiv \frac{|\bu|^2/}{2} + \frac{\tp}{\rho}$
 
-% ---------  bibliography
-\bibliographystyle{unsrt}
-\bibliography{\bibPath/FDS_general,\bibPath/FDS_refs,\bibPath/FDS_mathcomp,bibliography}
 
-%\addcontentsline{toc}{chapter}{References}
+\be
+   \dod{\bu}{t} {\bF_{\rm A}}  \underbrace{- \tp \, \nabla \left( \frac{1}{\rho}\right)}_{\bF_{\rm B}} + \nabla \cH =  0 \label{momeq}
+\ee
+\be
+   \dod{\bu}{t} + \nabla \bigg[\frac{|\bu|^2/}{2}]
+\ee
+
+\section{Inseparable Poisson equation}
+
+\be
+   \dod{\bu}{t} + \frac{|\bu|^2/}{2} + \frac{1}{\rho}\nabla\tilde{p} = -\bF_{\rm A}
+\ee
 
 \end{document}
 
