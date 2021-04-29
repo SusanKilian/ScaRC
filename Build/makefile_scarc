@@ -193,7 +193,7 @@ impi_intel_linux_scarc : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 
 
-impi_intel_linux_scarc_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC)
+impi_intel_linux_scarc_db : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f18 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC)
 impi_intel_linux_scarc_db : FFLAGS += -warn noexternals
 impi_intel_linux_scarc_db : LFLAGSMKL = $(LFLAGSMKL_INTEL)
 impi_intel_linux_scarc_db : LFLAGS = -static-intel 
@@ -206,7 +206,7 @@ impi_intel_linux_scarc_db : setup $(obj_all)
 	$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_all) $(LFLAGSMKL)
 	#$(FCOMPL) $(FFLAGS) $(LFLAGS) $(FOPENMPFLAGS) -o $(obj) $(obj_fds1) $(obj_fds2) $(LFLAGSMKL)
 
-impi_intel_linux_scarc_log : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_NODEBUG)
+impi_intel_linux_scarc_log : FFLAGS = -m64 -mt_mpi -check all -warn all -O0 -auto -WB -traceback -g -fpe0 -fltconsistency -stand:f18 -no-wrap-margin $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL) $(FFLAGS_SCARC_NODEBUG)
 impi_intel_linux_scarc_log : FFLAGS += -warn noexternals
 impi_intel_linux_scarc_log : LFLAGSMKL = $(LFLAGSMKL_INTEL)
 impi_intel_linux_scarc_log : LFLAGS = -static-intel 
@@ -263,7 +263,7 @@ mpi_intel_osx_scarc : setup $(obj_all)
 
 
 mpi_intel_osx_scarc_db : HERE=/Users/susannekilian/GIT/github/01_ScaRC/Build/mpi_intel_osx_scarc_db
-mpi_intel_osx_scarc_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f08 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC)
+mpi_intel_osx_scarc_db : FFLAGS = -m64 -check all -fp-stack-check -warn unused -O0 -auto -WB -traceback -ggdb -fpe0 -fltconsistency -stand:f18 -no-wrap-margin $(GITINFO) $(OPENMPI_COMPINFO) $(FFLAGSMKL_CUSTOM) -I$(HERE) $(FFLAGS_SCARC)
 mpi_intel_osx_scarc_db : LFLAGSMKL = $(LFLAGSMKL_CUSTOM) 
 mpi_intel_osx_scarc_db : LFLAGS = -static-intel 
 #mpi_intel_osx_scarc_db : LFLAGS = -static-intel libscarc.a
@@ -312,7 +312,7 @@ impi_intel_win_scarc : setup_win $(objwin_all)
 
 impi_intel_win_scarc_db : MPILIB = "$(I_MPI_DEBUG_ROOT)\impi.lib"
 impi_intel_win_scarc_db : MPIINCLUDE = "$(I_MPI_ROOT)\intel64\include"
-impi_intel_win_scarc_db : FFLAGS = /Od /nologo /debug:all /I$(MPIINCLUDE) /Z7 /extend_source:132 /warn:unused /warn:nointerfaces /Qtrapuv /fp:strict     /fp:except /traceback /check:all /stand:f08 /wrap-margin- $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL)
+impi_intel_win_scarc_db : FFLAGS = /Od /nologo /debug:all /I$(MPIINCLUDE) /Z7 /extend_source:132 /warn:unused /warn:nointerfaces /Qtrapuv /fp:strict     /fp:except /traceback /check:all /stand:f18 /wrap-margin- $(GITINFO) $(INTELMPI_COMPINFO) $(FFLAGSMKL_INTEL)
 impi_intel_win_scarc_db : FOPENMPFLAGS = /Qopenmp
 impi_intel_win_scarc_db : FCOMPL = ifort
 impi_intel_win_scarc_db : obj = fds_impi_win_scarc_db

@@ -9,7 +9,7 @@ MODULE SCARC_CONSTANTS
 
 USE PRECISION_PARAMETERS
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 INTEGER, PARAMETER :: NSCARC_ACCURACY_ABSOLUTE       =  1        !< Type of requested accuracy of method: absolute
 INTEGER, PARAMETER :: NSCARC_ACCURACY_RELATIVE       =  2        !< Type of requested accuracy of method: relative

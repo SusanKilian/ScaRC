@@ -12,10 +12,11 @@ USE SCARC_CONSTANTS
 USE SCARC_VARIABLES
 USE SCARC_MESSAGES
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
   
-REAL(EB) :: DT                                  !< TS width 
-REAL(EB) :: DTI                                 !< Inverse of TS width 
+REAL(EB) :: T                                   !< current time
+REAL(EB) :: DT                                  !< current timestep width 
+REAL(EB) :: DTI                                 !< Inverse of current timestep width 
 REAL(EB) :: OMEGA                               !< Relaxation parameter for current solver
 REAL(EB) :: EPS                                 !< Requested accuracy for current solver
 REAL(EB) :: RES                                 !< Current residual of current solver
@@ -54,9 +55,10 @@ CONTAINS
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Set current iteration state
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SET_ITERATION_STATE (DT_CURRENT)
-REAL(EB), INTENT(IN) :: DT_CURRENT
+SUBROUTINE SCARC_SET_ITERATION_STATE (T_CURRENT, DT_CURRENT)
+REAL(EB), INTENT(IN) :: T_CURRENT, DT_CURRENT
 
+T   = T_CURRENT
 DT  = DT_CURRENT
 DTI = 1.0_EB/DT_CURRENT
 

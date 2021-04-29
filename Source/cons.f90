@@ -8,7 +8,7 @@ MODULE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS
 USE MPI_F08
 USE ISO_FORTRAN_ENV, ONLY: ERROR_UNIT
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 INTEGER, PARAMETER :: DNS_MODE=1                 !< Flag for SIM_MODE: Direct Numerical Simulation
 INTEGER, PARAMETER :: LES_MODE=2                 !< Flag for SIM_MODE: Large Eddy Simulation
@@ -199,7 +199,6 @@ LOGICAL :: SHARED_FILE_SYSTEM=.TRUE.        !< Assume that FDS is being run on c
 LOGICAL :: FREEZE_VELOCITY=.FALSE.          !< Hold velocity fixed, do not perform a velocity update
 LOGICAL :: BNDF_DEFAULT=.TRUE.              !< Output boundary output files
 LOGICAL :: SPATIAL_GRAVITY_VARIATION=.FALSE.!< Assume gravity varies as a function of the \f$ x \f$ coordinate
-LOGICAL :: PROJECTION=.TRUE.                !< Apply the projection method for the divergence
 LOGICAL :: CHECK_VN=.TRUE.                  !< Check the Von Neumann number
 LOGICAL :: SOLID_PARTICLES=.FALSE.          !< Indicates the existence of solid particles
 LOGICAL :: HVAC=.FALSE.                     !< Perform an HVAC calculation
@@ -338,7 +337,7 @@ REAL(EB) :: Y_WERNER_WENGLE=11.81_EB           !< Limit of y+ in Werner-Wengle m
 REAL(EB) :: PARTICLE_CFL_MAX=1.0_EB            !< Upper limit of CFL constraint based on particle velocity
 REAL(EB) :: PARTICLE_CFL_MIN=0.8_EB            !< Lower limit of CFL constraint based on particle velocity
 REAL(EB) :: GRAV=9.80665_EB                    !< Acceleration of gravity (m/s2)
-REAL(EB) :: H_V_H2O(0:5000)                    !< Heat of vaporization for water (J/kg)
+REAL(EB), ALLOCATABLE, DIMENSION(:) :: H_V_H2O !< Heat of vaporization for water (J/kg)
 REAL(EB) :: CHI_R_MIN=0._EB                    !< Lower bound for radiative fraction
 REAL(EB) :: CHI_R_MAX=1._EB                    !< Upper bound for radiative fraction
 REAL(EB) :: EVAP_FILM_FAC=1._EB/3._EB          !< Factor used in droplet evaporation algorithm
@@ -430,15 +429,18 @@ LOGICAL :: REAC_SOURCE_CHECK=.FALSE.
 
 REAL(EB) :: RSUM0                                     !< Initial specific gas constant, \f$ R \sum_i Z_{i,0}/W_i \f$
 
+INTEGER :: I_MAX_TEMP=5000 !< Maximum dimension in K for temperature arrays
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: Z2Y          !< Matrix that converts lumped species vector to primitive, \f$ AZ=Y \f$
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: CP_Z         !< CP_Z(I,J) Specific heat (J/kg/K) of lumped species J at temperature I (K)
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: CPBAR_Z
+!< CPBAR_Z(I,J) Average specific heat (J/kg/K) of lumped species J at temperature I (K). Includes reference enthalpy.
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: K_RSQMW_Z
+!< K_RSQMW_Z(I,J) Conductivty (W/m/K) of lumped species J at temperature I (K) divided by SM%MW^0.5
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: MU_RSQMW_Z
-REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: D_Z
-REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: CP_AVG_Z
-REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: G_F_Z
-REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: H_SENS_Z
+!< MU_RSQMW_Z(I,J) Viscosity (m^2/s)  of lumped species J at temperature I (K) divided by SM%MW^0.5
+REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: D_Z          !< D_Z(I,J) Diffusivity (m^2/s) of lumped species J at temp I (K)
+REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: G_F_Z        !< CP_Z(I,J) Gibbs free energy (J/kg) of lumped species J at temp I (K)
+REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: H_SENS_Z     !< H_SENS(I,J) Sensible enthalpy (J/kg) of lumped species J at temp I (K)
 
 REAL(EB), ALLOCATABLE, DIMENSION(:) :: MWR_Z,RSQ_MW_Z
 CHARACTER(LABEL_LENGTH) :: EXTINCTION_MODEL='null'
@@ -632,6 +634,7 @@ REAL(EB) :: TMPMIN,TMPMAX,RHOMIN,RHOMAX
 
 INTEGER, PARAMETER :: CENTRAL_LIMITER=0,GODUNOV_LIMITER=1,SUPERBEE_LIMITER=2,MINMOD_LIMITER=3,CHARM_LIMITER=4,MP5_LIMITER=5
 INTEGER :: I_FLUX_LIMITER=SUPERBEE_LIMITER,CFL_VELOCITY_NORM=2
+LOGICAL, PARAMETER :: OW_ADVFLX_USE_WALL=.TRUE.
 
 ! Numerical quadrature (used in TEST_FILTER)
 
@@ -729,7 +732,7 @@ END MODULE GLOBAL_CONSTANTS
 MODULE RADCONS
 
 USE PRECISION_PARAMETERS
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: DLN                !< Wall-normal matrix
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: ORIENTATION_FACTOR !< Fraction of radiation angle corresponding to a particular direction

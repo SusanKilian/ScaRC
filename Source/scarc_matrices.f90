@@ -21,7 +21,7 @@ USE SCARC_STORAGE
 USE SCARC_MPI, ONLY: SCARC_EXCHANGE
 USE SCARC_GRIDS, ONLY: SCARC_SETUP_GLOBAL_CELL_MAPPING
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 CONTAINS
 
@@ -391,7 +391,7 @@ ELSE
    CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_UNSTRUCTURED)
 
    TYPE_SCOPE_SAVE(0:1) = TYPE_SCOPE(0:1)
-   TYPE_MKL_SAVE(0:1) = TYPE_MKL(0:1)
+   TYPE_MKL_SAVE(0:1)   = TYPE_MKL(0:1)
    IF (SCARC_MGM_CHECK_LAPLACE .OR. SCARC_MGM_EXACT_INITIAL) THEN
       TYPE_SCOPE(0) = NSCARC_SCOPE_GLOBAL
       IF (TRIM(SCARC_PRECON) == 'CLUSTER') THEN
@@ -407,7 +407,7 @@ ELSE
    ENDIF
 
    TYPE_SCOPE(0:1) = NSCARC_SCOPE_LOCAL
-   TYPE_MKL(0:1) = NSCARC_MKL_LOCAL
+   TYPE_MKL(0:1)   = NSCARC_MKL_LOCAL
    SELECT CASE (TYPE_MGM_LAPLACE)
       CASE (NSCARC_MGM_LAPLACE_CG, NSCARC_MGM_LAPLACE_PARDISO) 
          DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -422,7 +422,7 @@ ELSE
    END SELECT
    
    TYPE_SCOPE(0:1) = TYPE_SCOPE_SAVE(0:1)
-   TYPE_MKL(0:1) = TYPE_MKL_SAVE(0:1)
+   TYPE_MKL(0:1)   = TYPE_MKL_SAVE(0:1)
    CALL SCARC_SET_GRID_TYPE (NSCARC_GRID_STRUCTURED)
 
 ENDIF
@@ -1637,7 +1637,7 @@ REAL(EB), DIMENSION(:,:,:), POINTER :: RHOP
 INTEGER, INTENT(IN) :: IC, IX1, IY1, IZ1, IX2, IY2, IZ2, IOR0
 INTEGER, INTENT(INOUT) :: IP
 INTEGER :: IW
-REAL(EB) :: R2
+REAL(EB) :: RHOM
 
 ! If IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
 ! E.g.: ABS(IOR0)=1: then IX2 is either IX1-1 or IX1+1, so build corresponding meanvalue for RHO
@@ -1648,28 +1648,28 @@ ELSE
    RHOP => M%RHOS
 ENDIF
 
-R2 = 2.0_EB /(RHOP(IX1, IY1, IZ1) + RHOP(IX2, IY2, IZ2))
+RHOM = 2.0_EB /(RHOP(IX1, IY1, IZ1) + RHOP(IX2, IY2, IZ2))
 
 IF (IS_INTERNAL_CELL(IX1, IY1, IZ1, IOR0)) THEN
 
    IF (IS_STRUCTURED .OR. .NOT.L%IS_SOLID(IX2, IY2, IZ2)) THEN
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*R2
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*RHOM
          CASE (-1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *R2
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *RHOM
          CASE (2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*R2
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*RHOM
          CASE (-2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *R2
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *RHOM
          CASE (3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*R2
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*RHOM
          CASE (-3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *RHOM
       END SELECT
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-I : IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP):', &
-                                               IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP)
+WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-I : IC, IX1, IY1, IZ1, IP, RHOM, IOR0, A%VAL(IP):', &
+                                               IC, IX1, IY1, IZ1, IP, RHOM, IOR0, A%VAL(IP)
 #endif
       A%COL(IP) = G%CELL_NUMBER(IX2, IY2, IZ2)
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -1690,21 +1690,21 @@ ELSE IF (TYPE_SCOPE(0) == NSCARC_SCOPE_GLOBAL .AND. L%FACE(IOR0)%N_NEIGHBORS /= 
    IF (IW > 0) then                                    ! if available, build corresponding subdiagonal entry
       SELECT CASE(IOR0)
          CASE (1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*R2
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1-1)*RHOM
          CASE (-1)
-            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *R2
+            A%VAL(IP) = RDX(IX1)*RDXN(IX1)  *RHOM
          CASE (2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*R2
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1-1)*RHOM
          CASE (-2)
-            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *R2
+            A%VAL(IP) = RDY(IY1)*RDYN(IY1)  *RHOM
          CASE (3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*R2
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1-1)*RHOM
          CASE (-3)
-            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *R2
+            A%VAL(IP) = RDZ(IZ1)*RDZN(IZ1)  *RHOM
       END SELECT
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-E : IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP):', &
-                                               IC, IX1, IY1, IZ1, IP, R2, IOR0, A%VAL(IP)
+WRITE(MSG%LU_DEBUG,'(A,5I4, E12.4,I4, E12.4)') 'SUB-E : IC, IX1, IY1, IZ1, IP, RHOM, IOR0, A%VAL(IP):', &
+                                               IC, IX1, IY1, IZ1, IP, RHOM, IOR0, A%VAL(IP)
 #endif
       A%COL(IP) = G%WALL(IW)%ICE                       ! store its extended number in matrix column pointers
       A%STENCIL(-IOR0) = A%VAL(IP)
@@ -2338,11 +2338,21 @@ WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:'
          ELSE IF (GWC%BTYPE == NEUMANN) THEN
             IP = A%ROW(IC)
             A%VAL(IP) = A%VAL(IP) + F%INCR_BOUNDARY
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'C :PURE_NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
+#endif
          ENDIF
 
       ENDDO 
 
+#ifdef WITH_SCARC_DEBUG
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY PLAIN')
+#endif
       ! Transform into condensed system, if there are no Dirichlet BC's 
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'IS_PURE_NEUMANN=', IS_PURE_NEUMANN,': A%N_CONDENSED=', A%N_CONDENSED
+#endif
 
       IF (IS_PURE_NEUMANN) THEN
          DO ICO = 1, A%N_CONDENSED
@@ -2350,12 +2360,15 @@ WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'B :NEUMANN  : IW, I, J, K, NOM, IC, A%VAL:'
             DO ICOL = 1, ACO%N_COL
                IP = ACO%PTR(ICOL)
                A%VAL(IP) = ACO%VAL2(ICOL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'D :CONDENSED  : IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
+#endif
             ENDDO
          ENDDO
       ENDIF 
 
 #ifdef WITH_SCARC_DEBUG
-      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY')
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY AND POSSIBLE CONDENSING')
 #endif
  
    ! ---------- Matrix in bandwise storage technique
@@ -2500,54 +2513,54 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
             END SELECT
 
             IF (GWC%BTYPE == DIRICHLET .OR. GWC%BTYPE == NEUMANN) THEN
-            IF (TWO_D) THEN
-               SELECT CASE (IOR0)
-                  CASE (1)
-                     ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
+               IF (TWO_D) THEN
+                  SELECT CASE (IOR0)
+                     CASE (1)
+                        ASAVE = A%VAL(IP)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)),A%VAL(IP)
+                                     IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)),A%VAL(IP)
 #endif
-                  CASE (-1)
-                     ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
+                     CASE (-1)
+                        ASAVE = A%VAL(IP)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)), A%VAL(IP)
+                                     IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)), A%VAL(IP)
 #endif
-                  CASE (3)
-                     ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
+                     CASE (3)
+                        ASAVE = A%VAL(IP)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') ' 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)), A%VAL(IP)
+                                     IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)), A%VAL(IP)
 #endif
-                  CASE (-3)
-                     ASAVE = A%VAL(IP)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
+                     CASE (-3)
+                        ASAVE = A%VAL(IP)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
-                                  IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)), A%VAL(IP)
+                                     IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)), A%VAL(IP)
 #endif
-               END SELECT
-            ELSE
-               SELECT CASE (IOR0)
-                  CASE (1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
-                  CASE (-1)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
-                  CASE (2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(RHOP(I,J-1,K) + RHOP(I,J,K)))
-                  CASE (-2)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J+1,K)))
-                  CASE (3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
-                  CASE (-3)
-                     A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
-               END SELECT
+                  END SELECT
+               ELSE
+                  SELECT CASE (IOR0)
+                     CASE (1)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
+                     CASE (-1)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
+                     CASE (2)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J-1)*2.0_EB /(RHOP(I,J-1,K) + RHOP(I,J,K)))
+                     CASE (-2)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDY(J)*RDYN(J)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J+1,K)))
+                     CASE (3)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
+                     CASE (-3)
+                        A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
+                  END SELECT
+               ENDIF
             ENDIF
-         ENDIF
 
          ! Purely Neumann matrix
 
@@ -2560,28 +2573,28 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') '-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                      ASAVE = A%VAL(IP)
                      A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'PURE:N 1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                                   IC, ASAVE, SCAL, -RDX(I)*RDXN(I-1)*2.0_EB /(RHOP(I-1,J,K) + RHOP(I,J,K)),A%VAL(IP)
 #endif
                   CASE (-1)
                      ASAVE = A%VAL(IP)
                      A%VAL(IP) = A%VAL(IP) + SCAL*(-RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'PURE:N-1: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                                   IC, ASAVE, SCAL, -RDX(I)*RDXN(I)*2.0_EB /(RHOP(I,J,K) + RHOP(I+1,J,K)), A%VAL(IP)
 #endif
                   CASE (3)
                      ASAVE = A%VAL(IP)
                      A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'PURE:N 3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                                   IC, ASAVE, SCAL, -RDZ(K)*RDZN(K-1)*2.0_EB /(RHOP(I,J,K-1) + RHOP(I,J,K)), A%VAL(IP)
 #endif
                   CASE (-3)
                      ASAVE = A%VAL(IP)
                      A%VAL(IP) = A%VAL(IP) + SCAL*(-RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
+WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'PURE:N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
                                   IC, ASAVE, SCAL, -RDZ(K)*RDZN(K)*2.0_EB /(RHOP(I,J,K) + RHOP(I,J,K+1)), A%VAL(IP)
 #endif
                END SELECT
@@ -2605,6 +2618,17 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
 
       ENDDO 
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'IS_PURE_NEUMANN=', IS_PURE_NEUMANN,': A%N_CONDENSED=', A%N_CONDENSED
+WRITE(MSG%LU_DEBUG,*) 'RHO(1,1,1) =', MESHES(1)%RHO(1,1,1)
+WRITE(MSG%LU_DEBUG,*) 'RHOS(1,1,1) =', MESHES(1)%RHOS(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '1/RHO(1,1,1) =', 1.0_EB/MESHES(1)%RHO(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '1/RHOS(1,1,1) =', 1.0_EB/MESHES(1)%RHOS(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '200.0_EB/RHOS(1,1,1) =', 200.0_EB/MESHES(1)%RHOS(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '300.0_EB/RHOS(1,1,1) =', 300.0_EB/MESHES(1)%RHOS(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '400.0_EB/RHOS(1,1,1) =', 400.0_EB/MESHES(1)%RHOS(1,1,1)
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY PLAIN')
+#endif
       ! Transform into condensed system, if there are no Dirichlet BC's 
 
       IF (IS_PURE_NEUMANN) THEN
@@ -2613,12 +2637,15 @@ WRITE(MSG%LU_DEBUG,'(A, I4, 4E12.4)') 'N-3: IC, ASAVE, SCAL, ADD, A%VAL(IP):', &
             DO ICOL = 1, ACO%N_COL
                IP = ACO%PTR(ICOL)
                A%VAL(IP) = ACO%VAL2(ICOL)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,6I6,E14.6)') 'D :CONDENSED  : IW, I, J, K, NOM, IC, A%VAL:', IW, I, J, K, NOM, IC, A%VAL(IP)
+#endif
             ENDDO
          ENDDO
       ENDIF 
 
 #ifdef WITH_SCARC_DEBUG
-      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY')
+      CALL SCARC_DEBUG_CMATRIX(A, 'POISSON', 'POISSON WITH BDRY AND POSSIBLE CONDENSING')
 #endif
  
    ! ---------- Matrix in bandwise storage technique
@@ -2999,6 +3026,9 @@ IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0 .OR. &
     TYPE_PRECON == NSCARC_RELAX_FFT .OR. TYPE_PRECON == NSCARC_RELAX_FFTO) RETURN
 
  
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SETUP_SYSTEM_CONDENSED'
+#endif
 ! In last mesh:  subtract B*RHS(end) for internal legs of stencil
  
 MESH_REAL = 0.0_EB
@@ -3092,7 +3122,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
             IF (ICN /= SCARC(NMESHES)%NC) CYCLE            ! if no relation to last cell in last mesh, cycle
 
-            VC(ICW) = VC(ICW) - F%INCR_FACE * SCARC(NM)%RHS_END
+            VC(ICW) = VC(ICW) - F%INCR_FACE * SCARC(NM)%RHS_END          ! TODO: check size for non-equidistant grid
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) ' HALLO I AM HERE TOO ', IFACE, ICG, ICW
 #endif

@@ -7,8 +7,9 @@ USE PRECISION_PARAMETERS
 USE GLOBAL_CONSTANTS
 USE MESH_POINTERS
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
+USE SCRC, ONLY: MSG, SCARC_POISSON
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 PRIVATE
 
 PUBLIC VELOCITY_PREDICTOR,VELOCITY_CORRECTOR,NO_FLUX,BAROCLINIC_CORRECTION,MATCH_VELOCITY,MATCH_VELOCITY_FLUX,&
@@ -591,13 +592,9 @@ T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 END SUBROUTINE VISCOSITY_BC
 
 
-!> \brief Compute convective and diffusive terms of the momentum equations
-!> \param T Current time (s)
-!> \param DT Current time step (s)
-!> \param NM Mesh number
-!> \param APPLY_TO_ESTIMATED_VARIABLES Flag indicating whether to use estimated values of variables
-
 SUBROUTINE VELOCITY_FLUX(T,DT,NM,APPLY_TO_ESTIMATED_VARIABLES)
+
+! Compute convective and diffusive terms of the momentum equations
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 USE PHYSICAL_FUNCTIONS, ONLY: COMPUTE_WIND_COMPONENTS
@@ -612,7 +609,8 @@ REAL(EB) :: MUX,MUY,MUZ,UP,UM,VP,VM,WP,WM,VTRM,OMXP,OMXM,OMYP,OMYM,OMZP,OMZM,TXY
             RRHO,GX(0:IBAR_MAX),GY(0:IBAR_MAX),GZ(0:IBAR_MAX),TXXP,TXXM,TYYP,TYYM,TZZP,TZZM,DTXXDX,DTYYDY,DTZZDZ, &
             DUMMY=0._EB,T_NOW
 INTEGER :: I,J,K,IEXP,IEXM,IEYP,IEYM,IEZP,IEZM,IC,IC1,IC2
-REAL(EB), POINTER, DIMENSION(:,:,:) :: TXY,TXZ,TYZ,OMX,OMY,OMZ,UU,VV,WW,RHOP,DP
+REAL(EB), POINTER, DIMENSION(:,:,:) :: TXY=>NULL(),TXZ=>NULL(),TYZ=>NULL(),OMX=>NULL(),OMY=>NULL(),OMZ=>NULL(), &
+                                       UU=>NULL(),VV=>NULL(),WW=>NULL(),RHOP=>NULL(),DP=>NULL()
 
 T_NOW=CURRENT_TIME()
 
@@ -640,7 +638,6 @@ OMY => WORK5
 OMZ => WORK6
 
 ! Define velocities on gas cut-faces underlaying Cartesian faces.
-
 IF (CC_IBM .AND. .NOT.CC_STRESS_METHOD) THEN
    T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
    CALL CCIBM_INTERP_FACE_VEL(DT,NM,.TRUE.)
@@ -898,7 +895,6 @@ T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 CONTAINS
 
 SUBROUTINE DIRECT_FORCE()
-
 REAL(EB) :: TIME_RAMP_FACTOR
 
 TIME_RAMP_FACTOR = EVALUATE_RAMP(T,DUMMY,I_RAMP_FVX_T)
@@ -942,10 +938,10 @@ END SUBROUTINE DIRECT_FORCE
 
 SUBROUTINE CORIOLIS_FORCE()
 
-REAL(EB), POINTER, DIMENSION(:,:,:) :: UP,VP,WP
+REAL(EB), POINTER, DIMENSION(:,:,:) :: UP=>NULL(),VP=>NULL(),WP=>NULL()
 REAL(EB) :: UBAR,VBAR,WBAR
 INTEGER :: II,JJ,KK,IW
-TYPE(WALL_TYPE), POINTER :: WC
+TYPE(WALL_TYPE), POINTER :: WC=>NULL()
 
 ! Velocities relative to the p-cell center (same work done in Deardorff eddy viscosity)
 
@@ -1049,13 +1045,12 @@ ENDDO
 END SUBROUTINE MMS_VELOCITY_FLUX
 
 
-!> \brief Compute the velocity flux at a user-specified patch
-!> \details The user may specify a polynomial profile using the PROP and DEVC lines. This routine
-!> specifies the source term in the momentum equation to drive the local velocity toward
-!> this user-specified value, in much the same way as the immersed boundary method
-!> (see IBM_VELOCITY_FLUX).
-
 SUBROUTINE PATCH_VELOCITY_FLUX
+
+! The user may specify a polynomial profile using the PROP and DEVC lines. This routine
+! specifies the source term in the momentum equation to drive the local velocity toward
+! this user-specified value, in much the same way as the immersed boundary method
+! (see IBM_VELOCITY_FLUX).
 
 USE DEVICE_VARIABLES, ONLY: DEVICE_TYPE,PROPERTY_TYPE,N_DEVC,DEVICE,PROPERTY
 USE TRAN, ONLY: GINV
@@ -1195,12 +1190,9 @@ END SUBROUTINE PATCH_VELOCITY_FLUX
 END SUBROUTINE VELOCITY_FLUX
 
 
-!> \brief Compute convective and diffusive terms of the momentum equations in 2-D cylindrical coordinates
-!> \param T Current time (s)
-!> \param NM Mesh number
-!> \param APPLY_TO_ESTIMATED_VARIABLES Flag indicating whether to use estimated values of variables
-
 SUBROUTINE VELOCITY_FLUX_CYLINDRICAL(T,NM,APPLY_TO_ESTIMATED_VARIABLES)
+
+! Compute convective and diffusive terms for 2D axisymmetric
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 REAL(EB) :: T,DMUDX
@@ -1334,21 +1326,19 @@ T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 END SUBROUTINE VELOCITY_FLUX_CYLINDRICAL
 
 
-!> \brief Set momentum fluxes inside and on the surface of solid obstructions to maintain user-specified flux
-!> \param DT Time step (s)
-!> \param NM Mesh number
-
 SUBROUTINE NO_FLUX(DT,NM)
+
+! Set FVX,FVY,FVZ inside and on the surface of solid obstructions to maintain no flux
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: DT
-REAL(EB), POINTER, DIMENSION(:,:,:) :: HP,OM_HP
-REAL(EB) :: RFODT,H_OTHER,DUUDT,DVVDT,DWWDT,UN,T_NOW,DHFCT
+REAL(EB), POINTER, DIMENSION(:,:,:) :: HP=>NULL(),OM_HP=>NULL()
+REAL(EB) :: RFODT,H_OTHER,DUUDT,DVVDT,DWWDT,UN,T_NOW,DHFCT, VAL_KRES, VAL_P
 INTEGER  :: IC2,IC1,N,I,J,K,IW,II,JJ,KK,IOR,N_INT_CELLS,IIO,JJO,KKO,NOM
-TYPE (OBSTRUCTION_TYPE), POINTER :: OB
-TYPE (WALL_TYPE), POINTER :: WC
-TYPE (EXTERNAL_WALL_TYPE), POINTER :: EWC
+TYPE (OBSTRUCTION_TYPE), POINTER :: OB=>NULL()
+TYPE (WALL_TYPE), POINTER :: WC=>NULL()
+TYPE (EXTERNAL_WALL_TYPE), POINTER :: EWC=>NULL()
 LOGICAL :: GLMAT_ON_WHOLE_DOMAIN
 
 IF (SOLID_PHASE_ONLY .OR. FREEZE_VELOCITY) RETURN
@@ -1409,7 +1399,17 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DUUDT = -RFODT*(U(I,J,K)+US(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               FVX(I,J,K) = -VAL_KRES - VAL_P - DUUDT
+   ELSE
                FVX(I,J,K) = -RDXN(I)*(HP(I+1,J,K)-HP(I,J,K)) - DUUDT
+   ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVX:', I,J,K,FVX(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1426,7 +1426,16 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DVVDT = -RFODT*(V(I,J,K)+VS(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               FVY(I,J,K) = -VAL_KRES - VAL_P - DVVDT
+   ELSE
                FVY(I,J,K) = -RDYN(J)*(HP(I,J+1,K)-HP(I,J,K)) - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVY:', I,J,K,FVY(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1443,7 +1452,16 @@ OBST_LOOP: DO N=1,N_OBST
                ELSE
                   DWWDT = -RFODT*(W(I,J,K)+WS(I,J,K))
                ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               FVZ(I,J,K) = -VAL_KRES - VAL_P - DWWDT
+   ELSE
                FVZ(I,J,K) = -RDZN(K)*(HP(I,J,K+1)-HP(I,J,K)) - DWWDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX: I, J, K, FVZ:', I,J,K,FVZ(I,J,K)
+#endif
             ENDIF
          ENDDO
       ENDDO
@@ -1491,42 +1509,108 @@ WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS
             ELSE
                DUUDT = 2._EB*RFODT*(UN-0.5_EB*(U(II,JJ,KK)+US(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II+1,JJ,KK)-KRES(II,JJ,KK))*RDXN(II)
+            VAL_P    = 2.0_EB/(RHO(II+1,JJ,KK)+RHO(II,JJ,KK))*(H(II+1,JJ,KK)-H(II,JJ,KK))*RDXN(II)
+            FVX(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX 1: I, J, K, FVX:', II,JJ,KK, FVX(II,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVX(II,JJ,KK) = -RDXN(II)*(HP(II+1,JJ,KK)-HP(II,JJ,KK))*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX 1: I, J, K, FVX:', II,JJ,KK, FVX(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE(-1)
             IF (PREDICTOR) THEN
                DUUDT = RFODT*(UN-U(II-1,JJ,KK))
             ELSE
                DUUDT = 2._EB*RFODT*(UN-0.5_EB*(U(II-1,JJ,KK)+US(II-1,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II-1,JJ,KK))*RDXN(II-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II-1,JJ,KK))*(H(II,JJ,KK)-H(II-1,JJ,KK))*RDXN(II-1)
+            FVX(II-1,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A: NO_FLUX-1: I-1, J, K, FVX:', II-1, JJ, KK, FVX(II-1,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVX(II-1,JJ,KK) = -RDXN(II-1)*(HP(II,JJ,KK)-HP(II-1,JJ,KK))*DHFCT - DUUDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B: NO_FLUX-1: I-1, J, K, FVX:', II-1, JJ, KK, FVX(II-1,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE( 2)
             IF (PREDICTOR) THEN
                DVVDT = RFODT*(UN-V(II,JJ,KK))
             ELSE
                DVVDT = 2._EB*RFODT*(UN-0.5_EB*(V(II,JJ,KK)+VS(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ+1,KK)-KRES(II,JJ,KK))*RDYN(JJ)
+            VAL_P    = 2.0_EB/(RHO(II,JJ+1,KK)+RHO(II,JJ,KK))*(H(II,JJ+1,KK)-H(II,JJ,KK))*RDYN(JJ)
+            FVY(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DVVDT
+   ELSE
             FVY(II,JJ,KK) = -RDYN(JJ)*(HP(II,JJ+1,KK)-HP(II,JJ,KK))*DHFCT - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX 2: I, J, K, FVY:', II, JJ, KK, FVY(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
          CASE(-2)
             IF (PREDICTOR) THEN
                DVVDT = RFODT*(UN-V(II,JJ-1,KK))
             ELSE
                DVVDT = 2._EB*RFODT*(UN-0.5_EB*(V(II,JJ-1,KK)+VS(II,JJ-1,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II,JJ-1,KK))*RDYN(JJ-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II,JJ-1,KK))*(H(II,JJ,KK)-H(II,JJ-1,KK))*RDYN(JJ-1)
+            FVY(II,JJ-1,KK) = -(VAL_KRES + VAL_P)*DHFCT - DVVDT
+   ELSE
             FVY(II,JJ-1,KK) = -RDYN(JJ-1)*(HP(II,JJ,KK)-HP(II,JJ-1,KK))*DHFCT - DVVDT
+   ENDIF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'NO_FLUX-2: I, J-1, K, FVY:', II, JJ-1, KK, FVY(II,JJ-1,KK), DHFCT, SCARC_POISSON
+#endif
          CASE( 3)
             IF (PREDICTOR) THEN
                DWWDT = RFODT*(UN-W(II,JJ,KK))
             ELSE
                DWWDT = 2._EB*RFODT*(UN-0.5_EB*(W(II,JJ,KK)+WS(II,JJ,KK)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK+1)-KRES(II,JJ,KK))*RDZN(KK)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK+1)+RHO(II,JJ,KK))*(H(II,JJ,KK+1)-H(II,JJ,KK))*RDZN(KK)
+            FVZ(II,JJ,KK) = -(VAL_KRES + VAL_P)*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX 3: I, J, K, FVZ:', II, JJ, KK, FVZ(II,JJ,KK), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVZ(II,JJ,KK) = -RDZN(KK)*(HP(II,JJ,KK+1)-HP(II,JJ,KK))*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX 3: I, J, K, FVZ:', II, JJ, KK, FVZ(II,JJ,KK), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
          CASE(-3)
             IF (PREDICTOR) THEN
                DWWDT = RFODT*(UN-W(II,JJ,KK-1))
             ELSE
                DWWDT = 2._EB*RFODT*(UN-0.5_EB*(W(II,JJ,KK-1)+WS(II,JJ,KK-1)) )
             ENDIF
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+            VAL_KRES = (KRES(II,JJ,KK)-KRES(II,JJ,KK-1))*RDZN(KK-1)
+            VAL_P    = 2.0_EB/(RHO(II,JJ,KK)+RHO(II,JJ,KK-1))*(H(II,JJ,KK)-H(II,JJ,KK-1))*RDZN(KK-1)
+            FVZ(II,JJ,KK-1) = -(VAL_KRES - VAL_P)*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A:NO_FLUX-3: I, J, K-1, FVZ:', II, JJ, KK-1, FVZ(II,JJ,KK-1), DHFCT, VAL_KRES, VAL_P, SCARC_POISSON
+#endif
+   ELSE
             FVZ(II,JJ,KK-1) = -RDZN(KK-1)*(HP(II,JJ,KK)-HP(II,JJ,KK-1))*DHFCT - DWWDT
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B:NO_FLUX-3: I, J, K-1, FVZ:', II, JJ, KK-1, FVZ(II,JJ,KK-1), DHFCT, SCARC_POISSON
+#endif
+   ENDIF
       END SELECT
    ENDIF
 
@@ -1554,20 +1638,16 @@ T_USED(4)=T_USED(4)+CURRENT_TIME()-T_NOW
 END SUBROUTINE NO_FLUX
 
 
-!> \brief Estimate the velocity components at the next time step
-!> \param T Current time (s)
-!> \param DT Time step (s)
-!> \param DT_NEW New time step (if necessary)
-!> \param NM Mesh number
-
 SUBROUTINE VELOCITY_PREDICTOR(T,DT,DT_NEW,NM)
 
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
-USE SCRC, ONLY: SCARC_POISSON, MSG, SCARC_DEBUG_VECTOR3_BIG
+USE SCRC, ONLY : SCARC_POISSON, MSG
 
-REAL(EB) :: T_NOW,XHAT,ZHAT
+! Estimates the velocity components at the next time step
+
+REAL(EB) :: T_NOW,XHAT,ZHAT,VAL_KRES, VAL_P
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1583,40 +1663,35 @@ ENDIF
 T_NOW=CURRENT_TIME()
 CALL POINT_TO_MESH(NM)
 
-#ifdef WITH_SCARC_DEBUG
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'FVX VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'FVZ VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX_B, NM, 'FVX_B VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ_B, NM, 'FVZ_B VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (H, NM, 'H VELOCITY_PREDICTOR')
-#endif
-
 FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    US = U
    VS = V
    WS = W
 ELSE FREEZE_VELOCITY_IF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
-               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K)+FVX_B(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + VAL_KRES + VAL_P)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVX, FVX_B, H_I+1, H_I, US: ', I,J,K, &
-                               FVX(I,J,K), FVX_B(I,J,K), H(I+1,J,K), H(I,J,K), US(I,J,K) 
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, U, FVX, VAL, US:', I,J,K,U(I,J,K), FVX(I,J,K), VAL_KRES, VAL_P, US(I,J,K)
 #endif
             ENDDO
          ENDDO
       ENDDO
-   
+
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
-               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + VAL_KRES + VAL_P)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVY, FVY_B, H_J+1, H_J, VS: ', I,J,K, &
-                               FVY(I,J,K), FVY_B(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K) 
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, V, FVY, VAL, VS:', I,J,K,V(I,J,K), FVY(I,J,K), VAL_KRES, VAL_P, VS(I,J,K)
 #endif
             ENDDO
          ENDDO
@@ -1625,35 +1700,30 @@ WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVY, FVY_B, H_J+1
       DO K=0,KBAR
          DO J=1,JBAR
             DO I=1,IBAR
-               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K)+FVZ_B(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + VAL_KRES + VAL_P)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVZ, FVZ_B, H_K+1, H_K, WS: ', I,J,K, &
-                               FVZ(I,J,K), FVZ_B(I,J,K), H(I,J,K+1), H(I,J,K), WS(I,J,K) 
+WRITE(MSG%LU_DEBUG,*) 'VP: I, J, K, V, FVZ, VAL, WS:', I,J,K,W(I,J,K), FVZ(I,J,K), VAL_KRES, VAL_P, WS(I,J,K)
 #endif
             ENDDO
          ENDDO
       ENDDO
+
    ELSE
+
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
                US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVX, H_I+1, H_I, US: ', I,J,K, &
-                               FVX(I,J,K), H(I+1,J,K), H(I,J,K), US(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
-   
+
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
                VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVY, H_J+1, H_J, VS: ', I,J,K, &
-                               FVY(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
@@ -1662,10 +1732,6 @@ WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVY, H_J+1, H_J, VS
          DO J=1,JBAR
             DO I=1,IBAR
                WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVZ, H_K+1, H_K, WS: ', I,J,K, &
-                               FVZ(I,J,K), H(I,J,K+1), H(I,J,K), WS(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
@@ -1714,19 +1780,16 @@ T_USED(4)=T_USED(4)+CURRENT_TIME()-T_NOW
 END SUBROUTINE VELOCITY_PREDICTOR
 
 
-!> \brief Correct the velocity components at the next time step
-!> \param T Current time (s)
-!> \param DT Time step (s)
-!> \param NM Mesh number
-
 SUBROUTINE VELOCITY_CORRECTOR(T,DT,NM)
 
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
-USE SCRC, ONLY: SCARC_POISSON, MSG, SCARC_DEBUG_VECTOR3_BIG
+USE SCRC, ONLY : SCARC_POISSON
 
-REAL(EB) :: T_NOW,XHAT,ZHAT
+! Correct the velocity components
+
+REAL(EB) :: T_NOW,XHAT,ZHAT, VAL_KRES, VAL_P
 INTEGER  :: I,J,K
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -1739,14 +1802,6 @@ ENDIF
 
 T_NOW=CURRENT_TIME()
 CALL POINT_TO_MESH(NM)
-
-#ifdef WITH_SCARC_DEBUG
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'FVX VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'FVZ VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX_B, NM, 'FVX_B VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ_B, NM, 'FVZ_B VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (HS, NM, 'HS VELOCITY_CORRECTOR')
-#endif
 
 FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    U = US
@@ -1765,78 +1820,64 @@ ELSE FREEZE_VELOCITY_IF
       IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.TRUE.)       ! Store velocities on GEOM SOLID faces.
    ENDIF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
+   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'SUSI') THEN
+
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
-               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K)+FVX_B(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVX, FVX_B, HS_I+1, HS_I, U: ', I,J,K, &
-                               FVX(I,J,K), FVX_B(I,J,K), HS(I+1,J,K), HS(I,J,K), U(I,J,K) 
-#endif
+               VAL_KRES = (KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)
+               VAL_P    = 2.0_EB/(RHO(I+1,J,K)+RHO(I,J,K))*(H(I+1,J,K)-H(I,J,K))*RDXN(I)
+               U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + VAL_KRES + VAL_P))
             ENDDO
          ENDDO
       ENDDO
-
+   
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
-               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVY, FVY_B, HS_J+1, HS_J, V: ', I,J,K, &
-                               FVY(I,J,K), FVY_B(I,J,K), HS(I,J+1,K), HS(I,J,K), V(I,J,K) 
-#endif
+               VAL_KRES = (KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)
+               VAL_P    = 2.0_EB/(RHO(I,J+1,K)+RHO(I,J,K))*(H(I,J+1,K)-H(I,J,K))*RDYN(J)
+               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + VAL_KRES + VAL_P))
+            ENDDO
+         ENDDO
+      ENDDO
+   
+      DO K=0,KBAR
+         DO J=1,JBAR
+            DO I=1,IBAR
+               VAL_KRES = (KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)
+               VAL_P    = 2.0_EB/(RHO(I,J,K+1)+RHO(I,J,K))*(H(I,J,K+1)-H(I,J,K))*RDZN(K)
+               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + VAL_KRES + VAL_P))
             ENDDO
          ENDDO
       ENDDO
 
-      DO K=0,KBAR
-         DO J=1,JBAR
-            DO I=1,IBAR
-               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K)+FVZ_B(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVZ, FVZ_B, HS_K+1, HS_K, W: ', I,J,K, &
-                               FVZ(I,J,K), FVZ_B(I,J,K), HS(I,J,K+1), HS(I,J,K), W(I,J,K) 
-#endif
-            ENDDO
-         ENDDO
-      ENDDO
    ELSE
+
       DO K=1,KBAR
          DO J=1,JBAR
             DO I=0,IBAR
                U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVX, HS_I+1, HS_I, U: ', I,J,K, &
-                               FVX(I,J,K), HS(I+1,J,K), HS(I,J,K), U(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
-
+   
       DO K=1,KBAR
          DO J=0,JBAR
             DO I=1,IBAR
                V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVY, HS_J+1, HS_J, V: ', I,J,K, &
-                               FVY(I,J,K), HS(I,J+1,K), HS(I,J,K), V(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
-
+   
       DO K=0,KBAR
          DO J=1,JBAR
             DO I=1,IBAR
                W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVZ, HS_K+1, HS_K, W: ', I,J,K, &
-                               FVZ(I,J,K), HS(I,J,K+1), HS(I,J,K), W(I,J,K) 
-#endif
             ENDDO
          ENDDO
       ENDDO
+
    ENDIF
 
    IF (PRES_METHOD == 'GLMAT' .OR. PRES_METHOD == 'USCARC') THEN
@@ -1874,15 +1915,13 @@ ENDIF
 IF (DO_EVACUATION) W = 0._EB
 
 T_USED(4)=T_USED(4)+CURRENT_TIME()-T_NOW
+
 END SUBROUTINE VELOCITY_CORRECTOR
 
 
-!> \brief Assert tangential velocity boundary conditions
-!> \param T Current time (s)
-!> \param NM Mesh number
-!> \param APPLY_TO_ESTIMATED_VARIABLES Flag indicating that estimated (starred) variables are to be used
-
 SUBROUTINE VELOCITY_BC(T,NM,APPLY_TO_ESTIMATED_VARIABLES)
+
+! Assert tangential velocity boundary conditions
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 USE TURBULENCE, ONLY: WALL_MODEL,ABL_WALL_MODEL
@@ -1900,10 +1939,11 @@ INTEGER :: I,J,K,NOM(2),IIO(2),JJO(2),KKO(2),IE,II,JJ,KK,IEC,IOR,IWM,IWP,ICMM,IC
            BOUNDARY_TYPE_M,BOUNDARY_TYPE_P,IS2,IWPI,IWMI,VENT_INDEX
 LOGICAL :: ALTERED_GRADIENT(-2:2),PROCESS_EDGE,SYNTHETIC_EDDY_METHOD,HVAC_TANGENTIAL,INTERPOLATED_EDGE,&
            UPWIND_BOUNDARY,INFLOW_BOUNDARY
-REAL(EB), POINTER, DIMENSION(:,:,:) :: UU,VV,WW,U_Y,U_Z,V_X,V_Z,W_X,W_Y,RHOP,VEL_OTHER
+REAL(EB), POINTER, DIMENSION(:,:,:) :: UU=>NULL(),VV=>NULL(),WW=>NULL(),U_Y=>NULL(),U_Z=>NULL(), &
+                                       V_X=>NULL(),V_Z=>NULL(),W_X=>NULL(),W_Y=>NULL(),RHOP=>NULL(),VEL_OTHER=>NULL()
 REAL(EB), POINTER, DIMENSION(:,:,:,:) :: ZZP
-TYPE (SURFACE_TYPE), POINTER :: SF
-TYPE (OMESH_TYPE), POINTER :: OM
+TYPE (SURFACE_TYPE), POINTER :: SF=>NULL()
+TYPE (OMESH_TYPE), POINTER :: OM=>NULL()
 TYPE (VENTS_TYPE), POINTER :: VT
 TYPE (WALL_TYPE), POINTER :: WCM,WCP
 
@@ -2403,7 +2443,7 @@ EDGE_LOOP: DO IE=1,N_EDGES
 
                   CASE (WALL_MODEL_BC) BOUNDARY_CONDITION
 
-                     ITMP = MIN(I_MAX_TEMP,NINT(0.5_EB*(TMP(IIGM,JJGM,KKGM)+TMP(IIGP,JJGP,KKGP))))
+                     ITMP = MIN(5000,NINT(0.5_EB*(TMP(IIGM,JJGM,KKGM)+TMP(IIGP,JJGP,KKGP))))
                      MU_WALL = MU_RSQMW_Z(ITMP,1)/RSQ_MW_Z(1)
                      RHO_WALL = 0.5_EB*( RHOP(IIGM,JJGM,KKGM) + RHOP(IIGP,JJGP,KKGP) )
 
@@ -2637,20 +2677,18 @@ IF(CC_IBM .AND. CC_STRESS_METHOD) CALL CCIBM_VELOCITY_BC(T,NM,APPLY_TO_ESTIMATED
 END SUBROUTINE VELOCITY_BC
 
 
-!> \brief Force normal component of velocity to match at interpolated boundaries
-!> \param NM Mesh number
-
 SUBROUTINE MATCH_VELOCITY(NM)
+
+! Force normal component of velocity to match at interpolated boundaries
 
 INTEGER  :: NOM,II,JJ,KK,IOR,IW,IIO,JJO,KKO
 INTEGER, INTENT(IN) :: NM
-REAL(EB) :: T_NOW,DA_OTHER,UU_OTHER,VV_OTHER,WW_OTHER,NOM_CELLS
-REAL(EB), POINTER, DIMENSION(:,:,:) :: UU,VV,WW,OM_UU,OM_VV,OM_WW
-TYPE (OMESH_TYPE), POINTER :: OM
-TYPE (MESH_TYPE), POINTER :: M2
-TYPE (WALL_TYPE), POINTER :: WC
-TYPE (EXTERNAL_WALL_TYPE), POINTER :: EWC
-
+REAL(EB) :: UU_AVG,VV_AVG,WW_AVG,T_NOW,DA_OTHER,UU_OTHER,VV_OTHER,WW_OTHER,NOM_CELLS
+REAL(EB), POINTER, DIMENSION(:,:,:) :: UU=>NULL(),VV=>NULL(),WW=>NULL(),OM_UU=>NULL(),OM_VV=>NULL(),OM_WW=>NULL()
+TYPE (OMESH_TYPE), POINTER :: OM=>NULL()
+TYPE (MESH_TYPE), POINTER :: M2=>NULL()
+TYPE (WALL_TYPE), POINTER :: WC=>NULL()
+TYPE (EXTERNAL_WALL_TYPE), POINTER :: EWC=>NULL()
 IF (SOLID_PHASE_ONLY) RETURN
 IF (DO_EVACUATION) RETURN
 
@@ -2666,10 +2704,12 @@ IF (PREDICTOR) THEN
    UU => US
    VV => VS
    WW => WS
+   D_CORR = 0._EB
 ELSE
    UU => U
    VV => V
    WW => W
+   DS_CORR = 0._EB
 ENDIF
 
 ! Loop over all external wall cells and force adjacent normal components of velocty at interpolated boundaries to match.
@@ -2742,8 +2782,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         UU_AVG = 0.5_EB*(UU(0,JJ,KK) + UU_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) + 0.5*(UU_AVG-UU(0,JJ,KK))*R(0)*RDX(1)*RRN(1)
+         IF (CORRECTOR) DS_CORR(IW) = (UU_AVG-UU(0,JJ,KK))*R(0)*RDX(1)*RRN(1)
          UVW_SAVE(IW) = UU(0,JJ,KK)
-         UU(0,JJ,KK)  = 0.5_EB*(UU(0,JJ,KK) + UU_OTHER)
+         UU(0,JJ,KK)  = UU_AVG
 
       CASE(-1)
 
@@ -2756,8 +2799,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         UU_AVG = 0.5_EB*(UU(IBAR,JJ,KK) + UU_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) - 0.5*(UU_AVG-UU(IBAR,JJ,KK))*R(IBAR)*RDX(IBAR)*RRN(IBAR)
+         IF (CORRECTOR) DS_CORR(IW) = -(UU_AVG-UU(IBAR,JJ,KK))*R(IBAR)*RDX(IBAR)*RRN(IBAR)
          UVW_SAVE(IW) = UU(IBAR,JJ,KK)
-         UU(IBAR,JJ,KK) = 0.5_EB*(UU(IBAR,JJ,KK) + UU_OTHER)
+         UU(IBAR,JJ,KK) = UU_AVG
 
       CASE( 2)
 
@@ -2770,8 +2816,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         VV_AVG = 0.5_EB*(VV(II,0,KK) + VV_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) + 0.5*(VV_AVG-VV(II,0,KK))*RDY(1)
+         IF (CORRECTOR) DS_CORR(IW) = (VV_AVG-VV(II,0,KK))*RDY(1)
          UVW_SAVE(IW) = VV(II,0,KK)
-         VV(II,0,KK)  = 0.5_EB*(VV(II,0,KK) + VV_OTHER)
+         VV(II,0,KK)  = VV_AVG
 
       CASE(-2)
 
@@ -2784,8 +2833,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         VV_AVG = 0.5_EB*(VV(II,JBAR,KK) + VV_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) - 0.5*(VV_AVG-VV(II,JBAR,KK))*RDY(JBAR)
+         IF (CORRECTOR) DS_CORR(IW) = -(VV_AVG-VV(II,JBAR,KK))*RDY(JBAR)
          UVW_SAVE(IW)   = VV(II,JBAR,KK)
-         VV(II,JBAR,KK) = 0.5_EB*(VV(II,JBAR,KK) + VV_OTHER)
+         VV(II,JBAR,KK) = VV_AVG
 
       CASE( 3)
 
@@ -2798,8 +2850,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         WW_AVG = 0.5_EB*(WW(II,JJ,0) + WW_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) + 0.5*(WW_AVG-WW(II,JJ,0))*RDZ(1)
+         IF (CORRECTOR) DS_CORR(IW) = (WW_AVG-WW(II,JJ,0))*RDZ(1)
          UVW_SAVE(IW) = WW(II,JJ,0)
-         WW(II,JJ,0)  = 0.5_EB*(WW(II,JJ,0) + WW_OTHER)
+         WW(II,JJ,0)  = WW_AVG
 
       CASE(-3)
 
@@ -2812,8 +2867,11 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
                ENDDO
             ENDDO
          ENDDO
+         WW_AVG = 0.5_EB*(WW(II,JJ,KBAR) + WW_OTHER)
+         IF (PREDICTOR) D_CORR(IW) = DS_CORR(IW) - 0.5*(WW_AVG-WW(II,JJ,KBAR))*RDZ(KBAR)
+         IF (CORRECTOR) DS_CORR(IW) = -(WW_AVG-WW(II,JJ,KBAR))*RDZ(KBAR)
          UVW_SAVE(IW)   = WW(II,JJ,KBAR)
-         WW(II,JJ,KBAR) = 0.5_EB*(WW(II,JJ,KBAR) + WW_OTHER)
+         WW(II,JJ,KBAR) = WW_AVG
 
    END SELECT
 
@@ -2851,10 +2909,9 @@ T_USED(4)=T_USED(4)+CURRENT_TIME()-T_NOW
 END SUBROUTINE MATCH_VELOCITY
 
 
-!> \brief Force normal component of velocity flux to match at interpolated boundaries
-!> \param NM Mesh number
-
 SUBROUTINE MATCH_VELOCITY_FLUX(NM)
+
+! Force normal component of velocity flux to match at interpolated boundaries
 
 INTEGER  :: NOM,II,JJ,KK,IOR,IW,IIO,JJO,KKO
 INTEGER, INTENT(IN) :: NM
@@ -3006,12 +3063,9 @@ T_USED(4)=T_USED(4)+CURRENT_TIME()-T_NOW
 END SUBROUTINE MATCH_VELOCITY_FLUX
 
 
-!> \brief Check the Courant and Von Neumann stability criteria, and if necessary, reduce or increase the time step
-!> \param DT Time step (s)
-!> \param DT_NEW New time step (s)
-!> \param NM Mesh number
-
 SUBROUTINE CHECK_STABILITY(DT,DT_NEW,NM)
+
+! Checks the Courant and Von Neumann stability criteria, and if necessary, reduces the time step accordingly
 
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: DT
@@ -3153,14 +3207,11 @@ ENDIF
 END SUBROUTINE CHECK_STABILITY
 
 
-!> \brief Add baroclinic term to the momentum equation
-!> \param T Current time (s)
-!> \param NM Mesh number
-
 SUBROUTINE BAROCLINIC_CORRECTION(T,NM)
 
+! Add baroclinic term to the momentum equation
+
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
-USE SCRC, ONLY: MSG
 REAL(EB), INTENT(IN) :: T
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: UU=>NULL(),VV=>NULL(),WW=>NULL(),RHOP=>NULL(),HP=>NULL(),RHMK=>NULL(),RRHO=>NULL()
@@ -3267,10 +3318,10 @@ DO K=1,KBAR
       DO I=0,IBAR
          FVX_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I+1,J,K)+RHMK(I+1,J,K)*RHOP(I,J,K))*(RRHO(I+1,J,K)-RRHO(I,J,K))*RDXN(I)/ &
                          (RHOP(I+1,J,K)+RHOP(I,J,K))
-         FVX(I,J,K) = FVX(I,J,K) + FVX_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVX:', I,J,K, FVX(I,J,K)
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVX_B:', I,J,K,FVX_B(I,J,K)
 #endif
+         IF (TRIM(SCARC_POISSON) /= 'INSEPARABLE') FVX(I,J,K) = FVX(I,J,K) + FVX_B(I,J,K)
       ENDDO
    ENDDO
 ENDDO
@@ -3285,9 +3336,9 @@ IF (.NOT.TWO_D) THEN
          DO I=1,IBAR
             FVY_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J+1,K)+RHMK(I,J+1,K)*RHOP(I,J,K))*(RRHO(I,J+1,K)-RRHO(I,J,K))*RDYN(J)/ &
                             (RHOP(I,J+1,K)+RHOP(I,J,K))
-            FVY(I,J,K) = FVY(I,J,K) + FVY_B(I,J,K)
+            IF (TRIM(SCARC_POISSON) /= 'INSEPARABLE') FVY(I,J,K) = FVY(I,J,K) + FVY_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVY:', I,J,K, FVY(I,J,K)
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVY_B:', I,J,K,FVX_B(I,J,K)
 #endif
          ENDDO
       ENDDO
@@ -3303,9 +3354,9 @@ DO K=0,KBAR
       DO I=1,IBAR
          FVZ_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J,K+1)+RHMK(I,J,K+1)*RHOP(I,J,K))*(RRHO(I,J,K+1)-RRHO(I,J,K))*RDZN(K)/ &
                          (RHOP(I,J,K+1)+RHOP(I,J,K))
-         FVZ(I,J,K) = FVZ(I,J,K) + FVZ_B(I,J,K)
+         IF (TRIM(SCARC_POISSON) /= 'INSEPARABLE') FVZ(I,J,K) = FVZ(I,J,K) + FVZ_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVZ:', I,J,K, FVZ(I,J,K)
+WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC: I,J,K, FVZ_B:', I,J,K,FVX_B(I,J,K)
 #endif
       ENDDO
    ENDDO
@@ -3318,16 +3369,18 @@ T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 END SUBROUTINE BAROCLINIC_CORRECTION
 
 
-!> \brief Recompute velocities on wall cells
-!> \param DT Time step (s)
-!> \param STORE_UN Flag indicating whether normal velocity component is to be saved
-!> \details Ensure that the correct normal derivative of H is used on the projection. It is only used when the Poisson equation
-!> for the pressure is solved .NOT. PRES_ON_WHOLE_DOMAIN (i.e. using the GLMAT solver).
+! ------------------------ WALL_VELOCITY_NO_GRADH ---------------------------------
 
 SUBROUTINE WALL_VELOCITY_NO_GRADH(DT,STORE_UN)
 
+! This routine recomputes velocities on wall cells, such that the correct
+! normal derivative of H is used on the projection. It is only used when the Poisson equation
+! for the pressure is solved .NOT. PRES_ON_WHOLE_DOMAIN (i.e. using the GLMAT solver).
+
 REAL(EB), INTENT(IN) :: DT
 LOGICAL, INTENT(IN) :: STORE_UN
+
+! Local variables:
 INTEGER :: IIG,JJG,KKG,IOR,IW,N_INTERNAL_WALL_CELLS_AUX
 REAL(EB) :: DHDN, VEL_N
 TYPE (WALL_TYPE), POINTER :: WC

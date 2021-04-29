@@ -5,8 +5,9 @@ MODULE WALL_ROUTINES
 USE PRECISION_PARAMETERS
 USE GLOBAL_CONSTANTS
 USE MESH_POINTERS
+USE DEVICE_VARIABLES, ONLY : PROPERTY,PROPERTY_TYPE
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 PRIVATE
 
 PUBLIC WALL_BC,TGA_ANALYSIS
@@ -22,6 +23,7 @@ TYPE(VENTS_TYPE), POINTER :: VT
 TYPE(OMESH_TYPE), POINTER :: OM
 TYPE(MESH_TYPE), POINTER :: MM
 TYPE(MATERIAL_TYPE), POINTER :: ML
+TYPE(PROPERTY_TYPE), POINTER :: PY
 LOGICAL :: CALL_HT_1D
 
 CONTAINS
@@ -193,6 +195,16 @@ IF (SOLID_PARTICLES) THEN
          ONE_D%U_TANG = SQRT(UBAR**2+VBAR**2+WBAR**2)
          IF (LPC%SOLID_PARTICLE) CALL CALCULATE_TMP_F(PARTICLE_INDEX=IP)
          IF (SF%THERMAL_BC_INDEX==THERMALLY_THICK .AND. CALL_HT_1D) CALL SOLID_HEAT_TRANSFER_1D(NM,T,DT_BC,PARTICLE_INDEX=IP)
+         IF (LPC%MASSLESS_TARGET) THEN
+            PY => PROPERTY(LP%PROP_INDEX)
+            IF (PY%HEAT_TRANSFER_COEFFICIENT>0._EB) THEN
+               ONE_D%HEAT_TRANS_COEF = PY%HEAT_TRANSFER_COEFFICIENT
+            ELSE
+               ONE_D%HEAT_TRANS_COEF = HEAT_TRANSFER_COEFFICIENT(ONE_D%TMP_G-PY%GAUGE_TEMPERATURE,SF%H_FIXED,SURF_INDEX,&
+                                       PARTICLE_INDEX=IP)
+            ENDIF
+            ONE_D%Q_CON_F = ONE_D%HEAT_TRANS_COEF*(ONE_D%TMP_G-PY%GAUGE_TEMPERATURE)
+         ENDIF
       ENDIF
    ENDDO
 ENDIF
@@ -224,15 +236,16 @@ SUBROUTINE CALCULATE_TMP_F(WALL_INDEX,CFACE_INDEX,PARTICLE_INDEX)
 
 USE PHYSICAL_FUNCTIONS, ONLY: GET_VISCOSITY
 USE MATH_FUNCTIONS, ONLY: INTERPOLATE1D_UNIFORM, SCALAR_FACE_VALUE
+USE COMPLEX_GEOMETRY, ONLY : IBM_CGSC, IBM_SOLID
 
 INTEGER, INTENT(IN), OPTIONAL :: WALL_INDEX,CFACE_INDEX,PARTICLE_INDEX
 REAL(EB) :: ARO,FDERIV,QEXTRA,QNET,RAMP_FACTOR,RHO_G_2,RSUM_F,PBAR_F,TMP_OTHER_SOLID,TSI,UN, &
             RHO_ZZ_F(1:N_TOTAL_SCALARS),ZZ_GET(1:N_TRACKED_SPECIES),DUMMY, &
             ZZZ(1:4),RHO_OTHER,RHO_OTHER_2,RHO_ZZ_OTHER(1:N_TOTAL_SCALARS),RHO_ZZ_OTHER_2,RHO_ZZ_G,RHO_ZZ_G_2, &
-            DDO,PBAR_G,PBAR_OTHER,DENOM,D_Z_N(0:5000),D_Z_G,D_Z_OTHER,RHO_G,TMP_G,TMP_OTHER, &
+            DDO,PBAR_G,PBAR_OTHER,DENOM,D_Z_N(0:I_MAX_TEMP),D_Z_G,D_Z_OTHER,RHO_G,TMP_G,TMP_OTHER, &
             MU_DNS_G,MU_G,MU_DNS_OTHER,MU_OTHER,RHO_D,RHO_D_TURB,RHO_D_DZDN,RHO_D_DZDN_OTHER,RSUM_OTHER
 
-LOGICAL :: INFLOW,SECOND_ORDER_INTERPOLATED_BOUNDARY,SOLID_OTHER,ATMOSPHERIC_INTERPOLATION
+LOGICAL :: INFLOW,SECOND_ORDER_INTERPOLATED_BOUNDARY,SOLID_OTHER,ATMOSPHERIC_INTERPOLATION,CC_SOLID_FLAG
 INTEGER :: II,JJ,KK,IIG,JJG,KKG,IOR,IIO,JJO,KKO,N,ADCOUNT,ICG,ICO
 REAL(EB), POINTER, DIMENSION(:,:,:,:) :: OM_ZZP=>NULL()
 REAL(EB), POINTER, DIMENSION(:,:,:) :: OM_MUP=>NULL()
@@ -440,6 +453,7 @@ METHOD_OF_HEAT_TRANSFER: SELECT CASE(SF%THERMAL_BC_INDEX)
       ! Determine if there are 4 equally sized cells spanning the interpolated boundary
 
       SECOND_ORDER_INTERPOLATED_BOUNDARY = .FALSE.
+      CC_SOLID_FLAG = .FALSE.
       IF (ABS(EWC%AREA_RATIO-1._EB)<0.01_EB) THEN
          IIO = EWC%IIO_MIN
          JJO = EWC%JJO_MIN
@@ -452,7 +466,10 @@ METHOD_OF_HEAT_TRANSFER: SELECT CASE(SF%THERMAL_BC_INDEX)
             CASE( 3) ; ICG = CELL_INDEX(IIG,JJG,KKG+1) ; ICO = MM%CELL_INDEX(IIO,JJO,KKO-1)
             CASE(-3) ; ICG = CELL_INDEX(IIG,JJG,KKG-1) ; ICO = MM%CELL_INDEX(IIO,JJO,KKO+1)
          END SELECT
-         IF (.NOT.SOLID(ICG) .AND. .NOT.MM%SOLID(ICO)) SECOND_ORDER_INTERPOLATED_BOUNDARY = .TRUE.
+         IF (CC_IBM) THEN ! Test if one of surrounding cells is IBM_SOLID.
+            IF(CCVAR(IIG,JJG,KKG,IBM_CGSC)==IBM_SOLID .OR. CCVAR(II,JJ,KK,IBM_CGSC)==IBM_SOLID) CC_SOLID_FLAG = .TRUE. 
+         ENDIF
+         IF (.NOT.SOLID(ICG) .AND. .NOT.MM%SOLID(ICO) .AND. .NOT.CC_SOLID_FLAG) SECOND_ORDER_INTERPOLATED_BOUNDARY = .TRUE.
       ENDIF
 
       ! Density
@@ -800,9 +817,9 @@ SUBSTEP_LOOP: DO WHILE ( ABS(T_SUB-DT_BC_HT3D)>TWO_EPSILON_EB )
                               VSRVC_Y(I,J,K) = 1._EB
                               VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
                            ELSE
-                           VSRVC_X(I,J,K) = VSRVC(I,J,K)**ONTH
-                           VSRVC_Y(I,J,K) = VSRVC_X(I,J,K)
-                           VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
+                              VSRVC_X(I,J,K) = VSRVC(I,J,K)**ONTH
+                              VSRVC_Y(I,J,K) = VSRVC_X(I,J,K)
+                              VSRVC_Z(I,J,K) = VSRVC_X(I,J,K)
                            ENDIF
                         CASE(1)
                            VSRVC_X(I,J,K) = VSRVC(I,J,K)
@@ -1507,7 +1524,7 @@ OBST_LOOP_2: DO N=1,N_OBST
                         ITER = ITER + 1
                         C_S = 0._EB
                         H_S = 0._EB
-                        ITMP = MIN(4999,INT(T_NODE))
+                        ITMP = MIN(I_MAX_TEMP-1,INT(T_NODE))
                         T_S: DO NN=1,MS%N_MATL
                            IF (OB2%RHO(II2,JJ2,KK2,NN)<=0._EB) CYCLE T_S
                            ML  => MATERIAL(MS%MATL_INDEX(NN))
@@ -1554,7 +1571,7 @@ SUBROUTINE SOLID_MASS_TRANSFER_3D(DT_SUB)
 USE MATH_FUNCTIONS, ONLY: INTERPOLATE1D_UNIFORM
 REAL(EB), INTENT(IN) :: DT_SUB
 INTEGER :: I,J,K,N,NN,NR,IC,II,JJ,KK,IOR,ICM,ICP
-REAL(EB) :: D_Z_TEMP,D_Z_N(0:5000),D_F,R_D,VN_MT3D,RHO_ZZ_I,D_MAX,D_M,D_P,D_BAR,RHO_ZZ_F,RHO_ZZ_S,RDN
+REAL(EB) :: D_Z_TEMP,D_Z_N(0:I_MAX_TEMP),D_F,R_D,VN_MT3D,RHO_ZZ_I,D_MAX,D_M,D_P,D_BAR,RHO_ZZ_F,RHO_ZZ_S,RDN
 REAL(EB), POINTER, DIMENSION(:,:,:) :: D_DRHOZDX=>NULL(),D_DRHOZDY=>NULL(),D_DRHOZDZ=>NULL(),D_Z_P=>NULL(),RHO_ZZ_P=>NULL(),&
                                        VSRVC_X=>NULL(),VSRVC_Y=>NULL(),VSRVC_Z=>NULL(),VSRVC=>NULL()
 LOGICAL :: CONT_MATL_PROP,IS_GAS_IN_SOLID(1:N_TRACKED_SPECIES),IS_GAS_FUEL(1:N_TRACKED_SPECIES)
@@ -1972,7 +1989,7 @@ SELECT CASE(SIM_MODE)
          ONE_D%RHO_D_F(N) = ONE_D%MU_G*RSC*ONE_D%RHO_F/ONE_D%RHO_G
       ENDDO
    CASE (LES_MODE)
-      ITMP = MIN(4999,NINT(ONE_D%TMP_F))
+      ITMP = MIN(I_MAX_TEMP-1,NINT(ONE_D%TMP_F))
       IIG = ONE_D%IIG
       JJG = ONE_D%JJG
       KKG = ONE_D%KKG
@@ -1980,7 +1997,7 @@ SELECT CASE(SIM_MODE)
          ONE_D%RHO_D_F(N) = ONE_D%RHO_F*( D_Z(ITMP,N) + (ONE_D%MU_G-MU_DNS(IIG,JJG,KKG))/ONE_D%RHO_G*RSC )
       ENDDO
    CASE (DNS_MODE)
-      ITMP = MIN(4999,NINT(ONE_D%TMP_F))
+      ITMP = MIN(I_MAX_TEMP-1,NINT(ONE_D%TMP_F))
       DO N=1,N_TRACKED_SPECIES
          ONE_D%RHO_D_F(N) = ONE_D%RHO_F*D_Z(ITMP,N)
       ENDDO
@@ -2006,7 +2023,7 @@ REAL(EB) :: RADIUS,AREA_SCALING,RVC,M_DOT_PPP_SINGLE,M_DOT_SINGLE,CP,MW_RATIO,H_
             ZZ_GET(1:N_TRACKED_SPECIES),DENOM,M_GAS
 REAL(EB), INTENT(IN) :: T,DT
 INTEGER, INTENT(IN) :: NM
-INTEGER :: II,JJ,KK,IIG,JJG,KKG,IW,IC,ICG,ICF,NS,IP,I_FUEL,SPECIES_BC_INDEX
+INTEGER :: II,JJ,KK,IIG,JJG,KKG,IW,IC,ICG,ICF,NS,IP,SPECIES_BC_INDEX
 REAL(EB), POINTER, DIMENSION(:,:) :: PBAR_P=>NULL()
 REAL(EB), POINTER, DIMENSION(:,:,:,:) :: ZZP=>NULL()
 REAL(EB) :: H_S_B
@@ -2116,13 +2133,10 @@ PARTICLE_LOOP: DO IP=1,NLP
 
    ! Calculate the mass flux of fuel gas from particles
 
-   I_FUEL = 0
-   IF (N_REACTIONS>0) I_FUEL = REACTION(1)%FUEL_SMIX_INDEX
-
    IF (CORRECTOR) THEN
-      IF (I_FUEL>0) &
-      M_DOT(2,NM) = M_DOT(2,NM) +     ONE_D%M_DOT_G_PP_ACTUAL(I_FUEL)*ONE_D%AREA*LP%PWT
-      M_DOT(4,NM) = M_DOT(4,NM) + SUM(ONE_D%M_DOT_G_PP_ACTUAL)       *ONE_D%AREA*LP%PWT
+      DO NS=1,N_TRACKED_SPECIES
+         M_DOT(NS,NM) = M_DOT(NS,NM) + ONE_D%M_DOT_G_PP_ACTUAL(NS)*ONE_D%AREA*LP%PWT
+      ENDDO
    ENDIF
 
    ! Calculate particle mass
@@ -2567,7 +2581,7 @@ IF (.NOT. ANY(SF%LEAK_PATH>0)) THEN
       ELSE
          IF (DUCT(DU)%LEAK_ENTHALPY) THEN
             ZZ_GET(1:N_TRACKED_SPECIES) = NODE_ZZ_EX(ONE_D%NODE_INDEX,1:N_TRACKED_SPECIES)
-            CALL GET_ENTHALPY(ZZ_GET,H_G,ONE_D%TMP_G)
+            CALL GET_ENTHALPY(ZZ_GET,H_G,ONE_D%TMP_F)
             CALL GET_ENTHALPY(ZZ_GET,H_D,NODE_TMP_EX(ONE_D%NODE_INDEX))
             Q_LEAK = -MFT*(H_D-H_G)*ONE_D%RDN
          ENDIF
@@ -2625,7 +2639,7 @@ REAL(EB) :: DUMMY,DTMP,QDXKF,QDXKB,RR,RFACF,RFACB,RFACF2,RFACB2, &
             DEL_DOT_Q_SC,Q_DOT_G_PPP,Q_DOT_O2_PPP,Q_DOT_G_PP,Q_DOT_O2_PP,R_SURF,U_SURF,V_SURF,W_SURF,T_BC_SUB,DT_BC_SUB,&
             Q_NET_F,Q_NET_B,TMP_RATIO,KODXF,KODXB,H_S,T_NODE,C_S,H_NODE,RHO_C_S(1:NWP_MAX),RHO_H_S(1:NWP_MAX),VOL,T_BOIL_EFF,&
             Q_DOT_PART(MAX_LPC),M_DOT_PART(MAX_LPC),Q_DOT_PART_S(MAX_LPC),M_DOT_PART_S(MAX_LPC)
-REAL(EB) :: D_Z_N(0:5000),D_Z_TEMP,D_Z_P(0:NWP_MAX+1), D_DRHOZDX(0:NWP_MAX),D_BAR,PHI_BAR,D_STAR_BAR,&
+REAL(EB) :: D_Z_N(0:I_MAX_TEMP),D_Z_TEMP,D_Z_P(0:NWP_MAX+1), D_DRHOZDX(0:NWP_MAX),D_BAR,PHI_BAR,D_STAR_BAR,&
             RR_SUM,GAS_DENSITY,POROSITY(0:NWP_MAX+1),H_R,TMP_S,H_S_B,RHO_DOT,RHO_DOT_0(1:NWP_MAX),DDSUM,&
             SMALLEST_CELL_SIZE(1:MAX_LAYERS)
 REAL(EB), POINTER, DIMENSION(:) :: DELTA_TMP
@@ -2956,7 +2970,7 @@ PYROLYSIS_PREDICTED_IF: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
             M_DOT_S_PP(N) = M_DOT_S_PP(N)  + M_DOT_S_PPP(N)*GEOM_FACTOR
          ENDDO
       ENDIF
-      
+
       ! Compute particle mass flux at the surface
       IF (SF%N_LPC > 0) THEN
          GEOM_FACTOR = MF_FRAC(I)*(R_S(I-1)**I_GRAD-R_S(I)**I_GRAD)/(I_GRAD*(SF%THICKNESS+SF%INNER_RADIUS)**(I_GRAD-1))
@@ -3105,7 +3119,7 @@ ENDIF
 
 ! If liquid evaporation may need to recycle timestep if any node temperature exceeds boiling
 CYCLE_BOIL: DO
-   
+
 ! Adjust the material layer masses and thicknesses
 
 REMESH_LAYER = .FALSE.
@@ -3183,7 +3197,7 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
    DO I=NWP-1,0,-1
       R_S_NEW(I) = ( R_S_NEW(I+1)**I_GRAD + (R_S(I)**I_GRAD-R_S(I+1)**I_GRAD)*REGRID_FACTOR(I+1) )**(1./REAL(I_GRAD,EB))
    ENDDO
-   
+
    X_S_NEW(0) = 0._EB
    DO I=1,NWP
       X_S_NEW(I) = R_S_NEW(0) - R_S_NEW(I)
@@ -3239,7 +3253,7 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
             I = I + ONE_D%N_LAYER_CELLS(NL)
             CYCLE LAYER_LOOP
          ELSE
-            
+
             ! If there is only one cell, nothing to do
             IF (ONE_D%N_LAYER_CELLS(NL)==1) THEN
                N_LAYER_CELLS_NEW(NL) = ONE_D%N_LAYER_CELLS(NL)
@@ -3250,20 +3264,20 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
                   ONE_D%SMALLEST_CELL_SIZE(NL) = ONE_D%LAYER_THICKNESS(NL)
                ENDIF
                THICKNESS = THICKNESS + ONE_D%LAYER_THICKNESS(NL)
-               I = I + ONE_D%N_LAYER_CELLS(NL)               
+               I = I + ONE_D%N_LAYER_CELLS(NL)
                CYCLE LAYER_LOOP
             ENDIF
-            
+
             ! If no cells in the layer have changed size, nothing to do
             IF (ALL(ABS(REGRID_FACTOR(I+1:I+ONE_D%N_LAYER_CELLS(NL))-1._EB) <= TWO_EPSILON_EB)) THEN
                N_LAYER_CELLS_NEW(NL) = ONE_D%N_LAYER_CELLS(NL)
                NWP_NEW = NWP_NEW + N_LAYER_CELLS_NEW(NL)
                THICKNESS = THICKNESS + ONE_D%LAYER_THICKNESS(NL)
-               I = I + ONE_D%N_LAYER_CELLS(NL)               
+               I = I + ONE_D%N_LAYER_CELLS(NL)
                CYCLE LAYER_LOOP
             ENDIF
-         ENDIF   
-         
+         ENDIF
+
          ! Check if layer is expanding or contracting.
          EXPAND_CONTRACT: IF (ANY(REGRID_FACTOR(I+1:I+ONE_D%N_LAYER_CELLS(NL)) < 1._EB)) THEN
             ! At least one cell is contracting. Check to see if cells meets the RENODE_DELTA_T criterion
@@ -3275,7 +3289,7 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
                ENDIF
             ENDDO
             REMESH_CHECK_IF: IF (REMESH_CHECK) THEN
-               
+
                !If call cells in layer pass check, get new number of cells but limit decrease to at most one cell in a layer
                CALL GET_N_LAYER_CELLS(SF%MIN_DIFFUSIVITY(NL),ONE_D%LAYER_THICKNESS(NL), &
                   SF%STRETCH_FACTOR(NL),SF%CELL_SIZE_FACTOR,SF%N_LAYER_CELLS_MAX(NL),N_LAYER_CELLS_NEW(NL),SMALLEST_CELL_SIZE(NL),&
@@ -3308,8 +3322,8 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
                      REMESH_LAYER(NL) = .TRUE.
                   ENDIF LAYER_CELL_CHECK
             ELSE REMESH_CHECK_IF
-               
-               ! If at least one cell does not pass the check, keep the same number of cells but remesh.               
+
+               ! If at least one cell does not pass the check, keep the same number of cells but remesh.
                N_LAYER_CELLS_NEW(NL) = ONE_D%N_LAYER_CELLS(NL)
                ONE_D%SMALLEST_CELL_SIZE(NL) = ONE_D%LAYER_THICKNESS(NL) / ONE_D%DDSUM(NL)
                SMALLEST_CELL_SIZE(NL) = ONE_D%SMALLEST_CELL_SIZE(NL)
@@ -3372,7 +3386,7 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
             MATL_REMESH: DO N=1,SF%N_MATL
                IF (ONE_D%MATL_COMP(N)%RHO(I)<=TWO_EPSILON_EB) CYCLE MATL_REMESH
                ML  => MATERIAL(SF%MATL_INDEX(N))
-               ITMP = MIN(4999,INT(ONE_D%TMP(I)))
+               ITMP = MIN(I_MAX_TEMP-1,INT(ONE_D%TMP(I)))
                H_S = ML%H(ITMP)+(ONE_D%TMP(I)-REAL(ITMP,EB))*(ML%H(ITMP+1)-ML%H(ITMP))
                RHO_H_S(I) = RHO_H_S(I) + ONE_D%MATL_COMP(N)%RHO(I) * H_S
             ENDDO MATL_REMESH
@@ -3420,7 +3434,7 @@ PYROLYSIS_PREDICTED_IF_2: IF (SF%PYROLYSIS_MODEL==PYROLYSIS_PREDICTED) THEN
                   ITER = ITER + 1
                   C_S = 0._EB
                   H_S = 0._EB
-                  ITMP = MIN(4999,INT(T_NODE))
+                  ITMP = MIN(I_MAX_TEMP-1,INT(T_NODE))
                   H_S = 0._EB
                   T_S: DO N=1,SF%N_MATL
                      IF (ONE_D%MATL_COMP(N)%RHO(I)<=0._EB) CYCLE T_S
@@ -3575,13 +3589,13 @@ BOIL_CHECK: IF (MATERIAL(SF%MATL_INDEX(1))%PYROLYSIS_MODEL==PYROLYSIS_LIQUID .AN
    BOIL_CELL_LOOP: DO I=1,NWP
       IF (CCS(I) > T_BOIL_EFF) THEN
          ML => MATERIAL(SF%MATL_INDEX(1))
-         
+
          ITMP = INT(CCS(I))
          H_S = ML%H(ITMP)+(CCS(I)-REAL(ITMP,EB))*(ML%H(ITMP+1)-ML%H(ITMP))
          ITMP = INT(T_BOIL_EFF)
          H_S = H_S - (ML%H(ITMP)+(T_BOIL_EFF-REAL(ITMP,EB))*(ML%H(ITMP+1)-ML%H(ITMP)))
          H_S = H_S * ML%RHO_S
-         
+
          IF (ML%H_R_I(1) > 0) THEN
             H_R = EVALUATE_RAMP(T_BOIL_EFF,0._EB,ML%H_R_I(1))
          ELSE
@@ -3605,15 +3619,15 @@ BOIL_CHECK: IF (MATERIAL(SF%MATL_INDEX(1))%PYROLYSIS_MODEL==PYROLYSIS_LIQUID .AN
          BOIL_CYCLE = .TRUE.
       ENDIF
    ENDDO BOIL_CELL_LOOP
-   IF (BOIL_CYCLE) THEN 
+   IF (BOIL_CYCLE) THEN
       CYCLE CYCLE_BOIL
    ELSE
       ONE_D%MATL_COMP(1)%RHO_DOT(1:NWP) = RHO_DOT_0(1:NWP)
    ENDIF
 ENDIF BOIL_CHECK
-   
+
 EXIT CYCLE_BOIL
-   
+
 END DO CYCLE_BOIL
 
 IF (BOIL_CYCLE) ONE_D%MATL_COMP(1)%RHO_DOT(1:NWP) = ONE_D%MATL_COMP(1)%RHO_DOT(1:NWP) + RHO_DOT_0(1:NWP)
@@ -3688,7 +3702,6 @@ MASS_TRANSFER_1D: IF (SF%MT1D) THEN
          ! + M_DOT_G_PP_ACTUAL
          ONE_D%SPEC_COMP(NS)%RHO_ZZ(I) = MAX(0._EB,ONE_D%SPEC_COMP(NS)%RHO_ZZ(I)) ! guarantee boundedness
       ENDDO
-!      IF (NS==2) write(102,*) T,ONE_D%SPEC_COMP(NS)%RHO_ZZ(1:NWP)
    ENDDO
 ENDIF MASS_TRANSFER_1D
 
@@ -3719,7 +3732,7 @@ ENDIF
 
 ! If the surface temperature is less than the extinction temperature, stop the burning
 
-IF (SF%TMP_IGN<5000._EB .AND. ONE_D%TMP_F<SF%TMP_EXT .AND. ONE_D%T_IGN<T) ONE_D%T_IGN = HUGE(1._EB)
+IF (SF%TMP_IGN<50000._EB .AND. ONE_D%TMP_F<SF%TMP_EXT .AND. ONE_D%T_IGN<T) ONE_D%T_IGN = HUGE(1._EB)
 
 END SUBROUTINE SOLID_HEAT_TRANSFER_1D
 
@@ -3748,6 +3761,7 @@ END SUBROUTINE SOLID_HEAT_TRANSFER_1D
 !> \param Q_DOT_O2_PPP Heat release rate per unit volume due to char oxidation in grid cell abutting surface (W/m3)
 !> \param Q_DOT_PART Rate of enthalpy production of particles created in reactions (J/m3/s)
 !> \param M_DOT_PART Rate of mass production of particles created in reactions (kg/m3/s)
+!> \param T_BOIL_EFF Effective boiling temperature (K)
 !> \param R_DROP (OPTIONAL) Radius of liquid droplet
 !> \param LPU (OPTIONAL) x component of droplet velocity (m/s)
 !> \param LPV (OPTIONAL) y component of droplet velocity (m/s)
@@ -4203,7 +4217,7 @@ H_NATURAL = 0._EB
 H_FORCED  = 0._EB
 
 TMP_FILM = 0.5_EB*(ONE_DX%TMP_G+ONE_DX%TMP_F)
-ITMP = MIN(4999,NINT(TMP_FILM))
+ITMP = MIN(I_MAX_TEMP-1,NINT(TMP_FILM))
 
 ZZ_GET(1:N_TRACKED_SPECIES) = ONE_DX%ZZ_G(1:N_TRACKED_SPECIES)
 

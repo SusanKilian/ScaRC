@@ -15,7 +15,7 @@ USE MKL_PARDISO
 USE MKL_CLUSTER_SPARSE_SOLVER
 #endif
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 !> \brief Detailed information about arrays created within the ScaRC memory manager
 
@@ -764,6 +764,20 @@ TYPE SCARC_CPU_TYPE
    REAL(EB) :: SOLVER           = 0.0_EB                           !< Time for solver 
    INTEGER  :: N_TIMER          = 13                               !< Total number of timers
 END TYPE SCARC_CPU_TYPE
+
+!> \brief Auxiliary type
+  
+TYPE SCARC_WORKSPACE_TYPE
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: WX1
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: WY1
+   REAL(EB), ALLOCATABLE, DIMENSION (:) :: WZ1
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: WX2
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: WY2
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: WZ2
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: WX3
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: WY3
+   REAL(EB), ALLOCATABLE, DIMENSION (:,:,:) :: WZ3
+END TYPE SCARC_WORKSPACE_TYPE
 
 !> \brief Basic administration type for ScaRC-method
  

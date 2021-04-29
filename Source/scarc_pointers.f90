@@ -15,7 +15,7 @@ USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 TYPE (MESH_TYPE), POINTER:: M=>NULL()                  !< Pointer to specified mesh (based on MESHES from base code)
 TYPE (OMESH_TYPE), POINTER:: OM=>NULL()                !< Pointer to specified neighboring mesh (based on OMESH from base code)

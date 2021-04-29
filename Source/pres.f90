@@ -5,7 +5,7 @@ MODULE PRES
 USE PRECISION_PARAMETERS
 USE MESH_POINTERS
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 PRIVATE
 
 PUBLIC PRESSURE_SOLVER_COMPUTE_RHS,PRESSURE_SOLVER_FFT,PRESSURE_SOLVER_CHECK_RESIDUALS,COMPUTE_VELOCITY_ERROR
@@ -67,6 +67,9 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
    K   = WC%ONE_D%KK
    IOR = WC%ONE_D%IOR
 
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PRES: NEUMANN: IW=',IW
+#endif
    ! Apply pressure gradients at NEUMANN boundaries: dH/dn = -F_n - d(u_n)/dt
 
    IF_NEUMANN: IF (WC%PRESSURE_BC_INDEX==NEUMANN) THEN
@@ -95,6 +98,9 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
          ! Solid boundary that uses a Dirichlet BC. Assume that the pressure at the boundary (BXS, etc) is the average of the
          ! last computed pressures in the ghost and adjacent gas cells.
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PRES: DIRICHLET-NOT_OPEN: IW=', IW
+#endif
          SELECT CASE(IOR)
             CASE( 1)
                BXS(J,K) = 0.5_EB*(HP(0,J,K)+HP(1,J,K)) + WALL_WORK1(IW)
@@ -116,6 +122,9 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
 
       INTERPOLATED_ONLY: IF (WC%BOUNDARY_TYPE==INTERPOLATED_BOUNDARY) THEN
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'PRES: INTERPOLATED: IW=',IW
+#endif
          NOM     = EWC%NOM
          H_OTHER = 0._EB
          DO KKO=EWC%KKO_MIN,EWC%KKO_MAX
@@ -156,6 +165,9 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
 
       OPEN_IF: IF (WC%BOUNDARY_TYPE==OPEN_BOUNDARY) THEN
 
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'PRES: DIRICHLET-OPEN: IW=', IW
+#endif
          VT => VENTS(WC%VENT_INDEX)
          IF (ABS(WC%ONE_D%T_IGN-T_BEGIN)<=TWO_EPSILON_EB .AND. VT%PRESSURE_RAMP_INDEX >=1) THEN
             TSI = T
@@ -208,14 +220,30 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
             CASE( 1)
                IF (UU(0,J,K)<0._EB) THEN
                   BXS(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(1,J,K)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN A: IW, J,K, BXS=', &
+                                       IW, J,K, BXS(J,K), KRES(1,J,K), P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ELSE
                   BXS(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN B: IW, J,K, BXS=', &
+                                       IW, J,K, BXS(J,K), H0, P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ENDIF
             CASE(-1)
                IF (UU(IBAR,J,K)>0._EB) THEN
                   BXF(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(IBAR,J,K)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN A: IW, J,K, BXF=', &
+                                       IW, J,K, BXF(J,K), KRES(IBAR,J,K), P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ELSE
                   BXF(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN B: IW, J,K, BXF=', &
+                                       IW, J,K, BXF(J,K), H0, P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ENDIF
             CASE( 2)
                IF (VV(I,0,K)<0._EB) THEN
@@ -232,14 +260,30 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
             CASE( 3)
                IF (WW(I,J,0)<0._EB) THEN
                   BZS(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,J,1)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN A: I,J, BZS=', &
+                                       IW, I,J, BZS(I,J), KRES(I,J,1), P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ELSE
                   BZS(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN B: I,J, BZS=', &
+                                       IW, I,J, BZS(I,J), H0, P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ENDIF
             CASE(-3)
                IF (WW(I,J,KBAR)>0._EB) THEN
                   BZF(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,J,KBAR)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN A: I,J, BZF=', &
+                                       IW, I,J, BZF(I,J), KRES(I,J,KBAR), P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ELSE
                   BZF(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3I5, 4E14.6)') 'PRES: DIRICHLET-OPEN B: I,J, BZF=', &
+                                       IW, I,J, BZF(I,J), H0, P_EXTERNAL, WC%ONE_D%RHO_F
+#endif
                ENDIF
          END SELECT
 
@@ -250,20 +294,6 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
 ENDDO WALL_CELL_LOOP
 
 ! Compute the RHS of the Poisson equation
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '======================= PRES :', T
-WRITE(MSG%LU_DEBUG,*) 'RHOP'
-WRITE(MSG%LU_DEBUG,'(10E14.6)') ((RHOP(I,1,K), I=0,IBAR+1), K=KBAR+1,0,-1)
-WRITE(MSG%LU_DEBUG,*) 'DDDT'
-WRITE(MSG%LU_DEBUG,'(10E14.6)') ((DDDT(I,1,K), I=0,IBAR+1), K=KBAR+1,0,-1)
-WRITE(MSG%LU_DEBUG,*) 'U'
-WRITE(MSG%LU_DEBUG,'(10E14.6)') ((U(I,1,K), I=0,IBAR+1), K=KBAR+1,0,-1)
-WRITE(MSG%LU_DEBUG,*) 'W'
-WRITE(MSG%LU_DEBUG,'(10E14.6)') ((W(I,1,K), I=0,IBAR+1), K=KBAR+1,0,-1)
-WRITE(MSG%LU_DEBUG,*) 'PRHS'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') ((PRHS(I,1,K), I=1,IBAR), K=KBAR,1,-1)
-#endif
 
 SELECT CASE(IPS)
 
@@ -582,7 +612,7 @@ ELSE  ! MPI process 0 receives matrix components and solves tri-diagonal linear 
    TRIDIAGONAL_SOLVER_2: DO I=TUNNEL_NXP-1,1,-1
       TP_CC(I) = (TP_CC(I) - TP_AA(I)*TP_CC(I+1))/TP_DD(I)
    ENDDO TRIDIAGONAL_SOLVER_2
-   
+
 ENDIF
 
 ! The solution to the tri-diagonal linear system is TP_CC. Broadcast this to all the MPI processes.
@@ -607,12 +637,12 @@ SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS(NM)
 
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE GLOBAL_CONSTANTS
-USE SCRC, ONLY: MSG
+USE SCRC, ONLY: MSG, SCARC_POISSON, SCARC_DEBUG_VECTOR3_BIG
 
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP,RHOP,P,RESIDUAL
 INTEGER :: I,J,K
-REAL(EB) :: LHSS,RHSS,TNOW, LHSS1, LHSS2
+REAL(EB) :: LHSS,RHSS,TNOW, LHSS1, LHSS2, RHSS1, RHSS2, RHSS3
 
 IF (SOLID_PHASE_ONLY) RETURN
 IF (FREEZE_VELOCITY)  RETURN
@@ -628,20 +658,13 @@ ELSE
    RHOP => RHOS
 ENDIF
 
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'HP BEFORE CHECK:'
-WRITE(MSG%LU_DEBUG,'(8E14.6)') ((HP(I,1,K),I=1,IBAR),K=KBAR,1,-1)
-#endif
 ! Optional check of the accuracy of the separable pressure solution, del^2 H = -del dot F - dD/dt
 
-IF (CHECK_POISSON) THEN
-IF (NM==1) WRITE(*,*) '======================= CHECK_POISSON'
+!IF (CHECK_POISSON) THEN
+IF (SCARC_POISSON == 'INSEPARABLE') THEN
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
    !$OMP PARALLEL DO PRIVATE(I,J,K,RHSS,LHSS) SCHEDULE(STATIC)
    DO K=1,KBAR
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'CHECK_POISSON -------------------- K =', K
-#endif
       DO J=1,JBAR
          DO I=1,IBAR
             RHSS = ( R(I-1)*FVX(I-1,J,K) - R(I)*FVX(I,J,K) )*RDX(I)*RRN(I) &
@@ -653,60 +676,109 @@ WRITE(MSG%LU_DEBUG,*) 'CHECK_POISSON -------------------- K =', K
                  + ((HP(I,J,K+1)-HP(I,J,K))*RDZN(K)      - (HP(I,J,K)-HP(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,'(A,3I5,3E12.4)') 'CHECK_POISSON: I,J,K, LHSS, RHSS, RES:', I,J,K,LHSS, RHSS, RESIDUAL(I,J,K)
+WRITE(MSG%LU_DEBUG,'(A, 3I5, 3E14.6)') 'CHECK_POISSON IN PRES: I, J, K, LHSS, RHSS, RESIDUAL:', &
+                         I,J,K, LHSS, RHSS, RESIDUAL(I,J,K)
+
 #endif
          ENDDO
       ENDDO
    ENDDO
    !$OMP END PARALLEL DO
    POIS_ERR = MAXVAL(RESIDUAL)
-   WRITE(*,*) 'POIS_ERR=',POIS_ERR
+
+ELSE
+   RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
+   !$OMP PARALLEL DO PRIVATE(I,J,K,RHSS,LHSS) SCHEDULE(STATIC)
+   DO K=1,KBAR
+      DO J=1,JBAR
+         DO I=1,IBAR
+            RHSS = ( R(I-1)*FVX(I-1,J,K) - R(I)*FVX(I,J,K) )*RDX(I)*RRN(I) &
+                 + (        FVY(I,J-1,K) -      FVY(I,J,K) )*RDY(J)        &
+                 + (        FVZ(I,J,K-1) -      FVZ(I,J,K) )*RDZ(K)        &
+                 - DDDT(I,J,K)
+            LHSS = ((HP(I+1,J,K)-HP(I,J,K))*RDXN(I)*R(I) - (HP(I,J,K)-HP(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
+                 + ((HP(I,J+1,K)-HP(I,J,K))*RDYN(J)      - (HP(I,J,K)-HP(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
+                 + ((HP(I,J,K+1)-HP(I,J,K))*RDZN(K)      - (HP(I,J,K)-HP(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
+            RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 3I5, 3E14.6)') 'CHECK_POISSON IN PRES: I, J, K, LHSS, RHSS, RESIDUAL:', &
+                         I,J,K, LHSS, RHSS, RESIDUAL(I,J,K)
+
+#endif
+         ENDDO
+      ENDDO
+   ENDDO
+   !$OMP END PARALLEL DO
+   POIS_ERR = MAXVAL(RESIDUAL)
 ENDIF
+!ENDIF
 
 ! Mandatory check of how well the computed pressure satisfies the inseparable Poisson equation:
-! LHSS = del dot (1/rho) del p + del K = -del dot F - dD/dt = RHSS
+! LHSS = del dot ((1/rho) del p + del K) = -del dot F - dD/dt = RHSS
 
 !IF (ITERATE_BAROCLINIC_TERM) THEN
    P => WORK7
    P = RHOP*(HP-KRES)
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'FVX IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'FVZ IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX_B, NM, 'FVX_B IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ_B, NM, 'FVZ_B IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (DDDT, NM, 'DDDT IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (RHOP, NM, 'RHOP IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP IN PRES:CHECK_RESIDUALS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (P, NM, 'P IN PRES:CHECK_RESIDUALS')
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
-   !$OMP PARALLEL PRIVATE(I,J,K,RHSS,LHSS,NM)
-   !$OMP DO COLLAPSE(3) SCHEDULE(STATIC)
+   !!$OMP PARALLEL PRIVATE(I,J,K,RHSS,LHSS,NM)
+   !!$OMP DO COLLAPSE(3) SCHEDULE(STATIC)
    DO K=1,KBAR
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '------------------------------------ K = ', K
+#endif
       DO J=1,JBAR
          DO I=1,IBAR
-            RHSS = ( R(I-1)*(FVX(I-1,J,K)-FVX_B(I-1,J,K)) - R(I)*(FVX(I,J,K)-FVX_B(I,J,K)) )*RDX(I)*RRN(I) &
-                 + (        (FVY(I,J-1,K)-FVY_B(I,J-1,K)) -      (FVY(I,J,K)-FVY_B(I,J,K)) )*RDY(J)        &
-                 + (        (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -      (FVZ(I,J,K)-FVZ_B(I,J,K)) )*RDZ(K)        &
-                 - DDDT(I,J,K)
-            LHSS1 = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
+            RHSS1 = ( R(I-1)*(FVX(I-1,J,K)) - R(I)*(FVX(I,J,K)) )*RDX(I)*RRN(I) &    !inseparable
+                  + (        (FVY(I,J-1,K)) -      (FVY(I,J,K)) )*RDY(J)        &
+                  + (        (FVZ(I,J,K-1)) -      (FVZ(I,J,K)) )*RDZ(K)        
+            RHSS2 = ( R(I-1)*(FVX(I-1,J,K)-FVX_B(I-1,J,K)) - R(I)*(FVX(I,J,K)-FVX_B(I,J,K)) )*RDX(I)*RRN(I) &    !separable
+                  + (        (FVY(I,J-1,K)-FVY_B(I,J-1,K)) -      (FVY(I,J,K)-FVY_B(I,J,K)) )*RDY(J)        &
+                  + (        (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -      (FVZ(I,J,K)-FVZ_B(I,J,K)) )*RDZ(K)        
+            RHSS3 =   - DDDT(I,J,K)
+            LHSS1= ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I-1,J,K))*RDXN(I-1)*R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*RDX(I)*RRN(I) &
                  + ((P(I,J+1,K)-P(I,J,K))*RDYN(J)         *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I,J-1,K))*RDYN(J-1)       *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*RDY(J)        &
                  + ((P(I,J,K+1)-P(I,J,K))*RDZN(K)         *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I,J,K-1))*RDZN(K-1)       *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*RDZ(K)        
-          LHSS2=  ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
+            LHSS2 = ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
                  + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
                  + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
-            LHSS = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
-                    (P(I,J,K)-P(I-1,J,K))*RDXN(I-1)*R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*RDX(I)*RRN(I) &
-                 + ((P(I,J+1,K)-P(I,J,K))*RDYN(J)         *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
-                    (P(I,J,K)-P(I,J-1,K))*RDYN(J-1)       *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*RDY(J)        &
-                 + ((P(I,J,K+1)-P(I,J,K))*RDZN(K)         *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
-                    (P(I,J,K)-P(I,J,K-1))*RDZN(K-1)       *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*RDZ(K)        &
-                 + ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
-                 + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
-                 + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
-            RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+            IF (SCARC_POISSON == 'SEPARABLE') THEN
+               RESIDUAL(I,J,K) = ABS(RHSS2+RHSS3-LHSS1-LHSS2)
 #ifdef WITH_SCARC_DEBUG
- WRITE(MSG%LU_DEBUG,'(A,3I5,5E12.4)') 'ITERATE_BAROCLINIC_TERM: I,J,K, LHSS, LHSS1, LHSS2, RHSS, RES:', &
-    I,J,K,LHSS, LHSS1, LHSS2, RHSS, RESIDUAL(I,J,K)
+WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E12.4)') 'ITERATE_BARO IN PRES: I, J, K, P, LHSS1, LHSS2, RHSS2, RHSS3, RESIDUAL:', &
+                         I,J,K, P(I,J,K), LHSS1, LHSS2, RHSS2, RHSS3, RESIDUAL(I,J,K)
 #endif
+            ELSE
+               RESIDUAL(I,J,K) = ABS(RHSS1+RHSS3-LHSS1-LHSS2)
+#ifdef WITH_SCARC_DEBUG
+IF (I==1.AND.J==1.AND.K==4) THEN
+  WRITE(MSG%LU_DEBUG,'(A,16E12.4)') 'SUSI:', FVX(I-1,J,K), FVX(I,J,K), FVY(I,J-1,K), FVY(I,J,K), FVZ(I,J,K-1), FVZ(I,J,K), &
+                        RDX(I), RDY(J), RDZ(K), R(I-1), R(I), RRN(I), RHSS1, RHSS3, LHSS1, LHSS2
+  WRITE(MSG%LU_DEBUG,'(A,4E12.4)') 'SUSI2:', R(I-1)*(FVX(I-1,J,K)) - R(I)*(FVX(I,J,K)), &
+                                                    (FVY(I,J-1,K)) -      (FVY(I,J,K)), &
+                                                    (FVZ(I,J,K-1)) -      (FVZ(I,J,K)), RHSS1
+ENDIF
+WRITE(MSG%LU_DEBUG,'(A, 3I4, 8E12.4)') 'ITERATE_BARO IN PRES: I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, RESIDUAL:', &
+                         I,J,K, P(I,J,K), LHSS1, LHSS2, LHSS1+LHSS2, RHSS1, RHSS3, RHSS1+RHSS3, RESIDUAL(I,J,K)
+#endif
+            ENDIF
+
          ENDDO
       ENDDO
    ENDDO
-   !$OMP END DO
-   !$OMP END PARALLEL
+   !!$OMP END DO
+   !!$OMP END PARALLEL
    PRESSURE_ERROR_MAX(NM) = MAXVAL(RESIDUAL)
    PRESSURE_ERROR_MAX_LOC(:,NM) = MAXLOC(RESIDUAL)
 !ENDIF
@@ -1012,7 +1084,7 @@ USE CC_SCALARS_IBM, ONLY :   GET_H_CUTFACES, GET_BOUNDFACE_GEOM_INFO_H, ADD_INPL
 USE MKL_CLUSTER_SPARSE_SOLVER
 #endif /* WITH_MKL */
 
-IMPLICIT NONE
+IMPLICIT NONE (TYPE,EXTERNAL)
 
 ! These definitions are the same as geom.f90:
 INTEGER,  PARAMETER :: NGUARD= 2 ! Two layers of guard-cells.
@@ -2112,6 +2184,9 @@ END SUBROUTINE COPY_CCVAR_IN_HS
 SUBROUTINE GET_H_MATRIX_LUDCMP
 
 USE MPI_F08
+#ifdef __INTEL_COMPILER
+USE OPENMP, ONLY : KMP_SET_WARNINGS_OFF, KMP_SET_WARNINGS_ON
+#endif
 
 ! Local Variables:
 INTEGER :: INNZ, IROW, JCOL
@@ -3401,6 +3476,7 @@ SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS_U(NM)
 
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE GLOBAL_CONSTANTS
+USE SCRC, ONLY : MSG
 
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP,RHOP,P,RESIDUAL
@@ -3423,7 +3499,7 @@ ENDIF
 
 ! Optional check of the accuracy of the separable pressure solution, del^2 H = -del dot F - dD/dt
 
-IF (CHECK_POISSON) THEN
+!IF (CHECK_POISSON) THEN
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR); RESIDUAL = 0._EB
    !$OMP PARALLEL DO PRIVATE(I,J,K,RHSS,LHSS,IMFCT,JMFCT,KMFCT,IPFCT,JPFCT,KPFCT) SCHEDULE(STATIC)
    DO K=1,KBAR
@@ -3455,17 +3531,22 @@ IF (CHECK_POISSON) THEN
                  + ((HP(I,J+1,K)-HP(I,J,K))*RDYN(J)*JPFCT      - (HP(I,J,K)-HP(I,J-1,K))*RDYN(J-1)*JMFCT        )*RDY(J)        &
                  + ((HP(I,J,K+1)-HP(I,J,K))*RDZN(K)*KPFCT      - (HP(I,J,K)-HP(I,J,K-1))*RDZN(K-1)*KMFCT        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 3I5, 3E14.6)') 'CHECK_POISSON IN PRES: I, J, K, LHSS, RHSS, RESIDUAL:', &
+                         I,J,K, LHSS, RHSS, RESIDUAL(I,J,K)
+
+#endif
          ENDDO
       ENDDO
    ENDDO
    !$OMP END PARALLEL DO
    POIS_ERR = MAXVAL(RESIDUAL)
-ENDIF
+!ENDIF
 
 ! Mandatory check of how well the computed pressure satisfies the inseparable Poisson equation:
 ! LHSS = del dot (1/rho) del p + del K = -del dot F - dD/dt = RHSS
 
-IF (ITERATE_BAROCLINIC_TERM) THEN
+!IF (ITERATE_BAROCLINIC_TERM) THEN
    P => WORK7
    P = RHOP*(HP-KRES)
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR); RESIDUAL = 0._EB
@@ -3506,6 +3587,11 @@ IF (ITERATE_BAROCLINIC_TERM) THEN
             + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)*JPFCT      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)*JMFCT        )*RDY(J)        &
             + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)*KPFCT      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)*KMFCT        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 3I5, 3E14.6)') 'ITERATE_BARO IN PRES: I, J, K, LHSS, RHSS, RESIDUAL:', &
+                         I,J,K, LHSS, RHSS, RESIDUAL(I,J,K)
+
+#endif
          ENDDO
       ENDDO
    ENDDO
@@ -3513,7 +3599,7 @@ IF (ITERATE_BAROCLINIC_TERM) THEN
    !$OMP END PARALLEL
    PRESSURE_ERROR_MAX(NM) = MAXVAL(RESIDUAL)
    PRESSURE_ERROR_MAX_LOC(:,NM) = MAXLOC(RESIDUAL)
-ENDIF
+!ENDIF
 
 T_USED(5)=T_USED(5)+CURRENT_TIME()-TNOW
 END SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS_U
