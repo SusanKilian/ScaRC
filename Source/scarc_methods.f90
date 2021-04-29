@@ -3208,8 +3208,8 @@ IF (I==1.AND.J==1.AND.K==4) THEN
    WRITE(MSG%LU_DEBUG,'(A,16E12.4)') 'SUSI:', FVX(I-1,J,K), FVX(I,J,K), FVY(I,J-1,K), FVY(I,J,K), FVZ(I,J,K-1), FVZ(I,J,K), &
                          M%RDX(I), M%RDY(J), M%RDZ(K), M%R(I-1), M%R(I), M%RRN(I), RHSS1, RHSS3, LHSS1, LHSS2
    WRITE(MSG%LU_DEBUG,'(A,4E12.4)') 'SUSI2:', M%R(I-1)*(FVX(I-1,J,K)) - M%R(I)*(FVX(I,J,K)), &
-                                                        (FVY(I,J-1,K)) -        (FVY(I,J,K)), &
-                                                        (FVZ(I,J,K-1)) -        (FVZ(I,J,K)), RHSS1
+                                                       (FVY(I,J-1,K)) -        (FVY(I,J,K)), &
+                                                       (FVZ(I,J,K-1)) -        (FVZ(I,J,K)), RHSS1
 ENDIF
 IF (J == 1) &
 WRITE(MSG%LU_DEBUG,'(A, 3I4, 8E12.4)') 'CHECK_POISSON1 : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
