@@ -18,7 +18,6 @@ USE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS, ONLY: EB, FB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
-USE MPI_F08
 USE SCARC_CONSTANTS
 USE SCARC_TYPES
 USE SCARC_VARIABLES
@@ -178,7 +177,9 @@ END SUBROUTINE SCARC_SETUP_KRYLOV_ENVIRONMENT
 SUBROUTINE SCARC_SETUP_OPTIMIZED(NLMIN, NLMAX)
 USE SCARC_POINTERS, ONLY: L, SCARC_POINT_TO_LEVEL
 USE SCARC_FFT, ONLY: SCARC_SETUP_FFT_MESH
+#ifdef WITH_MKL
 USE SCARC_MKL, ONLY: SCARC_SETUP_PARDISO_MESH
+#endif
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
 INTEGER :: NM, NL
 
@@ -1144,8 +1145,8 @@ USE SCARC_POINTERS, ONLY: PRES
 #endif
 USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
 INTEGER, INTENT(IN) :: NS, NL
-REAL(EB) :: VAL, DIFF, B_SAVE
-REAL(EB), DIMENSION(:,:,:), POINTER :: KRES
+REAL(EB) :: VAL, DIFF, B_SAVE, KKRES
+REAL(EB), DIMENSION(:,:,:), POINTER :: KRES, RHOP, UU, VV, WW
 REAL(EB), DIMENSION(:), POINTER :: RDX, RDXN, RDY, RDYN, RDZ, RDZN
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 
@@ -1244,6 +1245,76 @@ CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN WORKSPACE-INSEP')
 WRITE(MSG%LU_DEBUG,*) 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SAVE, ST%B(IC)
 #endif
             ENDDO                         
+
+            IF (PREDICTOR) THEN
+               UU => M%U
+               VV => M%V
+               WW => M%W
+               RHOP=>M%RHO
+            ELSE
+               UU => M%US
+               VV => M%VS
+               WW => M%WS
+               RHOP=>M%RHOS
+            ENDIF
+
+            TEST_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
+      
+               GWC => G%WALL(IW)
+   
+               I = GWC%IXW
+               J = GWC%IYW
+               K = GWC%IZW
+   
+               IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+               IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+   
+               IC = G%CELL_NUMBER(I,J,K)
+
+               IF (GWC%BTYPE == DIRICHLET) THEN
+                  DO J=1,L%NY
+                     DO K=1,L%NZ
+                        KKRES = 0.5_EB*(             UU(0,J,K)**2          &
+                                         + 0.25_EB*( VV(1,J-1,K) + VV(1,J,K) )**2  &
+                                         + 0.25_EB*( WW(1,J,K-1) + WW(1,J,K) )**2  )
+                        B_SAVE = BXS(J,K)
+                        BXS(J,K)= 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K))*(BXS(J,K)-KKRES)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'INSEP: J,K,B_SAVE, BXS:', J, K, B_SAVE, BXS(J,K)
+#endif
+                     ENDDO
+                     DO K=1,L%NZ
+                        KKRES = 0.5_EB*(             UU(L%NX,J,K)**2          &
+                                         + 0.25_EB*( VV(L%NX,J-1,K) + VV(L%NX,J,K) )**2  &
+                                         + 0.25_EB*( WW(L%NX,J,K-1) + WW(L%NX,J,K) )**2  )
+                        BXF(J,K)= 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K))*(BXF(J,K)-KKRES)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'INSEP: J,K,B_SAVE, BXF:', J, K, BXF(J,K)
+#endif
+                     ENDDO
+                  ENDDO
+                  DO I=1,L%NX
+                     DO J=1,L%NY
+                        KKRES = 0.5_EB*(   0.25_EB*( UU(I-1,J,1) + UU(I,J,1) )**2    &
+                                         + 0.25_EB*( VV(I,J-1,1) + VV(I,J,1) )**2    &
+                                         +           WW(I,J,0)**2                )
+                        BZS(I,J)= 0.5_EB*(RHOP(I,J,0)+RHOP(1,J,1))*(BZS(I,J)-KKRES)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'INSEP: I,J,B_SAVE, BZS:', I, J, BZS(I,J)
+#endif
+                     ENDDO
+                     DO J=1,L%NY
+                        KKRES = 0.5_EB*(   0.25_EB*( UU(I-1,J,L%NZ) + UU(I,J,L%NZ) )**2    &
+                                         + 0.25_EB*( VV(I,J-1,L%NZ) + VV(I,J,L%NZ) )**2    &
+                                         +           WW(I,J,L%NZ)**2                    )
+                        BZF(I,J)= 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(1,J,L%NZ+1))*(BZF(I,J)-KKRES)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'INSEP: I,J,B_SAVE, BZF:', I, J, BZF(I,J)
+#endif
+                     ENDDO
+                  ENDDO
+               ENDIF
+            ENDDO TEST_LOOP
          ENDIF
 
          !!$OMP PARALLEL 
@@ -1546,8 +1617,9 @@ END SUBROUTINE SCARC_SETUP_WORKSPACE
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_KRYLOV(NSTACK, NPARENT, NLEVEL)
 USE SCARC_MATRICES, ONLY: SCARC_SETUP_SYSTEM_CONDENSED
+USE SCARC_POINTERS, ONLY: M
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-INTEGER :: NSTATE, NS, NP, NL, NG
+INTEGER :: NSTATE, NS, NP, NL, NG, NM
 REAL (EB) :: ALPHA0, BETA0, SIGMA0, SIGMA1=0.0_EB
 REAL (EB) :: TNOW, TNOWI
 
@@ -1577,7 +1649,7 @@ IF (IS_MGM .AND. NSTACK == 3) THEN
 ELSE
    TYPE_MATVEC = NSCARC_MATVEC_GLOBAL
 ENDIF
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,*) '====================== BEGIN KRYLOV METHOD '
 WRITE(MSG%LU_DEBUG,*) 'NSTACK  =', NSTACK
 WRITE(MSG%LU_DEBUG,*) 'NPARENT =', NPARENT
@@ -1591,6 +1663,16 @@ WRITE(MSG%LU_DEBUG,*) 'IS_STRUCTURED = ', IS_STRUCTURED
 WRITE(MSG%LU_DEBUG,*) 'IS_UNSTRUCTURED = ', IS_UNSTRUCTURED
 WRITE(MSG%LU_DEBUG,*) 'IS_LAPLACE = ', IS_LAPLACE
 WRITE(MSG%LU_DEBUG,*) 'IS_POISSON = ', IS_POISSON
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   M => MESHES(NM)
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%DDDT, NM, 'DP BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE CHECK_POISSON1')
+ENDDO
 #endif
 
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
@@ -1604,7 +1686,7 @@ IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B BEFORE FILTERING ', NL)
 #endif
-   CALL FILTER_MEANVALUE(B, NL)                       
+   !CALL FILTER_MEANVALUE(B, NL)                       
    GLOBAL_MEAN_VALUE = GLOBAL_REAL
    CALL SCARC_SETUP_SYSTEM_CONDENSED (B, NL, 1)            
 ENDIF
@@ -1743,11 +1825,13 @@ WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
 #endif
 
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
-   CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+   IF (IS_INSEPARABLE) THEN
+      CALL SCARC_UPDATE_HP(NLEVEL_MIN)
+   ELSE
+      CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+   ENDIF
    CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-   CALL SCARC_CHECK_POISSON1(NLEVEL_MIN)
-   IF (IS_INSEPARABLE) CALL SCARC_UPDATE_HP(NLEVEL_MIN)
-   CALL SCARC_CHECK_POISSON(NLEVEL_MIN)
+   !CALL SCARC_CHECK_POISSON1(NLEVEL_MIN)
 #ifdef WITH_SCARC_POSTPROCESSING
    IF (SCARC_DUMP) THEN
       CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
@@ -2833,12 +2917,20 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
                HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXS(IYW,IZW)
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) - L%DX *M%BXS(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
             ENDIF
          CASE (-1)
             IF (GWC%BTYPE==DIRICHLET) THEN
                HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXF(IYW,IZW)
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) + L%DX *M%BXF(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXF, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXF(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
             ENDIF
          CASE ( 2)
             IF (GWC%BTYPE==DIRICHLET) THEN
@@ -2857,12 +2949,20 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
                HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZS(IXW,IYW)
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) - L%DZ *M%BZS(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IZG, IXW, IYW, IZW, DZ, BZS, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
             ENDIF
          CASE (-3)
             IF (GWC%BTYPE==DIRICHLET) THEN
                HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZF(IXW,IYW)
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) + L%DZ *M%BZF(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IZG, IXW, IYW, IZW, DZ, BZF, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
             ENDIF
       END SELECT
 #ifdef WITH_SCARC_DEBUG2
@@ -3072,12 +3172,12 @@ END SUBROUTINE SCARC_COMPUTE_BAROCLINIC_TORQUE
 !> \brief Reset HP
 ! ----------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_UPDATE_HP(NL)
-USE SCARC_POINTERS, ONLY: M, L, ST, SCARC_POINT_TO_GRID
+USE SCARC_POINTERS, ONLY: M, L, G, ST, SCARC_POINT_TO_GRID
 REAL(EB), DIMENSION(:,:,:), POINTER :: RHOP, KRES, HP
 INTEGER, INTENT(IN) :: NL
 INTEGER :: NM
-INTEGER :: I, J, K
-REAL(EB) :: HP_SAVE
+INTEGER :: I, J, K, IC
+REAL(EB) :: X_SAVE
 
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_LEVEL (X, 'UPDATE_HP: X BEFORE ', NL)
@@ -3103,23 +3203,26 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN UPDATE_HP')
    CALL SCARC_DEBUG_VECTOR3_BIG (RHOP, NM, 'RHOP IN UPDATE_HP')
+   CALL SCARC_DEBUG_LEVEL (X, 'UPDATE_HP: X BEFORE ', NL)
 #endif
 
-   DO K=0,L%NZ+1
-      DO J=0,L%NY+1
-         DO I=0,L%NX+1
-            HP_SAVE = HP(I,J,K)
-            HP(I,J,K) = HP(I,J,K)/RHOP(I,J,K) + KRES(I,J,K)
+   DO K=1,L%NZ
+      DO J=1,L%NY
+         DO I=1,L%NX
+            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+            IC = G%CELL_NUMBER(I,J,K)
+            X_SAVE = ST%X(IC)
+            HP(I,J,K) = ST%X(IC)/RHOP(I,J,K) + KRES(I,J,K)
 #ifdef WITH_SCARC_DEBUG
 IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_HP: IC, I, J, K, X_SAVE, RHO, KRES, X_NEW:', &
-                                                  I,J,K, HP_SAVE, RHOP(I,J,K), KRES(I,J,K), HP(I,J,K)
+                                                  I,J,K, X_SAVE, RHOP(I,J,K), KRES(I,J,K), HP(I,J,K)
 #endif
          ENDDO
       ENDDO
    ENDDO
 
 #ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_LEVEL (X, 'UPDATE_HP: X AFTER ', NL)
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP IN UPDATE_HP')
 #endif
 
 ENDDO
@@ -3135,9 +3238,9 @@ INTEGER, INTENT(IN) :: NL
 REAL(EB), DIMENSION(:,:,:), POINTER :: FVX_B, FVY_B, FVZ_B, FVX, FVY, FVZ, KRES, RHOP, DP,V1
 INTEGER :: NM
 INTEGER :: I, J, K
-REAL(EB) :: MEAN_KRES, RHSS1, RHSS2, RHSS3, DIFF, LHSS1, LHSS2
+REAL(EB) :: RHSS1, RHSS3, DIFF, LHSS1, LHSS2
 
-MEAN_KRES = FILTER_MEANVALUE_KRES(NL)
+!MEAN_KRES = FILTER_MEANVALUE_KRES(NL)
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -3161,7 +3264,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    KRES => M%KRES
 
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'SCARC_CHECK_POISSON: MEAN_KRES', MEAN_KRES
+!   WRITE(MSG%LU_DEBUG,*) 'SCARC_CHECK_POISSON: MEAN_KRES', MEAN_KRES
    CALL SCARC_DEBUG_VECTOR3_BIG (DP, NM, 'DP BEFORE CHECK_POISSON1')
    CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON1')
    CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON1')
@@ -3181,6 +3284,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K=1,M%KBAR
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
+   IF (K == 7) WRITE(MSG%LU_DEBUG,'(E24.16)') HP(8,1,7)
+   IF (K == 8) WRITE(MSG%LU_DEBUG,'(2E24.16)') HP(7,1,8), HP(8,1,8)
 #endif
 
       DO J=1,M%JBAR
@@ -3192,7 +3297,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   + (          (FVZ(I,J,K-1)) -        (FVZ(I,J,K)) )*M%RDZ(K)
             RHSS3 = - DP(I,J,K)
             V1(I,J,K) = RHSS1-RHSS3
-            LHSS1 = ((HP(I+1,J,K)-HP(I,J,K))*M%RDXN(I)*M%R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
+            LHSS1 =((HP(I+1,J,K)-HP(I,J,K))*M%RDXN(I)*M%R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
                     (HP(I,J,K)-HP(I-1,J,K))*M%RDXN(I-1)*M%R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*M%RDX(I)*M%RRN(I) &
                  + ((HP(I,J+1,K)-HP(I,J,K))*M%RDYN(J)           *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
                     (HP(I,J,K)-HP(I,J-1,K))*M%RDYN(J-1)         *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*M%RDY(J)        &
@@ -3204,16 +3309,15 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
             DIFF = ABS(RHSS1+RHSS3-LHSS1-LHSS2)
 #ifdef WITH_SCARC_DEBUG
-IF (I==1.AND.J==1.AND.K==4) THEN
-   WRITE(MSG%LU_DEBUG,'(A,16E12.4)') 'SUSI:', FVX(I-1,J,K), FVX(I,J,K), FVY(I,J-1,K), FVY(I,J,K), FVZ(I,J,K-1), FVZ(I,J,K), &
-                         M%RDX(I), M%RDY(J), M%RDZ(K), M%R(I-1), M%R(I), M%RRN(I), RHSS1, RHSS3, LHSS1, LHSS2
-   WRITE(MSG%LU_DEBUG,'(A,4E12.4)') 'SUSI2:', M%R(I-1)*(FVX(I-1,J,K)) - M%R(I)*(FVX(I,J,K)), &
-                                                       (FVY(I,J-1,K)) -        (FVY(I,J,K)), &
-                                                       (FVZ(I,J,K-1)) -        (FVZ(I,J,K)), RHSS1
-ENDIF
+   WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'X', I,J,K, HP(I+1,J,K), HP(I,J,K), HP(I-1,J,K), HP(I+1,J,K)-HP(I,J,K), &
+   HP(I,J,K)-HP(I-1,J,K)
+   WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'Y', I,J,K, HP(I,J+1,K), HP(I,J,K), HP(I,J-1,K), HP(I,J+1,K)-HP(I,J,K), &
+   HP(I,J,K)-HP(I,J-1,K)
+   WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'Z', I,J,K, HP(I,J,K+1), HP(I,J,K), HP(I,J,K-1), HP(I,J,K+1)-HP(I,J,K), &
+   HP(I,J,K)-HP(I,J,K-1)
 IF (J == 1) &
-WRITE(MSG%LU_DEBUG,'(A, 3I4, 8E12.4)') 'CHECK_POISSON1 : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
-                          I,J,K, HP(I,J,K), LHSS1, LHSS2, LHSS1+LHSS2, RHSS1, RHSS3, RHSS1+RHSS3, DIFF
+WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E20.12)') 'CHECK_POISSON1 : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
+                          I,J,K, HP(I,J,K), LHSS1, LHSS2, RHSS1, RHSS3, DIFF !, DIFF-GLOBAL_MEAN_VALUE
 #endif
          ENDDO
       ENDDO
@@ -3229,208 +3333,6 @@ ENDDO
 
 END SUBROUTINE SCARC_CHECK_POISSON1
 
-! ----------------------------------------------------------------------------------------------------------------------
-!> \brief Reset HP
-! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_CHECK_POISSON(NL)
-USE SCARC_POINTERS, ONLY: M, L, G, ST, HP, SCARC_POINT_TO_GRID
-INTEGER, INTENT(IN) :: NL
-REAL(EB), DIMENSION(:,:,:), POINTER :: FVX_B, FVY_B, FVZ_B, FVX, FVY, FVZ, KRES, RHOP, DP,V1
-INTEGER :: NM
-INTEGER :: I, J, K
-REAL(EB) :: RHSS, LHSS, RESS, MEAN_KRES, RHSS1, RHSS2, DIFF
-LOGICAL :: DO_IT 
-
-MEAN_KRES = FILTER_MEANVALUE_KRES(NL)
-
-DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-
-   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
-   ST  => L%STAGE(NSCARC_STAGE_ONE)
-
-   DP => M%DDDT
-   IF (PREDICTOR) THEN
-      HP => M%H
-      RHOP => M%RHO
-   ELSE
-      HP => M%HS
-      RHOP => M%RHOS
-   ENDIF
-   FVX => M%FVX
-   FVY => M%FVY
-   FVZ => M%FVZ
-   FVX_B => M%FVX_B
-   FVY_B => M%FVY_B
-   FVZ_B => M%FVZ_B
-   KRES => M%KRES
-
-#ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) 'SCARC_CHECK_POISSON: MEAN_KRES', MEAN_KRES
-   CALL SCARC_DEBUG_VECTOR3_BIG (DP, NM, 'DP BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP BEFORE CHECK_POISSON')
-#endif
-
-   DO_IT = .TRUE.
-   !IF (IS_SEPARABLE) THEN
-   IF (DO_IT) THEN
-
-   V1 => M%WORK7
-   !V1 =  RHOP*(HP-KRES)
-   DIFF = 0.0_EB
-
-   DO K=1,M%KBAR
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
-#endif
-
-      DO J=1,M%JBAR
-         DO I=1,M%IBAR
-
-            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-            RHSS1 = (M%R(I-1)*FVX(I-1,J,K) - M%R(I)*FVX(I,J,K))*M%RDX(I)*M%RRN(I) &
-                  + (         FVY(I,J-1,K) -        FVY(I,J,K))*M%RDY(J)        &
-                  + (         FVZ(I,J,K-1) -        FVZ(I,J,K))*M%RDZ(K)        &
-                 - DP(I,J,K)
-        RHSS2= +((KRES(I+1,J,K)-KRES(I,J,K))*M%RDXN(I)*M%R(I)-(KRES(I,J,K)-KRES(I-1,J,K))*M%RDXN(I-1)*M%R(I-1))*M%RDX(I)*M%RRN(I)&
-               +((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1)        )*M%RDY(J)        &
-               +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
-            V1(I,J,K) = RHSS1-RHSS2
-            DIFF = V1(I,J,K) - ST%B(G%CELL_NUMBER(I,J,K))
-#ifdef WITH_SCARC_DEBUG
-IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I5,3E14.6)') 'DIFF: ', I,J,K, V1(I,J,K), ST%B(G%CELL_NUMBER(I,J,K)), DIFF
-#endif
-         ENDDO
-      ENDDO
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
-   CALL SCARC_DEBUG_VECTOR3_BIG (V1, NM, 'V1 RHS')
-#endif
-
-   IF (IS_SEPARABLE) THEN
-      V1 =  RHOP*(HP-KRES)
-   ELSE
-      V1 =  HP
-   ENDIF
-
-#ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP BEFORE CHECK_POISSON')
-   CALL SCARC_DEBUG_VECTOR3_BIG (V1, NM, 'V1 BEFORE CHECK_POISSON')
-#endif
-   DO K=1,M%KBAR
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
-#endif
-      DO J=1,M%JBAR
-         DO I=1,M%IBAR
-
-            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-            RHSS = (M%R(I-1)*(FVX(I-1,J,K)-FVX_B(I-1,J,K)) - M%R(I)*(FVX(I,J,K)-FVX_B(I,J,K)) )*M%RDX(I)*M%RRN(I) &
-                 + (         (FVY(I,J-1,K)-FVY_B(I,J-1,K)) -        (FVY(I,J,K)-FVY_B(I,J,K)) )*M%RDY(J)        &
-                 + (         (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -        (FVZ(I,J,K)-FVZ_B(I,J,K)) )*M%RDZ(K)        &
-                 - DP(I,J,K)
-            LHSS = ((V1(I+1,J,K)-V1(I,J,K))*M%RDXN(I)*M%R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
-                    (V1(I,J,K)-V1(I-1,J,K))*M%RDXN(I-1)*M%R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*M%RDX(I)*M%RRN(I) &
-                 + ((V1(I,J+1,K)-V1(I,J,K))*M%RDYN(J)           *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
-                    (V1(I,J,K)-V1(I,J-1,K))*M%RDYN(J-1)         *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*M%RDY(J)        &
-                 + ((V1(I,J,K+1)-V1(I,J,K))*M%RDZN(K)           *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
-                    (V1(I,J,K)-V1(I,J,K-1))*M%RDZN(K-1)         *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*M%RDZ(K)        &
-               +((KRES(I+1,J,K)-KRES(I,J,K))*M%RDXN(I)*M%R(I)-(KRES(I,J,K)-KRES(I-1,J,K))*M%RDXN(I-1)*M%R(I-1))*M%RDX(I)*M%RRN(I)&
-               +((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1)        )*M%RDY(J)        &
-               +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
-
-            RESS = ABS(RHSS-LHSS)
-
-#ifdef WITH_SCARC_DEBUG
-IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 5E12.4)') 'SCARC_CHECK_POISSON: I, J, K, LHSS, RHSS, RES:',&
-                                                 I,J,K, LHSS, RHSS, RESS
-#endif
-         ENDDO
-      ENDDO
-   ENDDO
-
-
-   ELSE
-
-   V1 => M%WORK7
-   !V1 =  RHOP*(HP-KRES)
-   DIFF = 0.0_EB
-
-   DO K=1,M%KBAR
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
-#endif
-
-      DO J=1,M%JBAR
-         DO I=1,M%IBAR
-
-            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-            RHSS1 = (M%R(I-1)*FVX(I-1,J,K) - M%R(I)*FVX(I,J,K))*M%RDX(I)*M%RRN(I) &
-                  + (         FVY(I,J-1,K) -        FVY(I,J,K))*M%RDY(J)        &
-                  + (         FVZ(I,J,K-1) -        FVZ(I,J,K))*M%RDZ(K)        &
-                 - DP(I,J,K)
-        RHSS2= +((KRES(I+1,J,K)-KRES(I,J,K))*M%RDXN(I)*M%R(I)-(KRES(I,J,K)-KRES(I-1,J,K))*M%RDXN(I-1)*M%R(I-1))*M%RDX(I)*M%RRN(I)&
-               +((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1)        )*M%RDY(J)        &
-               +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
-            V1(I,J,K) = RHSS1-RHSS2
-            DIFF = V1(I,J,K) - ST%B(G%CELL_NUMBER(I,J,K))
-#ifdef WITH_SCARC_DEBUG
-IF (J==1) WRITE(MSG%LU_DEBUG,'(3I5,3E14.6)') I,J,K, V1(I,J,K), ST%B(G%CELL_NUMBER(I,J,K)), DIFF
-#endif
-         ENDDO
-      ENDDO
-   ENDDO
-#ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
-   CALL SCARC_DEBUG_VECTOR3_BIG (V1, NM, 'V1 RHS')
-#endif
-
-   DO K=1,M%KBAR
-#ifdef WITH_SCARC_DEBUG
-         WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
-#endif
-
-      DO J=1,M%JBAR
-         DO I=1,M%IBAR
-
-            IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-            RHSS1 = (M%R(I-1)*FVX(I-1,J,K) - M%R(I)*FVX(I,J,K))*M%RDX(I)*M%RRN(I) &
-                  + (         FVY(I,J-1,K) -        FVY(I,J,K))*M%RDY(J)        &
-                  + (         FVZ(I,J,K-1) -        FVZ(I,J,K))*M%RDZ(K)        &
-                 - DP(I,J,K)
-        RHSS2= +((KRES(I+1,J,K)-KRES(I,J,K))*M%RDXN(I)*M%R(I)-(KRES(I,J,K)-KRES(I-1,J,K))*M%RDXN(I-1)*M%R(I-1))*M%RDX(I)*M%RRN(I)&
-               +((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1)        )*M%RDY(J)        &
-               +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
-            RHSS = RHSS1 - RHSS2
-
-            LHSS = ((HP(I+1,J,K)-HP(I,J,K))*M%RDXN(I)*M%R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
-                    (HP(I,J,K)-HP(I-1,J,K))*M%RDXN(I-1)*M%R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*M%RDX(I)*M%RRN(I) &
-                 + ((HP(I,J+1,K)-HP(I,J,K))*M%RDYN(J)           *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
-                    (HP(I,J,K)-HP(I,J-1,K))*M%RDYN(J-1)         *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*M%RDY(J)        &
-                 + ((HP(I,J,K+1)-HP(I,J,K))*M%RDZN(K)           *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
-                    (HP(I,J,K)-HP(I,J,K-1))*M%RDZN(K-1)         *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*M%RDZ(K)        
-
-            RESS = ABS(RHSS-LHSS)
-
-#ifdef WITH_SCARC_DEBUG
-IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 3E12.4)') 'SCARC_CHECK_POISSON: I, J, K, LHSS, RHSS, RES:',&
-                                                 I,J,K, LHSS, RHSS, RESS
-#endif
-         ENDDO
-      ENDDO
-      ENDDO
-   ENDIF
-
-
-ENDDO
-
-END SUBROUTINE SCARC_CHECK_POISSON
 
 ! -------------------------------------------------------------------------------------------------------------
 !> \brief Preconditioning method which is based on the following input and output convention:

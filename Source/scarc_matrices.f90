@@ -14,7 +14,6 @@ USE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS, ONLY: EB, FB
 USE MEMORY_FUNCTIONS, ONLY: CHKMEMERR
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
-USE MPI_F08
 USE SCARC_CONSTANTS
 USE SCARC_UTILITIES
 USE SCARC_STORAGE
@@ -786,6 +785,7 @@ WRITE(MSG%LU_DEBUG,*) '================ IC = ', IC
       A%N_VAL = IP
    
       CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
+      CALL SCARC_MATRIX_CHECK_NEUMANN(A, G%NC)
 
 #ifdef WITH_SCARC_DEBUG2
 CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
@@ -944,6 +944,7 @@ WRITE(MSG%LU_DEBUG,*) '================ IC = ', IC
       A%N_VAL = IP
    
       CALL SCARC_GET_MATRIX_STENCIL_MAX(A, G%NC)
+      CALL SCARC_MATRIX_CHECK_NEUMANN(A, G%NC)
 
 #ifdef WITH_SCARC_DEBUG2
 CALL SCARC_DEBUG_CMATRIX (A, 'POISSON', 'SETUP_POISSON: NO BDRY')
@@ -2036,6 +2037,40 @@ WRITE(MSG%LU_DEBUG,*) 'GET_STENCIL_MAX:', A%N_STENCIL_MAX
 END SUBROUTINE SCARC_GET_MATRIX_STENCIL_MAX
 
 
+SUBROUTINE SCARC_MATRIX_CHECK_NEUMANN (A, NC)
+TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A
+REAL(EB):: ROW_SUM
+INTEGER, INTENT(IN) :: NC
+INTEGER :: IC, ICOL
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'ROW_SUM: NC:', NC, TWO_EPSILON_EB
+#endif
+A%CONDENSING_REQUIRED = .TRUE.
+ROW_LOOP: DO IC = 1, NC
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+#endif
+   ROW_SUM = 0.0_EB
+   DO ICOL = A%ROW(IC), A%ROW(IC+1)-1
+      ROW_SUM = ROW_SUM + A%VAL(ICOL)
+   ENDDO
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'ROW_SUM: IC:', IC, ROW_SUM
+#endif
+   IF (ROW_SUM > TWO_EPSILON_EB) THEN
+      A%CONDENSING_REQUIRED = .FALSE.
+      EXIT ROW_LOOP
+   ENDIF
+ENDDO ROW_LOOP
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A%CONDENSING_REQUIRED = ', A%CONDENSING_REQUIRED
+#endif
+
+END SUBROUTINE SCARC_MATRIX_CHECK_NEUMANN
+
+
 #ifdef WITH_MKL
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Setup symmetric version of Poisson matrix for MKL solver in double precision
@@ -2770,6 +2805,9 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
    ACO%COL(ICOL)  = A%COL(IP)
    ACO%VAL1(ICOL) = A%VAL(IP)
    ACO%VAL2(ICOL) = 1.0_EB
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CONDENSING A:         IP, ICOL, ACO%COL, ACO%VAL1:', IP, ICOL, ACO%COL(ICOL), ACO%VAL1(ICOL)
+#endif
 
    DO IP = A%ROW(NC)+1, A%ROW(NC+1)-1
       ICOL = ICOL + 1
@@ -2777,6 +2815,9 @@ LAST_CELL_IN_LAST_MESH_IF: IF (NM == NMESHES) THEN
       ACO%COL(ICOL)  = A%COL(IP)
       ACO%VAL1(ICOL) = A%VAL(IP)
       ACO%VAL2(ICOL) = 0.0_EB
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CONDENSING A:         IP, ICOL, ACO%COL, ACO%VAL1:', IP, ICOL, ACO%COL(ICOL), ACO%VAL1(ICOL)
+#endif
    ENDDO
    ACO%N_COL = ICOL                                ! number of stored columns
 
@@ -2791,14 +2832,14 @@ WRITE(MSG%LU_DEBUG,*) '===========> ACO1: JC, ROW1, ROW2:', JC, A%ROW(JC)+1, A%R
    DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
       IF (A%COL(IP) == NC) THEN
          ICO = ICO + 1
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '         IP, A%COL(IP), ICO', IP, A%COL(IP), ICO
-#endif
          ACO => A%CONDENSED(ICO)
          ACO%PTR(1)  = IP
          ACO%COL(1)  = JC
          ACO%VAL1(1) = A%VAL(IP)                     ! store original value of system matrix
          ACO%VAL2(1) = 0.0_EB                        ! store new value of condensed system matrix
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CONDENSING B:         IP, A%COL(IP), ICO, ACO%VAL1:', IP, A%COL(IP), ICO, ACO%VAL1(1)
+#endif
          ACO%N_COL   = 1
          EXIT
       ENDIF
@@ -2811,13 +2852,13 @@ WRITE(MSG%LU_DEBUG,*) '===========> ACO2: JC, ROW1, ROW2:', JC, A%ROW(JC)+1, A%R
    DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
       IF (A%COL(IP) == NC) THEN
          ICO = ICO + 1
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) '         IP, A%COL(IP), ICO', IP, A%COL(IP), ICO
-#endif
          ACO => A%CONDENSED(ICO)
          ACO%PTR(1)  = IP
          ACO%COL(1)  = JC
          ACO%VAL1(1) = A%VAL(IP)                     ! store original value of system matrix
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'CONDENSING B:         IP, A%COL(IP), ICO, ACO%VAL1', IP, A%COL(IP), ICO, ACO%VAL1(1)
+#endif
          ACO%VAL2(1) = 0.0_EB                        ! store new value of condensed system matrix
          ACO%N_COL   = 1
          EXIT
@@ -3021,6 +3062,7 @@ USE SCARC_POINTERS, ONLY: L, G, OG, F, OL, VC, A, ACO, AB, ABCO, &
                           SCARC_POINT_TO_CMATRIX, SCARC_POINT_TO_BMATRIX, SCARC_POINT_TO_VECTOR
 INTEGER, INTENT(IN) :: NV, NL, ITYPE
 INTEGER :: NM, NOM, IFACE, ICN, ICE, ICW, JC, NC, ICO, IOR0, IP, ICG, INBR
+REAL(EB) :: VC_SAVE
 
 IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0 .OR. &
     TYPE_PRECON == NSCARC_RELAX_FFT .OR. TYPE_PRECON == NSCARC_RELAX_FFTO) RETURN
@@ -3049,7 +3091,14 @@ IF (UPPER_MESH_INDEX == NMESHES) THEN
          DO ICO = 2, A%N_CONDENSED
             ACO => A%CONDENSED(ICO)
             JC = ACO%COL(1)
-            IF (JC < NC) VC(JC) = VC(JC) - ACO%VAL1(1)*VC(NC)
+            IF (JC < NC) THEN
+               VC_SAVE = VC(JC)
+               VC(JC) = VC(JC) - ACO%VAL1(1)*VC(NC)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A, 2I5, 4E18.10)') 'CONDENSING: ICO, JC, VC_SAVE, VC, ACO%VAL1: ', &
+                                   ICO, JC, ACO%VAL1(1), VC_SAVE, VC(NC)*ACO%VAL1(1), VC(JC)
+#endif
+            ENDIF
          ENDDO
 
       CASE (NSCARC_MATRIX_BANDWISE)

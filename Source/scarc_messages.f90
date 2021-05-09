@@ -226,6 +226,7 @@ CLOSE(LU_DUMP)
 
 END SUBROUTINE SCARC_VERBOSE_VECTOR3
 
+#ifdef WITH_SCARC_AMG
 ! ------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out matrix information on specified level for BLENDER
 ! ------------------------------------------------------------------------------------------------------------------
@@ -365,6 +366,7 @@ CLOSE(MAGG)
 1003 FORMAT(E14.6,',',  E14.6,',', E14.6)
 1000 FORMAT(I8,',', I8,',', E14.6,',',  E14.6,',', E14.6)
 END SUBROUTINE SCARC_VERBOSE_BLENDER_ZONES
+#endif
 #endif
 
 #ifdef WITH_SCARC_DEBUG
@@ -614,6 +616,7 @@ WRITE(MSG%LU_DEBUG,*) '============ DEBUGGING REAL1 ARRAY ', CMYSELF, ' AT ', TR
 WRITE(MSG%LU_DEBUG,'(8E14.6)') (ARR(IC), IC=I1, I2)
 END SUBROUTINE SCARC_DEBUG_REAL1
 
+#ifdef WITH_SCARC_AMG
 ! --------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for aggregation zones
 ! --------------------------------------------------------------------------------------------------------------------
@@ -637,6 +640,7 @@ ENDIF
 WRITE(MSG%LU_DEBUG,*) '-------------- ZONE_CENTERS'
 WRITE(MSG%LU_DEBUG,'(8I12)') G%ZONE_CENTERS
 END SUBROUTINE SCARC_DEBUG_ZONES
+#endif
 
 ! --------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
@@ -1457,7 +1461,7 @@ ENDDO MESHES_LOOP
 1001 FORMAT(I8,',')
 1002 FORMAT(E10.2,',')
 END SUBROUTINE SCARC_PYTHON_MATRIX
-
+ 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out aggregation zones information on specified level for PYTHON
 ! --------------------------------------------------------------------------------------------------------------

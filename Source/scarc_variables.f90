@@ -7,10 +7,10 @@
 !=======================================================================================================================
 MODULE SCARC_VARIABLES
 
+USE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS
 USE SCARC_CONSTANTS
 USE SCARC_TYPES
-USE MPI_F08
 
 IMPLICIT NONE (TYPE,EXTERNAL)
 
