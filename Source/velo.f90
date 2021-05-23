@@ -1562,10 +1562,10 @@ END SUBROUTINE NO_FLUX
 
 SUBROUTINE VELOCITY_PREDICTOR(T,DT,DT_NEW,NM)
 
+USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG, IS_INSEPARABLE
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
-USE SCRC, ONLY: SCARC_POISSON, MSG, SCARC_DEBUG_VECTOR3_BIG
 
 REAL(EB) :: T_NOW,XHAT,ZHAT
 INTEGER  :: I,J,K
@@ -1584,97 +1584,93 @@ T_NOW=CURRENT_TIME()
 CALL POINT_TO_MESH(NM)
 
 #ifdef WITH_SCARC_DEBUG
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'FVX VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'FVZ VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX_B, NM, 'FVX_B VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ_B, NM, 'FVZ_B VELOCITY_PREDICTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (H, NM, 'H VELOCITY_PREDICTOR')
+   CALL SCARC_DEBUG_VECTOR3_BIG (U, NM, 'VELOCITY_PREDICTOR: U')
+   CALL SCARC_DEBUG_VECTOR3_BIG (V, NM, 'VELOCITY_PREDICTOR: V')
+   CALL SCARC_DEBUG_VECTOR3_BIG (W, NM, 'VELOCITY_PREDICTOR: W')
+   CALL SCARC_DEBUG_VECTOR3_BIG (US, NM, 'VELOCITY_PREDICTOR: US')
+   CALL SCARC_DEBUG_VECTOR3_BIG (VS, NM, 'VELOCITY_PREDICTOR: VS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (WS, NM, 'VELOCITY_PREDICTOR: WS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'VELOCITY_PREDICTOR: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVY, NM, 'VELOCITY_PREDICTOR: FVY')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'VELOCITY_PREDICTOR: FVZ')
+   CALL SCARC_DEBUG_VECTOR3_BIG (H, NM, 'VELOCITY_PREDICTOR: H')
 #endif
-
 FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    US = U
    VS = V
    WS = W
 ELSE FREEZE_VELOCITY_IF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
-      DO K=1,KBAR
-         DO J=1,JBAR
-            DO I=0,IBAR
+   DO K=1,KBAR
+      DO J=1,JBAR
+         DO I=0,IBAR
+            IF (IS_INSEPARABLE) THEN
                US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K)+FVX_B(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVX, FVX_B, H_I+1, H_I, US: ', I,J,K, &
-                               FVX(I,J,K), FVX_B(I,J,K), H(I+1,J,K), H(I,J,K), US(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: INSEP: X: I,J,K, FVX, HI+1, HI, US:', &
+                                                I,J,K, FVX(I,J,K), FVX_B(I,J,K),H(I+1,J,K), H(I,J,K), US(I,J,K)
 #endif
-            ENDDO
-         ENDDO
-      ENDDO
-   
-      DO K=1,KBAR
-         DO J=0,JBAR
-            DO I=1,IBAR
-               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVY, FVY_B, H_J+1, H_J, VS: ', I,J,K, &
-                               FVY(I,J,K), FVY_B(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K) 
-#endif
-            ENDDO
-         ENDDO
-      ENDDO
-
-      DO K=0,KBAR
-         DO J=1,JBAR
-            DO I=1,IBAR
-               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K)+FVZ_B(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_PRED_INSEP: I,J,K, FVZ, FVZ_B, H_K+1, H_K, WS: ', I,J,K, &
-                               FVZ(I,J,K), FVZ_B(I,J,K), H(I,J,K+1), H(I,J,K), WS(I,J,K) 
-#endif
-            ENDDO
-         ENDDO
-      ENDDO
-   ELSE
-      DO K=1,KBAR
-         DO J=1,JBAR
-            DO I=0,IBAR
+            ELSE
                US(I,J,K) = U(I,J,K) - DT*( FVX(I,J,K) + RDXN(I)*(H(I+1,J,K)-H(I,J,K)) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVX, H_I+1, H_I, US: ', I,J,K, &
-                               FVX(I,J,K), H(I+1,J,K), H(I,J,K), US(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: X: I,J,K, FVX, HI+1, HI, US:', &
+                                                I,J,K, FVX(I,J,K), FVX_B(I,J,K),H(I+1,J,K), H(I,J,K), US(I,J,K)
 #endif
-            ENDDO
+            ENDIF
          ENDDO
       ENDDO
-   
-      DO K=1,KBAR
-         DO J=0,JBAR
-            DO I=1,IBAR
+   ENDDO
+
+   DO K=1,KBAR
+      DO J=0,JBAR
+         DO I=1,IBAR
+            IF (IS_INSEPARABLE) THEN
+               VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: INSEP: Y: I,J,K, FVY, HJ+1, HJ, VS:', &
+                                                I,J,K, FVY(I,J,K), FVY_B(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K)
+#endif
+            ELSE
                VS(I,J,K) = V(I,J,K) - DT*( FVY(I,J,K) + RDYN(J)*(H(I,J+1,K)-H(I,J,K)) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVY, H_J+1, H_J, VS: ', I,J,K, &
-                               FVY(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: Y: I,J,K, FVY, HJ+1, HJ, VS:', &
+                                                I,J,K, FVY(I,J,K), FVY_B(I,J,K), H(I,J+1,K), H(I,J,K), VS(I,J,K)
 #endif
-            ENDDO
+            ENDIF
          ENDDO
       ENDDO
+   ENDDO
 
-      DO K=0,KBAR
-         DO J=1,JBAR
-            DO I=1,IBAR
+   DO K=0,KBAR
+      DO J=1,JBAR
+         DO I=1,IBAR
+            IF (IS_INSEPARABLE) THEN
+               WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K)+FVZ_B(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: INSEP: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVZ(I,J,K), FVZ_B(I,J,K),H(I,J,K+1), H(I,J,K), WS(I,J,K)
+#endif
+            ELSE
                WS(I,J,K) = W(I,J,K) - DT*( FVZ(I,J,K) + RDZN(K)*(H(I,J,K+1)-H(I,J,K)) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_PRED_SEP: I,J,K, FVZ, H_K+1, H_K, WS: ', I,J,K, &
-                               FVZ(I,J,K), H(I,J,K+1), H(I,J,K), WS(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_PREDICTOR: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVZ(I,J,K), FVZ_B(I,J,K),H(I,J,K+1), H(I,J,K), WS(I,J,K)
 #endif
-            ENDDO
+            ENDIF
          ENDDO
       ENDDO
-   ENDIF
+   ENDDO
 
    IF (PRES_METHOD == 'GLMAT' .OR. PRES_METHOD == 'USCARC') CALL WALL_VELOCITY_NO_GRADH(DT,.FALSE.)
    IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.FALSE.)
 
 ENDIF FREEZE_VELOCITY_IF
+
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (US, NM, 'VELOCITY_PREDICTOR: US')
+   CALL SCARC_DEBUG_VECTOR3_BIG (VS, NM, 'VELOCITY_PREDICTOR: VS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (WS, NM, 'VELOCITY_PREDICTOR: WS')
+#endif
 
 ! Manufactured solution (debug)
 
@@ -1721,10 +1717,10 @@ END SUBROUTINE VELOCITY_PREDICTOR
 
 SUBROUTINE VELOCITY_CORRECTOR(T,DT,NM)
 
+USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG, IS_INSEPARABLE
 USE TURBULENCE, ONLY: COMPRESSION_WAVE
 USE MANUFACTURED_SOLUTIONS, ONLY: UF_MMS,WF_MMS,VD2D_MMS_U,VD2D_MMS_V
 USE CC_SCALARS_IBM, ONLY : CCIBM_VELOCITY_NO_GRADH
-USE SCRC, ONLY: SCARC_POISSON, MSG, SCARC_DEBUG_VECTOR3_BIG
 
 REAL(EB) :: T_NOW,XHAT,ZHAT
 INTEGER  :: I,J,K
@@ -1741,13 +1737,17 @@ T_NOW=CURRENT_TIME()
 CALL POINT_TO_MESH(NM)
 
 #ifdef WITH_SCARC_DEBUG
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'FVX VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'FVZ VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVX_B, NM, 'FVX_B VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (FVZ_B, NM, 'FVZ_B VELOCITY_CORRECTOR')
-    CALL SCARC_DEBUG_VECTOR3_BIG (HS, NM, 'HS VELOCITY_CORRECTOR')
+   CALL SCARC_DEBUG_VECTOR3_BIG (U, NM, 'VELOCITY_CORRECTOR: U')
+   CALL SCARC_DEBUG_VECTOR3_BIG (V, NM, 'VELOCITY_CORRECTOR: V')
+   CALL SCARC_DEBUG_VECTOR3_BIG (W, NM, 'VELOCITY_CORRECTOR: W')
+   CALL SCARC_DEBUG_VECTOR3_BIG (US, NM, 'VELOCITY_CORRECTOR: US')
+   CALL SCARC_DEBUG_VECTOR3_BIG (VS, NM, 'VELOCITY_CORRECTOR: VS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (WS, NM, 'VELOCITY_CORRECTOR: WS')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'VELOCITY_CORRECTOR: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVY, NM, 'VELOCITY_CORRECTOR: FVY')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'VELOCITY_CORRECTOR: FVZ')
+   CALL SCARC_DEBUG_VECTOR3_BIG (H, NM, 'VELOCITY_CORRECTOR: H')
 #endif
-
 FREEZE_VELOCITY_IF: IF (FREEZE_VELOCITY) THEN
    U = US
    V = VS
@@ -1765,79 +1765,65 @@ ELSE FREEZE_VELOCITY_IF
       IF (CC_IBM) CALL CCIBM_VELOCITY_NO_GRADH(DT,.TRUE.)       ! Store velocities on GEOM SOLID faces.
    ENDIF
 
-   IF ((PRES_METHOD == 'SCARC' .OR. PRES_METHOD == 'USCARC') .AND. SCARC_POISSON == 'INSEPARABLE') THEN
-      DO K=1,KBAR
-         DO J=1,JBAR
-            DO I=0,IBAR
+   DO K=1,KBAR
+      DO J=1,JBAR
+         DO I=0,IBAR
+            IF (IS_INSEPARABLE) THEN
                U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K)+FVX_B(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVX, FVX_B, HS_I+1, HS_I, U: ', I,J,K, &
-                               FVX(I,J,K), FVX_B(I,J,K), HS(I+1,J,K), HS(I,J,K), U(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: INSEP: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVX(I,J,K), FVX_B(I,J,K),H(I+1,J,K), H(I,J,K), U(I,J,K)
 #endif
-            ENDDO
-         ENDDO
-      ENDDO
-
-      DO K=1,KBAR
-         DO J=0,JBAR
-            DO I=1,IBAR
-               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVY, FVY_B, HS_J+1, HS_J, V: ', I,J,K, &
-                               FVY(I,J,K), FVY_B(I,J,K), HS(I,J+1,K), HS(I,J,K), V(I,J,K) 
-#endif
-            ENDDO
-         ENDDO
-      ENDDO
-
-      DO K=0,KBAR
-         DO J=1,JBAR
-            DO I=1,IBAR
-               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K)+FVZ_B(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,5E14.6)') 'VELO_CORR_INSEP: I,J,K, FVZ, FVZ_B, HS_K+1, HS_K, W: ', I,J,K, &
-                               FVZ(I,J,K), FVZ_B(I,J,K), HS(I,J,K+1), HS(I,J,K), W(I,J,K) 
-#endif
-            ENDDO
-         ENDDO
-      ENDDO
-   ELSE
-      DO K=1,KBAR
-         DO J=1,JBAR
-            DO I=0,IBAR
+            ELSE
                U(I,J,K) = 0.5_EB*( U(I,J,K) + US(I,J,K) - DT*(FVX(I,J,K) + RDXN(I)*(HS(I+1,J,K)-HS(I,J,K))) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVX, HS_I+1, HS_I, U: ', I,J,K, &
-                               FVX(I,J,K), HS(I+1,J,K), HS(I,J,K), U(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVX(I,J,K), FVX_B(I,J,K),H(I+1,J,K), H(I,J,K), U(I,J,K)
 #endif
-            ENDDO
+            ENDIF
          ENDDO
       ENDDO
+   ENDDO
 
-      DO K=1,KBAR
-         DO J=0,JBAR
-            DO I=1,IBAR
+   DO K=1,KBAR
+      DO J=0,JBAR
+         DO I=1,IBAR
+            IF (IS_INSEPARABLE) THEN
+               V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K)+FVY_B(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: INSEP: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVY(I,J,K), FVY_B(I,J,K),H(I,J+1,K), H(I,J,K), V(I,J,K)
+#endif
+            ELSE
                V(I,J,K) = 0.5_EB*( V(I,J,K) + VS(I,J,K) - DT*(FVY(I,J,K) + RDYN(J)*(HS(I,J+1,K)-HS(I,J,K))) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVY, HS_J+1, HS_J, V: ', I,J,K, &
-                               FVY(I,J,K), HS(I,J+1,K), HS(I,J,K), V(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVY(I,J,K), FVY_B(I,J,K),H(I,J+1,K), H(I,J,K), V(I,J,K)
 #endif
-            ENDDO
+            ENDIF
          ENDDO
       ENDDO
+   ENDDO
 
-      DO K=0,KBAR
-         DO J=1,JBAR
-            DO I=1,IBAR
+   DO K=0,KBAR
+      DO J=1,JBAR
+         DO I=1,IBAR
+            IF (IS_INSEPARABLE) THEN
                W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I5,4E14.6)') 'VELO_CORR_SEP: I,J,K, FVZ, HS_K+1, HS_K, W: ', I,J,K, &
-                               FVZ(I,J,K), HS(I,J,K+1), HS(I,J,K), W(I,J,K) 
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: INSEP: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVZ(I,J,K), FVZ_B(I,J,K),H(I,J,K+1), H(I,J,K), W(I,J,K)
 #endif
-            ENDDO
+            ELSE
+               W(I,J,K) = 0.5_EB*( W(I,J,K) + WS(I,J,K) - DT*(FVZ(I,J,K) + RDZN(K)*(HS(I,J,K+1)-HS(I,J,K))) )
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,3i4,5E24.16)') 'VELOCITY_CORRECTOR: Z: I,J,K, FVZ, HK+1, HK, WS:', &
+                                                I,J,K, FVZ(I,J,K), FVZ_B(I,J,K),H(I,J,K+1), H(I,J,K), W(I,J,K)
+#endif
+            ENDIF
          ENDDO
       ENDDO
-   ENDIF
+   ENDDO
 
    IF (PRES_METHOD == 'GLMAT' .OR. PRES_METHOD == 'USCARC') THEN
       CALL WALL_VELOCITY_NO_GRADH(DT,.FALSE.)
@@ -3160,7 +3146,7 @@ END SUBROUTINE CHECK_STABILITY
 SUBROUTINE BAROCLINIC_CORRECTION(T,NM)
 
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
-USE SCRC, ONLY: MSG
+USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG
 REAL(EB), INTENT(IN) :: T
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: UU=>NULL(),VV=>NULL(),WW=>NULL(),RHOP=>NULL(),HP=>NULL(),RHMK=>NULL(),RRHO=>NULL()
@@ -3175,6 +3161,12 @@ IF (SOLID_PHASE_ONLY .OR. FREEZE_VELOCITY) RETURN
 T_NOW=CURRENT_TIME()
 CALL POINT_TO_MESH(NM)
 
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'BAROCLINIC_CORRECTION:A: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'BAROCLINIC_CORRECTION:A: FVZ')
+   WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_TERMS_ATTACHED=', BAROCLINIC_TERMS_ATTACHED
+#endif
+
 ! If the baroclinic torque term has been added to the momentum equation RHS, subtract it off.
 
 IF (BAROCLINIC_TERMS_ATTACHED) THEN
@@ -3182,6 +3174,11 @@ IF (BAROCLINIC_TERMS_ATTACHED) THEN
    FVY = FVY - FVY_B
    FVZ = FVZ - FVZ_B
 ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'BAROCLINIC_CORRECTION:B: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'BAROCLINIC_CORRECTION:B: FVZ')
+#endif
 
 BAROCLINIC_TERMS_ATTACHED = .TRUE.
 
@@ -3217,6 +3214,11 @@ DO K=0,KBP1
 ENDDO
 !$OMP END DO
 
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (RHMK, NM, 'BAROCLINIC_CORRECTION:B: RHMK')
+   CALL SCARC_DEBUG_VECTOR3_BIG (RRHO, NM, 'BAROCLINIC_CORRECTION:B: RRHO')
+#endif
+
 ! Set baroclinic term to zero at outflow boundaries and P_EXTERNAL at inflow boundaries
 
 !$OMP MASTER
@@ -3232,6 +3234,9 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
       ENDIF
       TIME_RAMP_FACTOR = EVALUATE_RAMP(TSI,DUMMY,VT%PRESSURE_RAMP_INDEX)
       P_EXTERNAL = TIME_RAMP_FACTOR*VT%DYNAMIC_PRESSURE
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'VENT_INDEX, TSI, TIME_RAMP_FACTOR, P_EXTERNAL=', WC%VENT_INDEX, TSI, TIME_RAMP_FACTOR, P_EXTERNAL
+#endif
    ENDIF
    II  = WC%ONE_D%II
    JJ  = WC%ONE_D%JJ
@@ -3252,8 +3257,14 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
    IF (UN*SIGN(1._EB,REAL(IOR,EB))>TWO_EPSILON_EB) INFLOW=.TRUE.
    IF (INFLOW) THEN
       RHMK(II,JJ,KK) = 2._EB*P_EXTERNAL - RHMK(IIG,JJG,KKG)  ! Pressure at inflow boundary is P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'A: RHMK(',II,',',JJ,',',KK,')=', RHMK(II,JJ,KK)
+#endif
    ELSE
       RHMK(II,JJ,KK) = -RHMK(IIG,JJG,KKG)                    ! No baroclinic correction for outflow boundary
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'B: RHMK(',II,',',JJ,',',KK,')=', RHMK(II,JJ,KK)
+#endif
    ENDIF
 ENDDO EXTERNAL_WALL_LOOP
 !$OMP END MASTER
@@ -3269,7 +3280,7 @@ DO K=1,KBAR
                          (RHOP(I+1,J,K)+RHOP(I,J,K))
          FVX(I,J,K) = FVX(I,J,K) + FVX_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVX:', I,J,K, FVX(I,J,K)
+WRITE(MSG%LU_DEBUG,'(A, 3I4,2E14.6)') 'BAROCLINIC_CORRECTION: I,J,K, FVX_B:', I,J,K, FVX_B(I,J,K), FVX(I,J,K)
 #endif
       ENDDO
    ENDDO
@@ -3287,7 +3298,7 @@ IF (.NOT.TWO_D) THEN
                             (RHOP(I,J+1,K)+RHOP(I,J,K))
             FVY(I,J,K) = FVY(I,J,K) + FVY_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVY:', I,J,K, FVY(I,J,K)
+WRITE(MSG%LU_DEBUG,'(A, 3I4,2E14.6)') 'BAROCLINIC_CORRECTION: I,J,K, FVY_B:', I,J,K, FVY_B(I,J,K), FVY(I,J,K)
 #endif
          ENDDO
       ENDDO
@@ -3305,13 +3316,18 @@ DO K=0,KBAR
                          (RHOP(I,J,K+1)+RHOP(I,J,K))
          FVZ(I,J,K) = FVZ(I,J,K) + FVZ_B(I,J,K)
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'BAROCLINIC_CORRECTION: I,J,K, FVZ:', I,J,K, FVZ(I,J,K)
+WRITE(MSG%LU_DEBUG,'(A, 3I4,2E14.6)') 'BAROCLINIC_CORRECTION: I,J,K, FVZ_B:', I,J,K, FVZ_B(I,J,K), FVZ(I,J,K)
 #endif
       ENDDO
    ENDDO
 ENDDO
 !$OMP END DO nowait
 !$OMP END PARALLEL
+
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'BAROCLINIC_CORRECTION:C: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'BAROCLINIC_CORRECTION:C: FVZ')
+#endif
 
 T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 

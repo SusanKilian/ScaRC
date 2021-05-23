@@ -1144,10 +1144,15 @@ USE SCARC_POINTERS, ONLY: M, L, F, G, SV, ST, STP, GWC, PRHS, HP, MGM, VB, VX, &
 USE SCARC_POINTERS, ONLY: PRES
 #endif
 USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
+USE TYPES, ONLY: VENTS_TYPE, WALL_TYPE
+USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 INTEGER, INTENT(IN) :: NS, NL
 REAL(EB) :: VAL, DIFF, B_SAVE, KKRES
+REAL(EB), DIMENSION(:),     POINTER :: RDX, RDXN, RDY, RDYN, RDZ, RDZN
 REAL(EB), DIMENSION(:,:,:), POINTER :: KRES, RHOP, UU, VV, WW
-REAL(EB), DIMENSION(:), POINTER :: RDX, RDXN, RDY, RDYN, RDZ, RDZN
+TYPE (VENTS_TYPE), POINTER :: VT
+TYPE (WALL_TYPE),  POINTER :: WC
+REAL(EB) :: TSI, P_EXTERNAL, TIME_RAMP_FACTOR, DUMMY=0.0_EB
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 
 #ifdef WITH_SCARC_DEBUG
@@ -1191,7 +1196,8 @@ WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BZF:', BZF
          !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
          DO IC = 1, G%NC
             I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
-            ST%X(IC) = HP(I, J, K)                              ! use last iterate as initial solution
+!            ST%X(IC) = HP(I, J, K)                              ! use last iterate as initial solution
+             ST%X(IC) = 0.0_EB
             ST%B(IC) = PRHS(I, J, K)                            ! get new RHS from surrounding code
          ENDDO                         
          !$OMP END PARALLEL DO
@@ -1210,29 +1216,7 @@ WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BZF:', BZF
 
          ! In case of inseparable poisson solution, move del dot del K term to RHS
 
-         IF (IS_INSEPARABLE) THEN
-
-            KRES => M%KRES
-            RDX  => M%RDX
-            RDXN => M%RDXN
-            RDY  => M%RDY
-            RDYN => M%RDYN
-            RDZ  => M%RDZ
-            RDZN => M%RDZN
-
-!            KRES(0     ,1,0     ) = 0.0_EB                ! TODO: CHECK !!
-!            KRES(L%NX+1,1,0     ) = 0.0_EB
-!            KRES(0     ,1,L%NZ+1) = 0.0_EB
-!            KRES(L%NX+1,1,L%NZ+1) = 0.0_EB
-
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
-CALL SCARC_DEBUG_VECTOR3_BIG (M%U, NM, 'U IN WORKSPACE-INSEP')
-CALL SCARC_DEBUG_VECTOR3_BIG (M%W, NM, 'W IN WORKSPACE-INSEP')
-CALL SCARC_DEBUG_VECTOR3_BIG (M%US, NM, 'US IN WORKSPACE-INSEP')
-CALL SCARC_DEBUG_VECTOR3_BIG (M%WS, NM, 'WS IN WORKSPACE-INSEP')
-CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN WORKSPACE-INSEP')
-#endif
+         INSEPARABLE_IF: IF (IS_INSEPARABLE) THEN
 
             DO IC = 1, G%NC
                I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
@@ -1258,162 +1242,301 @@ WRITE(MSG%LU_DEBUG,*) 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SA
                RHOP=>M%RHOS
             ENDIF
 
-            TEST_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
-      
-               GWC => G%WALL(IW)
-   
-               I = GWC%IXW
-               J = GWC%IYW
-               K = GWC%IZW
-   
-               IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-               IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-   
-               IC = G%CELL_NUMBER(I,J,K)
+            KRES => M%KRES
+            RDX  => M%RDX
+            RDXN => M%RDXN
+            RDY  => M%RDY
+            RDYN => M%RDYN
+            RDZ  => M%RDZ
+            RDZN => M%RDZN
 
-               IF (GWC%BTYPE == DIRICHLET) THEN
-                  DO J=1,L%NY
-                     DO K=1,L%NZ
-                        KKRES = 0.5_EB*(             UU(0,J,K)**2          &
-                                         + 0.25_EB*( VV(1,J-1,K) + VV(1,J,K) )**2  &
-                                         + 0.25_EB*( WW(1,J,K-1) + WW(1,J,K) )**2  )
-                        B_SAVE = BXS(J,K)
-                        BXS(J,K)= 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K))*(BXS(J,K)-KKRES)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'INSEP: J,K,B_SAVE, BXS:', J, K, B_SAVE, BXS(J,K)
-#endif
-                     ENDDO
-                     DO K=1,L%NZ
-                        KKRES = 0.5_EB*(             UU(L%NX,J,K)**2          &
-                                         + 0.25_EB*( VV(L%NX,J-1,K) + VV(L%NX,J,K) )**2  &
-                                         + 0.25_EB*( WW(L%NX,J,K-1) + WW(L%NX,J,K) )**2  )
-                        BXF(J,K)= 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K))*(BXF(J,K)-KKRES)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'INSEP: J,K,B_SAVE, BXF:', J, K, BXF(J,K)
-#endif
-                     ENDDO
-                  ENDDO
-                  DO I=1,L%NX
-                     DO J=1,L%NY
-                        KKRES = 0.5_EB*(   0.25_EB*( UU(I-1,J,1) + UU(I,J,1) )**2    &
-                                         + 0.25_EB*( VV(I,J-1,1) + VV(I,J,1) )**2    &
-                                         +           WW(I,J,0)**2                )
-                        BZS(I,J)= 0.5_EB*(RHOP(I,J,0)+RHOP(1,J,1))*(BZS(I,J)-KKRES)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'INSEP: I,J,B_SAVE, BZS:', I, J, BZS(I,J)
-#endif
-                     ENDDO
-                     DO J=1,L%NY
-                        KKRES = 0.5_EB*(   0.25_EB*( UU(I-1,J,L%NZ) + UU(I,J,L%NZ) )**2    &
-                                         + 0.25_EB*( VV(I,J-1,L%NZ) + VV(I,J,L%NZ) )**2    &
-                                         +           WW(I,J,L%NZ)**2                    )
-                        BZF(I,J)= 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(1,J,L%NZ+1))*(BZF(I,J)-KKRES)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'INSEP: I,J,B_SAVE, BZF:', I, J, BZF(I,J)
-#endif
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDDO TEST_LOOP
-         ENDIF
+!            KRES(0     ,1,0     ) = 0.0_EB                ! TODO: CHECK !!
+!            KRES(L%NX+1,1,0     ) = 0.0_EB
+!            KRES(0     ,1,L%NZ+1) = 0.0_EB
+!            KRES(L%NX+1,1,L%NZ+1) = 0.0_EB
 
-         !!$OMP PARALLEL 
-         MAIN_INHOMOGENEOUS_LOOP: DO IOR0 = -3, 3, 1 
-      
-            IF (IOR0 == 0) CYCLE
-            F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
-            
-            IW1 = F%NCW0
-            IW2 = F%NCW0 + F%NCW - 1
-      
-            !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
-            MAIN_FACE_INHOMOGENEOUS_LOOP: DO IW = IW1, IW2
-      
-               GWC => G%WALL(IW)
-   
-               I = GWC%IXW
-               J = GWC%IYW
-               K = GWC%IZW
-   
-               IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-               IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
-   
-               IC = G%CELL_NUMBER(I,J,K)
-   
-               ! ---------- Dirichlet BC's:
-               ! These are based on the settings in BTYPE
-               ! In the structured case this corresponds to the face-wise settings according to the FFT
-               ! (this allows to use local FFT's as preconditioners)
-               ! In the unstructured case only open boundary cells lead to Dirichlet BC's
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
+CALL SCARC_DEBUG_VECTOR3_BIG (M%U, NM, 'U IN WORKSPACE-INSEP')
+CALL SCARC_DEBUG_VECTOR3_BIG (M%W, NM, 'W IN WORKSPACE-INSEP')
+CALL SCARC_DEBUG_VECTOR3_BIG (M%US, NM, 'US IN WORKSPACE-INSEP')
+CALL SCARC_DEBUG_VECTOR3_BIG (M%WS, NM, 'WS IN WORKSPACE-INSEP')
+CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN WORKSPACE-INSEP')
+#endif
 
-               MAIN_IF_DIRICHLET: IF (GWC%BTYPE == DIRICHLET) THEN
-   
-                  SELECT CASE (IOR0)
-                     CASE (1)
-                        VAL =  BXS(J,K)
-                     CASE (-1)
-                        VAL =  BXF(J,K)
-                     CASE (2)
-                        VAL =  BYS(I,K)
-                     CASE (-2)
-                        VAL =  BYF(I,K)
-                     CASE (3)
-                        VAL =  BZS(I,J)
-                     CASE (-3)
-                        VAL =  BZF(I,J)
-                  END SELECT
-   
-                  ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL             ! TODO: check SCAL_DIRICHLET value in general
+            !!$OMP PARALLEL 
+            INSEPARABLE_FACES_LOOP: DO IOR0 = -3, 3, 1 
+         
+               IF (IOR0 == 0) CYCLE
+               F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+               
+               IW1 = F%NCW0
+               IW2 = F%NCW0 + F%NCW - 1
+         
+               !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
+               INSEPARABLE_IW_LOOP: DO IW = IW1, IW2
+         
+                  GWC => G%WALL(IW)
+      
+                  I = GWC%IXW
+                  J = GWC%IYW
+                  K = GWC%IZW
+      
+                  IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+                  IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+      
+                  IC = G%CELL_NUMBER(I,J,K)
+      
+                  ! ---------- Dirichlet BC's:
+                  ! These are based on the settings in BTYPE
+                  ! In the structured case this corresponds to the face-wise settings according to the FFT
+                  ! (this allows to use local FFT's as preconditioners)
+                  ! In the unstructured case only open boundary cells lead to Dirichlet BC's
+
+                  INSEPARABLE_DIRICHLET_IF: IF (GWC%BTYPE == DIRICHLET) THEN
+                     WC => M%WALL(IW)
+                     VT => M%VENTS(WC%VENT_INDEX)
+                     IF (ABS(WC%ONE_D%T_IGN-T_BEGIN)<=TWO_EPSILON_EB .AND. VT%PRESSURE_RAMP_INDEX >=1) THEN
+                        TSI = T
+                     ELSE
+                        TSI = T - T_BEGIN
+                     ENDIF
+                     TIME_RAMP_FACTOR = EVALUATE_RAMP(TSI,DUMMY,VT%PRESSURE_RAMP_INDEX)
+                     P_EXTERNAL = TIME_RAMP_FACTOR*VT%DYNAMIC_PRESSURE
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,*) 'SETUP_WORKSPACE, DIRICHLET: T, VENT_INDEX, PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL:', &
+                                                T, WC%VENT_INDEX, VT%PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL
+#endif
+      
+                     SELECT CASE (IOR0)
+                        CASE (1)
+                           VAL =  BXS(J,K)
+                           BXS(J,K) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BXS(J,K) =', IOR0, IW,I,J,K,BXS(J,K)
+#endif
+                        CASE (-1)
+                           VAL =  BXF(J,K)
+                           BXF(J,K) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BXF(J,K) =', IOR0, IW,I,J,K,BXF(J,K)
+#endif
+                        CASE (2)
+                           VAL =  BYS(I,K)
+                           BYS(I,K) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BYS(I,K) =', IOR0, IW,I,J,K,BYS(I,K)
+#endif
+                        CASE (-2)
+                           VAL =  BYF(I,K)
+                           BYF(I,K) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BYF(I,K) =', IOR0, IW,I,J,K,BYF(I,K)
+#endif
+                        CASE (3)
+                           VAL =  BZS(I,J)
+                           BZS(I,J) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BZS(I,J) =', IOR0, IW,I,J,K,BZS(I,J)
+#endif
+                        CASE (-3)
+                           VAL =  BZF(I,J)
+                           BZF(I,J) = P_EXTERNAL
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BZF(I,J) =', IOR0, IW,I,J,K,BZF(I,J)
+#endif
+                     END SELECT
+      
+                     ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL             ! TODO: check SCAL_DIRICHLET value in general
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
-                                 IW, I, J, K, IC, VAL, ST%B(IC)
+                                    IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-               ENDIF MAIN_IF_DIRICHLET
-   
-               ! ---------- Neumann BC's:
-               ! Note for the unstructured case only:
-               ! Here, the matrix also contains Neumann BC's for those cells which have a
-               ! PRESSURE_BC_INDEX == DIRICHLET but are NOT open; these cells must be excluded below,
-               ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
-               ! excluding them corresponds to a homogeneous Neumann condition for these cells
+                  ENDIF INSEPARABLE_DIRICHLET_IF
+      
+                  ! ---------- Neumann BC's:
+                  ! Note for the unstructured case only:
+                  ! Here, the matrix also contains Neumann BC's for those cells which have a
+                  ! PRESSURE_BC_INDEX == DIRICHLET but are NOT open; these cells must be excluded below,
+                  ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
+                  ! excluding them corresponds to a homogeneous Neumann condition for these cells
 
-               MAIN_IF_NEUMANN: IF (GWC%BTYPE == NEUMANN) THEN
-   
-                  IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
-   
-                  SELECT CASE (IOR0)
-                     CASE (1)
-                        VAL =  BXS(J,K)
-                     CASE (-1)
-                        VAL =  BXF(J,K)
-                     CASE (2)
-                        VAL =  BYS(I,K)
-                     CASE (-2)
-                        VAL =  BYF(I,K)
-                     CASE (3)
-                        VAL =  BZS(I,J)
-                     CASE (-3)
-                        VAL =  BZF(I,J)
-                  END SELECT
-   
-                  ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL             ! TODO: check SCAL_NEUMANN value in general
+                  INSEPARABLE_NEUMANN_IF: IF (GWC%BTYPE == NEUMANN) THEN
+      
+                     IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
+      
+                     SELECT CASE (IOR0)
+                        CASE (1)
+                           BXS(J,K) = 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K))*(BXS(J,K) - UU(0,J,K))
+                           !BXS(J,K) = 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K)) &
+                           !                 *(BXS(J,K) - 0.5_EB*(KRES(1,J,K)-KRES(0,J,K))*M%RDXN(0))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BXS(J,K) =', &
+                                        IOR0, IW,I,J,K,RHOP(0,J,K),RHOP(1,J,K),UU(0,J,K), BXS(J,K)
+#endif
+                           VAL =  BXS(J,K)
+                        CASE (-1)
+                           VAL =  BXF(J,K)
+                           BXF(J,K) = 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K))*(BXF(J,K) - UU(L%NX,J,K))
+                           !BXF(J,K) = 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K)) &
+                           !                 *(BXF(J,K) - 0.5_EB*(KRES(L%NX+1,J,K)-KRES(L%NX,J,K))*M%RDXN(L%NX))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BXF(J,K) =',&
+                                        IOR0, IW,I,J,K,RHOP(L%NX,J,K),RHOP(L%NX+1,J,K),UU(L%NX,J,K), BXF(J,K)
+#endif
+                        CASE (2)
+                           VAL =  BYS(I,K)
+                           BYS(I,K) = 0.5_EB*(RHOP(I,0,K)+RHOP(I,1,K))*(BYS(I,K) - VV(I,0,K))
+                           !BYS(I,K) = 0.5_EB*(RHOP(I,0,K)+RHOP(I,1,K)) &
+                           !                 *(BYS(I,K) - 0.5_EB*(KRES(I,1,K)-KRES(I,0,K))*M%RDYN(0))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BYS(I,K) =',&
+                                        IOR0, IW,I,J,K,RHOP(I,0,K),RHOP(I,1,K),VV(I,0,K),BYS(I,K)
+#endif
+                        CASE (-2)
+                           VAL =  BYF(I,K)
+                           BYF(I,K) = 0.5_EB*(RHOP(I,L%NY,K)+RHOP(I,L%NY+1,K))*(BYF(I,K) - VV(I,L%NY,K))
+                           !BYF(I,K) = 0.5_EB*(RHOP(I,L%NY,K)+RHOP(I,L%NY+1,K)) &
+                           !                 *(BYS(I,K) - 0.5_EB*(KRES(I,L%NY+1,K)-KRES(I,L%NY,K))*M%RDYN(L%NY))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BYF(I,K) =',&
+                                        IOR0, IW,I,J,K,RHOP(I,L%NY,K),RHOP(I,L%NY+1,K),VV(I,L%NY,K),BYF(I,K)
+#endif
+                        CASE (3)
+                           VAL =  BZS(I,J)
+                           BZS(I,J) = 0.5_EB*(RHOP(I,J,0)+RHOP(I,J,1))*(BZS(I,J) - WW(I,J,0))
+                           !BZS(I,J) = 0.5_EB*(RHOP(I,J,0)+RHOP(I,J,1)) &
+                           !                 *(BZS(I,J) - 0.5_EB*(KRES(I,J,1)-KRES(I,J,0))*M%RDZN(L%NZ))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BZS(I,J) =',&
+                                        IOR0, IW,I,J,K,RHOP(I,J,0),RHOP(I,J,1),WW(I,J,0),BZS(I,J)
+#endif
+                        CASE (-3)
+                           VAL =  BZF(I,J)
+                           BZF(I,J) = 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(I,J,L%NZ+1))*(BZF(I,J) - WW(I,J,L%NZ))
+                           !BZF(I,J) = 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(I,J,L%NZ+1)) &
+                           !                 *(BZS(I,J) - 0.5_EB*(KRES(I,J,L%NZ+1)-KRES(I,J,L%NZ))*M%RDZN(L%NZ))
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BZF(I,J) =',&
+                                        IOR0, IW,I,J,K,RHOP(I,J,L%NZ),RHOP(I,J,L%NZ+1),WW(I,J,L%NZ),BZF(I,J)
+#endif
+                     END SELECT
+      
+                     ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL             ! TODO: check SCAL_NEUMANN value in general
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
-                                 IW, I, J, K, IC, VAL, ST%B(IC)
+                                    IW, I, J, K, IC, VAL, ST%B(IC)
 #endif
-               ENDIF MAIN_IF_NEUMANN
-      
-            ENDDO MAIN_FACE_INHOMOGENEOUS_LOOP
-            !!$OMP END DO
+                  ENDIF INSEPARABLE_NEUMANN_IF
+         
+               ENDDO INSEPARABLE_IW_LOOP
+               !!$OMP END DO
 
-         ENDDO MAIN_INHOMOGENEOUS_LOOP
-         !!$OMP END PARALLEL 
-   
+            ENDDO INSEPARABLE_FACES_LOOP
+            !!$OMP END PARALLEL 
+
+         ELSE INSEPARABLE_IF
+      
+            !!$OMP PARALLEL 
+            SEPARABLE_LOOP: DO IOR0 = -3, 3, 1 
+         
+               IF (IOR0 == 0) CYCLE
+               F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+               
+               IW1 = F%NCW0
+               IW2 = F%NCW0 + F%NCW - 1
+         
+               !!$OMP DO PRIVATE(IW, GWC, I, J, K, IC, VAL) SCHEDULE(STATIC)
+               SEPARABLE_FACES_LOOP: DO IW = IW1, IW2
+         
+                  GWC => G%WALL(IW)
+      
+                  I = GWC%IXW
+                  J = GWC%IYW
+                  K = GWC%IZW
+      
+                  IF (TWO_D .AND. J /= 1) CALL SCARC_ERROR(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
+                  IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
+      
+                  IC = G%CELL_NUMBER(I,J,K)
+      
+                  ! ---------- Dirichlet BC's:
+                  ! These are based on the settings in BTYPE
+                  ! In the structured case this corresponds to the face-wise settings according to the FFT
+                  ! (this allows to use local FFT's as preconditioners)
+                  ! In the unstructured case only open boundary cells lead to Dirichlet BC's
+
+                  SEPARABLE_DIRICHLET_IF: IF (GWC%BTYPE == DIRICHLET) THEN
+      
+                     SELECT CASE (IOR0)
+                        CASE (1)
+                           VAL =  BXS(J,K)
+                        CASE (-1)
+                           VAL =  BXF(J,K)
+                        CASE (2)
+                           VAL =  BYS(I,K)
+                        CASE (-2)
+                           VAL =  BYF(I,K)
+                        CASE (3)
+                           VAL =  BZS(I,J)
+                        CASE (-3)
+                           VAL =  BZF(I,J)
+                     END SELECT
+      
+                     ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL             ! TODO: check SCAL_DIRICHLET value in general
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
+                                    IW, I, J, K, IC, VAL, ST%B(IC)
+#endif
+                  ENDIF SEPARABLE_DIRICHLET_IF
+      
+                  ! ---------- Neumann BC's:
+                  ! Note for the unstructured case only:
+                  ! Here, the matrix also contains Neumann BC's for those cells which have a
+                  ! PRESSURE_BC_INDEX == DIRICHLET but are NOT open; these cells must be excluded below,
+                  ! because BXS, BXF, ... contain the Dirichlet information from pres.f90 there;
+                  ! excluding them corresponds to a homogeneous Neumann condition for these cells
+
+                  SEPARABLE_NEUMANN_IF: IF (GWC%BTYPE == NEUMANN) THEN
+      
+                     IF (IS_UNSTRUCTURED .AND. M%WALL(IW)%PRESSURE_BC_INDEX /= NEUMANN) CYCLE
+      
+                     SELECT CASE (IOR0)
+                        CASE (1)
+                           VAL =  BXS(J,K)
+                        CASE (-1)
+                           VAL =  BXF(J,K)
+                        CASE (2)
+                           VAL =  BYS(I,K)
+                        CASE (-2)
+                           VAL =  BYF(I,K)
+                        CASE (3)
+                           VAL =  BZS(I,J)
+                        CASE (-3)
+                           VAL =  BZF(I,J)
+                     END SELECT
+      
+                     ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL             ! TODO: check SCAL_NEUMANN value in general
+
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
+                                    IW, I, J, K, IC, VAL, ST%B(IC)
+#endif
+                  ENDIF SEPARABLE_NEUMANN_IF
+         
+               ENDDO SEPARABLE_FACES_LOOP
+               !!$OMP END DO
+
+            ENDDO SEPARABLE_LOOP
+            !!$OMP END PARALLEL 
+      
+         ENDIF INSEPARABLE_IF
+
 #ifdef WITH_SCARC_POSTPROCESSING
          IF (SCARC_DUMP) PRES%B_NEW = ST%B
 #endif
-   
+      
       ENDDO MAIN_MESHES_LOOP
       
       ! In case of Krylov method (also with 2 levels) or MGM method  clear overlapping parts of auxiliary vectors
@@ -1665,13 +1788,20 @@ WRITE(MSG%LU_DEBUG,*) 'IS_LAPLACE = ', IS_LAPLACE
 WRITE(MSG%LU_DEBUG,*) 'IS_POISSON = ', IS_POISSON
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    M => MESHES(NM)
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%DDDT, NM, 'DP BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%DDDT, NM, 'DP BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHOS, NM, 'RHOS BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%H, NM, 'H BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%HS, NM, 'HS BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%U, NM, 'U BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%US, NM, 'US BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%W, NM, 'W BEFORE KRYLOV')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%WS, NM, 'WS BEFORE KRYLOV')
 ENDDO
 #endif
 
@@ -1825,13 +1955,15 @@ WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
 #endif
 
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
+   CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+   CALL SCARC_DEBUG_PRESSURE('PRES')
+   CALL SCARC_CHECK_POISSON(NLEVEL_MIN)
    IF (IS_INSEPARABLE) THEN
       CALL SCARC_UPDATE_HP(NLEVEL_MIN)
-   ELSE
-      CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
+      CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
    ENDIF
-   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-   !CALL SCARC_CHECK_POISSON1(NLEVEL_MIN)
+   CALL SCARC_DEBUG_PRESSURE('HP')
 #ifdef WITH_SCARC_POSTPROCESSING
    IF (SCARC_DUMP) THEN
       CALL SCARC_PRESSURE_DIFFERENCE(NLEVEL_MIN)
@@ -2915,8 +3047,158 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
          CASE ( 1)
             IF (GWC%BTYPE==DIRICHLET) THEN
                HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXS(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) - L%DX *M%BXS(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+            ENDIF
+         CASE (-1)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXF(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IXG, IXW, IYW, IZW, DX, BXF, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXF(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) + L%DX *M%BXF(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXF, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXF(IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+            ENDIF
+         CASE ( 2)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYS(IXW,IZW)
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXW,IYG,IZW) =  HP(IXW,IYW,IZW) - L%DY *M%BYS(IXW,IZW)
+            ENDIF
+         CASE (-2)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYF(IXW,IZW)
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXW,IYG,IZW) =  HP(IXW,IYW,IZW) + L%DY *M%BYF(IXW,IZW)
+            ENDIF
+         CASE ( 3)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZS(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IZG, IXW, IYW, IZW, DZ, BZS, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZS(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) - L%DZ *M%BZS(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IZG, IXW, IYW, IZW, DZ, BZS, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZS(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
+            ENDIF
+         CASE (-3)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZF(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IZG, IXW, IYW, IZW, DZ, BZF, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) + L%DZ *M%BZF(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IZG, IXW, IYW, IZW, DZ, BZF, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), HP(IXG, IYW, IZW)
+#endif
+            ENDIF
+      END SELECT
+#ifdef WITH_SCARC_DEBUG2
+      WRITE(MSG%LU_DEBUG,'(A, 5I6, E14.6)') 'UPDATE_GHOST_CELLS: IW, IOR0, IXW, IYW, IZG, HP:',&
+                                             IW, IOR0, IXW, IYW, IZG, HP(IXW, IYW, IZG)
+#endif
+
+   ENDDO WALL_CELLS_LOOP
+   !!$OMP END PARALLEL DO
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'UPDATE_GHOST_CELLS:2: HP'
+WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
+#endif
+#ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP: UPDATE_GHOST_CELLS')
+   !CALL SCARC_DEBUG_PRESSURE (HP, NM, 'h')
+#endif
+
+ENDDO
+
+! Perform data exchange to achieve consistency of ghost values along internal boundaries
+! Note: this is most probably no longer necessary because MESH_EXCHANGE(5) is used after the call of ScaRC
+
+CALL SCARC_EXCHANGE(NSCARC_EXCHANGE_PRESSURE, NSCARC_NONE, NL)
+
+#ifdef WITH_SCARC_DEBUG
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   IF (PREDICTOR) THEN
+         HP => M%H
+   ELSE
+      HP => M%HS
+   ENDIF
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP: UPDATE_GHOST_CELLS - AFTER EXCHANGE')
+ENDDO
+#endif
+   
+END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
+   
+! --------------------------------------------------------------------------------------------------------------
+!> \brief Set correct boundary values at external and internal boundaries
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_UPDATE_GHOSTCELLS_INSEPARABLE(NL)
+USE SCARC_POINTERS, ONLY: M, L, G, GWC, HP, SCARC_POINT_TO_GRID
+INTEGER, INTENT(IN) :: NL
+INTEGER :: NM, IW, IOR0, IXG, IYG, IZG, IXW, IYW, IZW 
+#ifdef WITH_SCARC_DEBUG
+INTEGER :: I, K
+#endif
+
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+
+   IF (PREDICTOR) THEN
+      HP => M%H
+   ELSE
+      HP => M%HS
+   ENDIF
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'UPDATE_GHOST_CELLS:1: HP'
+WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
+#endif
+   ! Compute ghost cell values
+ 
+   !!$OMP PARALLEL DO SHARED(HP, M, L, G) PRIVATE(IW, IXG, IYG, IZG, IXW, IYW, IZW, IOR0, GWC) SCHEDULE(STATIC)
+   WALL_CELLS_LOOP: DO IW = 1, L%N_WALL_CELLS_EXT
+
+      GWC => G%WALL(IW)
+
+      IXG = GWC%IXG
+      IYG = GWC%IYG
+      IZG = GWC%IZG
+
+      IXW = GWC%IXW
+      IYW = GWC%IYW
+      IZW = GWC%IZW
+
+      IOR0 = GWC%IOR
+
+      SELECT CASE (IOR0)
+         CASE ( 1)
+            IF (GWC%BTYPE==DIRICHLET) THEN
+               HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXS(IYW,IZW)
+            ELSE IF (GWC%BTYPE==NEUMANN) THEN
+               HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) - L%DX *M%BXS(IYW,IZW) 
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
                        IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), HP(IXG, IYW, IZW)
@@ -3001,8 +3283,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO
 #endif
    
-END SUBROUTINE SCARC_UPDATE_GHOSTCELLS
-   
+END SUBROUTINE SCARC_UPDATE_GHOSTCELLS_INSEPARABLE
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Compute baroclinic torque term based on inseparable Poisson solution
@@ -3075,6 +3356,10 @@ EXTERNAL_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
       ENDIF
       TIME_RAMP_FACTOR = EVALUATE_RAMP(TSI,DUMMY,VT%PRESSURE_RAMP_INDEX)
       P_EXTERNAL = TIME_RAMP_FACTOR*VT%DYNAMIC_PRESSURE
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'BARO: INFLOW, IW, VT%PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL:', &
+                                     IW, VT%PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL
+#endif
    ENDIF
    II  = WC%ONE_D%II
    JJ  = WC%ONE_D%JJ
@@ -3116,7 +3401,7 @@ DO K=1,KBAR
       DO I=0,IBAR
          FVX_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I+1,J,K)+RHMK(I+1,J,K)*RHOP(I,J,K))*(RRHO(I+1,J,K)-RRHO(I,J,K))*RDXN(I)/ &
                          (RHOP(I+1,J,K)+RHOP(I,J,K))
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVX_B:', I, J, K, FVX_B(I, J, K)
 #endif
       ENDDO
@@ -3133,7 +3418,7 @@ IF (.NOT.TWO_D) THEN
          DO I=1,IBAR
             FVY_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J+1,K)+RHMK(I,J+1,K)*RHOP(I,J,K))*(RRHO(I,J+1,K)-RRHO(I,J,K))*RDYN(J)/ &
                             (RHOP(I,J+1,K)+RHOP(I,J,K))
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVY_B:', I, J, K, FVY_B(I, J, K)
 #endif
          ENDDO
@@ -3150,7 +3435,7 @@ DO K=0,KBAR
       DO I=1,IBAR
          FVZ_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J,K+1)+RHMK(I,J,K+1)*RHOP(I,J,K))*(RRHO(I,J,K+1)-RRHO(I,J,K))*RDZN(K)/ &
                          (RHOP(I,J,K+1)+RHOP(I,J,K))
-#ifdef WITH_SCARC_DEBUG2
+#ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVZ_B:', I, J, K, FVZ_B(I, J, K)
 #endif
       ENDDO
@@ -3179,11 +3464,6 @@ INTEGER :: NM
 INTEGER :: I, J, K, IC
 REAL(EB) :: X_SAVE
 
-#ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_LEVEL (X, 'UPDATE_HP: X BEFORE ', NL)
-#endif
-
-
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    CALL SCARC_POINT_TO_GRID (NM, NL)                                    
@@ -3201,9 +3481,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    ENDIF
 
 #ifdef WITH_SCARC_DEBUG
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP ALIAS P IN UPDATE_HP')
    CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN UPDATE_HP')
    CALL SCARC_DEBUG_VECTOR3_BIG (RHOP, NM, 'RHOP IN UPDATE_HP')
-   CALL SCARC_DEBUG_LEVEL (X, 'UPDATE_HP: X BEFORE ', NL)
 #endif
 
    DO K=1,L%NZ
@@ -3211,8 +3491,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO I=1,L%NX
             IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
             IC = G%CELL_NUMBER(I,J,K)
-            X_SAVE = ST%X(IC)
-            HP(I,J,K) = ST%X(IC)/RHOP(I,J,K) + KRES(I,J,K)
+            !X_SAVE = ST%X(IC)
+            X_SAVE = HP(I,J,K)
+            !HP(I,J,K) = ST%X(IC)/RHOP(I,J,K) + KRES(I,J,K)
+            HP(I,J,K) = HP(I,J,K)/RHOP(I,J,K) + KRES(I,J,K)
 #ifdef WITH_SCARC_DEBUG
 IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_HP: IC, I, J, K, X_SAVE, RHO, KRES, X_NEW:', &
                                                   I,J,K, X_SAVE, RHOP(I,J,K), KRES(I,J,K), HP(I,J,K)
@@ -3222,7 +3504,7 @@ IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_HP: IC, I, J, K, X_SAVE
    ENDDO
 
 #ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP IN UPDATE_HP')
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'FINAL HP IN UPDATE_HP')
 #endif
 
 ENDDO
@@ -3232,7 +3514,7 @@ END SUBROUTINE SCARC_UPDATE_HP
 ! ----------------------------------------------------------------------------------------------------------------------
 !> \brief Check accuracy of Poisson solution
 ! ----------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_CHECK_POISSON1(NL)
+SUBROUTINE SCARC_CHECK_POISSON(NL)
 USE SCARC_POINTERS, ONLY: M, L, ST, HP, SCARC_POINT_TO_GRID
 INTEGER, INTENT(IN) :: NL
 REAL(EB), DIMENSION(:,:,:), POINTER :: FVX_B, FVY_B, FVZ_B, FVX, FVY, FVZ, KRES, RHOP, DP,V1
@@ -3265,14 +3547,14 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 #ifdef WITH_SCARC_DEBUG
 !   WRITE(MSG%LU_DEBUG,*) 'SCARC_CHECK_POISSON: MEAN_KRES', MEAN_KRES
-   CALL SCARC_DEBUG_VECTOR3_BIG (DP, NM, 'DP BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE CHECK_POISSON1')
-   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP BEFORE CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (DP, NM, 'DP BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX, NM, 'FVX BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ, NM, 'FVZ BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVX_B, NM, 'FVX_B BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%FVZ_B, NM, 'FVZ_B BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%RHO, NM, 'RHO BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (M%KRES, NM, 'KRES BEFORE CHECK_POISSON')
+   CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'HP BEFORE CHECK_POISSON')
 #endif
 
    ! In this case array HP still contains the real pressure values and FV. only conatin F_A
@@ -3284,8 +3566,8 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K=1,M%KBAR
 #ifdef WITH_SCARC_DEBUG
    WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K, IS_UNSTRUCTURED
-   IF (K == 7) WRITE(MSG%LU_DEBUG,'(E24.16)') HP(8,1,7)
-   IF (K == 8) WRITE(MSG%LU_DEBUG,'(2E24.16)') HP(7,1,8), HP(8,1,8)
+   !IF (K == 7) WRITE(MSG%LU_DEBUG,'(E24.16)') HP(8,1,7)
+   !IF (K == 8) WRITE(MSG%LU_DEBUG,'(2E24.16)') HP(7,1,8), HP(8,1,8)
 #endif
 
       DO J=1,M%JBAR
@@ -3308,22 +3590,24 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                +((KRES(I,J+1,K)-KRES(I,J,K))*M%RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*M%RDYN(J-1)        )*M%RDY(J)        &
                +((KRES(I,J,K+1)-KRES(I,J,K))*M%RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*M%RDZN(K-1)        )*M%RDZ(K)
             DIFF = ABS(RHSS1+RHSS3-LHSS1-LHSS2)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
    WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'X', I,J,K, HP(I+1,J,K), HP(I,J,K), HP(I-1,J,K), HP(I+1,J,K)-HP(I,J,K), &
    HP(I,J,K)-HP(I-1,J,K)
    WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'Y', I,J,K, HP(I,J+1,K), HP(I,J,K), HP(I,J-1,K), HP(I,J+1,K)-HP(I,J,K), &
    HP(I,J,K)-HP(I,J-1,K)
    WRITE(MSG%LU_DEBUG,'(A, 3I5,5E20.12)') 'Z', I,J,K, HP(I,J,K+1), HP(I,J,K), HP(I,J,K-1), HP(I,J,K+1)-HP(I,J,K), &
    HP(I,J,K)-HP(I,J,K-1)
+#endif
+#ifdef WITH_SCARC_DEBUG
 IF (J == 1) &
-WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E20.12)') 'CHECK_POISSON1 : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
+WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E20.12)') 'CHECK_POISSON : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
                           I,J,K, HP(I,J,K), LHSS1, LHSS2, RHSS1, RHSS3, DIFF !, DIFF-GLOBAL_MEAN_VALUE
 #endif
          ENDDO
       ENDDO
    ENDDO
 #ifdef WITH_SCARC_DEBUG
-   CALL SCARC_DEBUG_VECTOR3_BIG (V1, NM, 'V1 CHECK_POISSON1')
+   CALL SCARC_DEBUG_VECTOR3_BIG (V1, NM, 'V1 CHECK_POISSON')
 #endif
 
    ENDIF
@@ -3331,7 +3615,7 @@ WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E20.12)') 'CHECK_POISSON1 : I, J, K, P, LHSS1, LHS
 
 ENDDO
 
-END SUBROUTINE SCARC_CHECK_POISSON1
+END SUBROUTINE SCARC_CHECK_POISSON
 
 
 ! -------------------------------------------------------------------------------------------------------------

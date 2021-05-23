@@ -585,7 +585,7 @@ DO IZ = MESHES(NM)%KBP1, 0, -1
    !WRITE(MSG%LU_DEBUG,*) '-------- IZ = ', IZ,' ------------------------------------------'
    !DO IY = MESHES(NM)%JBP1, 0, -1
    DO IY = MESHES(NM)%JBAR, 1, -1
-      WRITE(MSG%LU_DEBUG,'(10E14.6)') (HH(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+      WRITE(MSG%LU_DEBUG,'(10E24.16)') (HH(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
    ENDDO
 ENDDO
 WRITE(MSG%LU_DEBUG,*) '============================================================='
@@ -827,6 +827,68 @@ ENDDO
 END SUBROUTINE SCARC_DEBUG_LEVEL
 
 ! --------------------------------------------------------------------------------------------------------------
+!> \brief Debugging version only: Print out debug information for specified vector
+! --------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_LEVEL_FINE (NV, CVEC, NL)
+USE SCARC_POINTERS, ONLY: L, G, VC, SCARC_POINT_TO_GRID, SCARC_POINT_TO_VECTOR
+INTEGER, INTENT(IN) :: NV, NL
+REAL (EB) :: VALUES(0:100)
+INTEGER :: NM, II, JJ, KK, IC, NNX, NNY, NNZ
+CHARACTER (*), INTENT(IN) :: CVEC
+
+!IF (TYPE_SOLVER /= NSCARC_SOLVER_MAIN) RETURN
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+
+   CALL SCARC_POINT_TO_GRID (NM, NL)                                    
+   VC => SCARC_POINT_TO_VECTOR (NM, NL, NV)
+
+   NNX=MIN(10,L%NX)
+   NNY=MIN(10,L%NY)
+   NNZ=MIN(10,L%NZ)
+
+   WRITE(MSG%LU_DEBUG,*) 'IS_UNSTRUCTURED =', IS_UNSTRUCTURED
+   WRITE(MSG%LU_DEBUG,*) '=========================================================='
+   WRITE(MSG%LU_DEBUG,2001) CVEC, NM, NL
+   WRITE(MSG%LU_DEBUG,2002) G%NC, NNX, NNY, NNZ, NV, TYPE_GRID
+   WRITE(MSG%LU_DEBUG,*) '=========================================================='
+   !IF ((IS_AMG.OR.IS_CG_AMG.OR.HAS_COARSENING_AMG) .AND. NL > NLEVEL_MIN) THEN
+
+   !   WRITE(MSG%LU_DEBUG, '(4E14.6)') VC
+
+   !ELSE
+   !IF (NL == NLEVEL_MIN) THEN
+   DO KK = NNZ, 1, - 1
+      DO JJ = NNY, 1, - 1
+         DO II=1, NNX
+            IF (IS_UNSTRUCTURED.AND.L%IS_SOLID(II,JJ,KK)) THEN
+               VALUES(II)=0.0_EB
+               !CYCLE
+            ELSE
+               IC=G%CELL_NUMBER(II,JJ,KK)
+               IF (ABS(VC(IC))<1.0E-14_EB) THEN
+                  VALUES(II)=0.0_EB
+               ELSE
+                  VALUES(II)=VC(IC)
+               ENDIF
+            ENDIF
+         ENDDO
+         WRITE(MSG%LU_DEBUG, '(8E24.16)') (VALUES(II), II=1, NNX)
+      ENDDO
+      IF (.NOT. TWO_D) WRITE(MSG%LU_DEBUG, *) '----------------'
+   ENDDO
+   !ENDIF
+   WRITE(MSG%LU_DEBUG, *) '---------------- Overlap ----------------'
+   WRITE(MSG%LU_DEBUG, '(4E25.16)') (VC(IC), IC = G%NC+1, G%NCE)
+   !ENDIF
+ENDDO
+
+!CALL SCARC_MATLAB_VECTOR(NV, CVEC, NL)
+
+2001 FORMAT('=== ',A,' on mesh ',I8,' on level ',I8)
+2002 FORMAT('=== NC = ',I6, ': NX, NY, NZ=',3I6,': NV=',I6,': GRID=', I6)
+END SUBROUTINE SCARC_DEBUG_LEVEL_FINE
+
+! --------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified combination of vector and mesh
 ! --------------------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_LEVEL_MESH (X, CVEC, NTYPE, NM, NL)
@@ -875,68 +937,53 @@ WRITE(MSG%LU_DEBUG, '(4E14.6)') (X(IC), IC = GG%NC+1, GG%NCE)
 2002 FORMAT('=== NC = ',I6, ': NX, NY, NZ=',3I6)
 END SUBROUTINE SCARC_DEBUG_LEVEL_MESH
 
+
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Dump out information for specified quantity
 ! --------------------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEBUG_PRESSURE (HP, NM, CMYSELF)
-INTEGER, INTENT(IN) :: NM
-REAL(EB), DIMENSION(0:,0:,0:), INTENT(IN) :: HP
+SUBROUTINE SCARC_DEBUG_PRESSURE (CMYSELF)
+USE SCARC_POINTERS, ONLY: M, HP, SCARC_POINT_TO_GRID
 CHARACTER(*), INTENT(IN) :: CMYSELF
-CHARACTER(80) :: FN_DUMP, FN_DEBUG1
-INTEGER :: LU_DUMP, IX, IY, IZ
-INTEGER, SAVE :: LU_DEBUG1
-LOGICAL :: BFIRST = .TRUE.
+CHARACTER(80) :: FN_DUMP
+INTEGER :: LU_DUMP, IX, IY, IZ, NM
 
-IF (BFIRST) THEN
-   WRITE (FN_DEBUG1, '(A,A,A,i3.3)') 'debug/',TRIM(CHID),'_',ICYC
-   LU_DEBUG1 = GET_FILE_NUMBER()
-   OPEN (LU_DEBUG1, FILE=FN_DEBUG1)
-   BFIRST = .FALSE.
-ENDIF
+DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-WRITE(LU_DEBUG1,*) '==========================================================================='
-IF (PREDICTOR) THEN
-   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: H'
-ELSE
-   WRITE(LU_DEBUG1,*) ' ICYC = ', ICYC, '        PREDICTOR: HS'
-ENDIF
-WRITE(LU_DEBUG1,*) '==========================================================================='
-WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'pressure/',TRIM(CHID),'_',TRIM(CMYSELF),'_',ICYC
-
-LU_DUMP = GET_FILE_NUMBER()
-OPEN (LU_DUMP, FILE=FN_DUMP)
-DO IZ = 0, MESHES(NM)%KBP1
-   IF (TWO_D) THEN
-      DO IY = 1, MESHES(NM)%JBAR
-         DO IX = 0, MESHES(NM)%IBP1
-            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
-         ENDDO
-      ENDDO
+   CALL SCARC_POINT_TO_GRID (NM, NLEVEL_MIN)                                    
+   IF (PREDICTOR) THEN
+      HP => M%H
    ELSE
-      DO IY = 0, MESHES(NM)%JBP1
-         DO IX = 0, MESHES(NM)%IBP1
-            WRITE(LU_DUMP,*)  HP(IX, IY, IZ)
-         ENDDO
-      ENDDO
+      HP => M%HS
    ENDIF
-ENDDO
-CLOSE(LU_DUMP)
 
-DO IZ = MESHES(NM)%KBP1, 0, -1
-   IF (TWO_D) THEN
-      DO IY = MESHES(NM)%JBAR, 1, -1
-         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-      ENDDO
-   ELSE
-      DO IY = MESHES(NM)%JBP1, 0, -1
-         WRITE(LU_DEBUG1,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-         WRITE(MSG%LU_DEBUG,'(10E14.6)') (HP(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
-      ENDDO
-   ENDIF
+   WRITE (FN_DUMP, '(A,A,A,A,A,i3.3)') 'dump/',TRIM(CHID),'_',TRIM(CMYSELF),'_',TOTAL_PRESSURE_ITERATIONS
+   
+   LU_DUMP = GET_FILE_NUMBER()
+   OPEN (LU_DUMP, FILE=FN_DUMP)
+   DO IZ = 0, MESHES(NM)%KBP1
+      IF (TWO_D) THEN
+         DO IY = 1, MESHES(NM)%JBAR
+            DO IX = 0, MESHES(NM)%IBP1
+               WRITE(LU_DUMP,'(E24.16)')  HP(IX, IY, IZ)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'DUMPING: IX, IZ, HP:', IX, IZ, TOTAL_PRESSURE_ITERATIONS, FN_DUMP, HP(IX,IY,IZ)
+#endif
+            ENDDO
+         ENDDO
+      ELSE
+         DO IY = 0, MESHES(NM)%JBP1
+            DO IX = 0, MESHES(NM)%IBP1
+               WRITE(LU_DUMP,'(E24.16)')  HP(IX, IY, IZ)
+            ENDDO
+         ENDDO
+      ENDIF
+   ENDDO
+   CLOSE(LU_DUMP)
+
 ENDDO
 
 END SUBROUTINE SCARC_DEBUG_PRESSURE
+
 
 ! --------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for specified quantity

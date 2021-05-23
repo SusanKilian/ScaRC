@@ -41,6 +41,7 @@ USE CC_SCALARS_IBM,   ONLY: CCIBM_SET_DATA,CCIBM_END_STEP,CCREGION_DENSITY,CCIBM
 USE OPENMP
 USE MPI_F08
 USE SCRC, ONLY: SCARC_SETUP, SCARC_SOLVER
+USE SCARC_MESSAGES, ONLY: MSG
 USE SOOT_ROUTINES, ONLY: CALC_AGGLOMERATION
 USE GLOBMAT_SOLVER, ONLY : GLMAT_SOLVER_SETUP_H, GLMAT_SOLVER_H, COPY_H_OMESH_TO_MESH, &
                            FINISH_GLMAT_SOLVER_H,PRESSURE_SOLVER_CHECK_RESIDUALS_U
@@ -529,6 +530,9 @@ MAIN_LOOP: DO
 
    ICYC  = ICYC + 1   ! Time step iterations
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '============================================ICYC=',ICYC
+#endif
    ! Do not print out general diagnostics into .out file every time step
 
    DIAGNOSTICS = .FALSE.
@@ -585,6 +589,9 @@ MAIN_LOOP: DO
 
       ! Predict species mass fractions at the next time step.
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '============================================LOOPING TIME STEP'
+#endif
       COMPUTE_DENSITY_LOOP: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
          IF (EVACUATION_SKIP(NM)) CYCLE COMPUTE_DENSITY_LOOP
          CALL DENSITY(T,DT,NM)
@@ -659,6 +666,9 @@ MAIN_LOOP: DO
       CALL PRESSURE_ITERATION_SCHEME
       CALL EVAC_PRESSURE_ITERATION_SCHEME
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'AFTER PRESSURE_ITERATION_SCHEME, BEFORE VELOCITY_PREDICTOR'
+#endif
       ! Predict the velocity components at the next time step
 
       CHANGE_TIME_STEP_INDEX = 0
@@ -669,6 +679,9 @@ MAIN_LOOP: DO
          CALL VELOCITY_PREDICTOR(T+DT,DT,DT_NEW,NM)
       ENDDO PREDICT_VELOCITY_LOOP
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'AFTER VELOCITY_PREDICTOR'
+#endif
       ! Check if there is a numerical instability after updating the velocity field. If there is, exit this loop, finish the time
       ! step, and stop the code.
 
@@ -695,6 +708,9 @@ MAIN_LOOP: DO
          DT = MINVAL(DT_NEW)
          FIRST_PASS = .FALSE.
       ELSE  ! exit the loop and if the time step is to be increased, this will occur at the next time step.
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'EXIT CHANGE_TIME_STEP_LOOP'
+#endif
          EXIT CHANGE_TIME_STEP_LOOP
       ENDIF
 
@@ -1352,6 +1368,7 @@ SUBROUTINE PRESSURE_ITERATION_SCHEME
 
 ! Iterate calls to pressure solver until velocity tolerance is satisfied
 
+USE SCARC_MESSAGES, ONLY: MSG
 INTEGER :: NM_MAX_V,NM_MAX_P
 REAL(EB) :: TNOW,VELOCITY_ERROR_MAX_OLD,PRESSURE_ERROR_MAX_OLD
 
@@ -1363,10 +1380,17 @@ ELSE
    ITERATE_BAROCLINIC_TERM = .FALSE.
 ENDIF
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '====> PRESSURE_ITERATION_SCHEME: BEFORE LOOOP'
+#endif
 PRESSURE_ITERATION_LOOP: DO
 
    PRESSURE_ITERATIONS = PRESSURE_ITERATIONS + 1
    TOTAL_PRESSURE_ITERATIONS = TOTAL_PRESSURE_ITERATIONS + 1
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '====> PRESSURE_ITERATION_SCHEME: PI=', PRESSURE_ITERATIONS, ' : TPI=', TOTAL_PRESSURE_ITERATIONS
+#endif
 
    ! The following loops and exchange always get executed the first pass through the PRESSURE_ITERATION_LOOP.
    ! If we need to iterate the baroclinic torque term, the loop is executed each time.
@@ -1419,6 +1443,9 @@ PRESSURE_ITERATION_LOOP: DO
 
    ! Check the residuals of the Poisson solution
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '====> PRESSURE_ITERATION_SCHEME: BEFORE CHECK_RESIDUALS'
+#endif
    DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
       IF (EVACUATION) CYCLE
       IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. (PRES_METHOD=='GLMAT'.OR.PRES_METHOD=='USCARC')) THEN ! unstructured global solvers
@@ -1429,7 +1456,13 @@ PRESSURE_ITERATION_LOOP: DO
    ENDDO
 
 
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '====> PRESSURE_ITERATION_SCHEME: BEFORE ITERATE:', ITERATE_PRESSURE
+#endif
    IF (.NOT.ITERATE_PRESSURE) EXIT PRESSURE_ITERATION_LOOP
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) '====> PRESSURE_ITERATION_SCHEME: AFTER ITERATE:', ITERATE_PRESSURE
+#endif
 
    ! Exchange both H or HS and FVX, FVY, FVZ and then estimate values of U, V, W (US, VS, WS) at next time step.
 
@@ -2237,6 +2270,13 @@ EVACUATION_ZONE_IF: IF (N_EVAC_ZONE>0) THEN
 
 ENDIF EVACUATION_ZONE_IF
 
+! Ensure that all cells have been assigned a pressure zone, even within solids
+
+DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+   M => MESHES(NM)
+   WHERE (M%PRESSURE_ZONE<0) M%PRESSURE_ZONE = 0
+ENDDO
+
 END SUBROUTINE INITIALIZE_PRESSURE_ZONES
 
 
@@ -2867,12 +2907,16 @@ SENDING_MESH_LOOP: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
 
       SEND_RADIATION: IF (CODE==2 .AND. M3%NIC_S>0) THEN
          IF (RNODE/=SNODE) THEN
-            IF (ICYC>1) ANG_INC_COUNTER = M%ANGLE_INC_COUNTER
+            IF (ICYC>1) THEN
+               AIC = M%ANGLE_INC_COUNTER
+            ELSE
+               AIC = ANG_INC_COUNTER
+            ENDIF
             LLL = 0
             PACK_REAL_SEND_PKG5: DO LL=1,M3%NIC_S
                IOR = M3%IOR_S(LL)
                DO NN2=1,NUMBER_SPECTRAL_BANDS
-                  DO NN1=NUMBER_RADIATION_ANGLES-ANG_INC_COUNTER+1,1,-ANGLE_INCREMENT
+                  DO NN1=NUMBER_RADIATION_ANGLES-AIC+1,1,-ANGLE_INCREMENT
                      IF (DLN(IOR,NN1)<=0._EB) CYCLE
                      LLL = LLL + 1
                      M3%REAL_SEND_PKG5(LLL) = M3%IL_S(LL,NN1,NN2)
@@ -3218,12 +3262,16 @@ RECV_MESH_LOOP: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
       ! Unpack radiation information at the end of the CORRECTOR stage of the time step
 
       RECEIVE_RADIATION: IF (CODE==2 .AND. M2%NIC_R>0 .AND. RNODE/=SNODE) THEN
-         IF (ICYC>1) ANG_INC_COUNTER = M%ANGLE_INC_COUNTER
+         IF (ICYC>1) THEN
+            AIC = M%ANGLE_INC_COUNTER
+         ELSE
+            AIC = ANG_INC_COUNTER
+         ENDIF
          LLL = 0
          UNPACK_REAL_RECV_PKG5: DO LL=1,M2%NIC_R
             IOR = M2%IOR_R(LL)
             DO NN2=1,NUMBER_SPECTRAL_BANDS
-               DO NN1=NUMBER_RADIATION_ANGLES-ANG_INC_COUNTER+1,1,-ANGLE_INCREMENT
+               DO NN1=NUMBER_RADIATION_ANGLES-AIC+1,1,-ANGLE_INCREMENT
                   IF (DLN(IOR,NN1)<=0._EB) CYCLE
                   LLL = LLL + 1
                   M2%IL_R(LL,NN1,NN2) = M2%REAL_RECV_PKG5(LLL)

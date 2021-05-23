@@ -2524,6 +2524,12 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
          IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE       
 
          F  => L%FACE(IOR0)
+         RDX  => M%RDX
+         RDXN => M%RDXN
+         RDY  => M%RDY
+         RDYN => M%RDYN
+         RDZ  => M%RDZ
+         RDZN => M%RDZN
 
          I = GWC%IXW
          J = GWC%IYW
@@ -2540,6 +2546,7 @@ SELECT CASE (SET_MATRIX_TYPE(NL))
          IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0) THEN
 
             IP = A%ROW(IC)
+            ! Either subtract or add contribution depending on boundary type
             SELECT CASE (GWC%BTYPE)
                CASE (DIRICHLET)
                   SCAL =  1.0_EB
@@ -2659,6 +2666,9 @@ WRITE(MSG%LU_DEBUG,*) 'RHO(1,1,1) =', MESHES(1)%RHO(1,1,1)
 WRITE(MSG%LU_DEBUG,*) 'RHOS(1,1,1) =', MESHES(1)%RHOS(1,1,1)
 WRITE(MSG%LU_DEBUG,*) '1/RHO(1,1,1) =', 1.0_EB/MESHES(1)%RHO(1,1,1)
 WRITE(MSG%LU_DEBUG,*) '1/RHOS(1,1,1) =', 1.0_EB/MESHES(1)%RHOS(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '200.0_EB/RHO(1,1,1) =', 200.0_EB/MESHES(1)%RHO(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '300.0_EB/RHO(1,1,1) =', 300.0_EB/MESHES(1)%RHO(1,1,1)
+WRITE(MSG%LU_DEBUG,*) '400.0_EB/RHO(1,1,1) =', 400.0_EB/MESHES(1)%RHO(1,1,1)
 WRITE(MSG%LU_DEBUG,*) '200.0_EB/RHOS(1,1,1) =', 200.0_EB/MESHES(1)%RHOS(1,1,1)
 WRITE(MSG%LU_DEBUG,*) '300.0_EB/RHOS(1,1,1) =', 300.0_EB/MESHES(1)%RHOS(1,1,1)
 WRITE(MSG%LU_DEBUG,*) '400.0_EB/RHOS(1,1,1) =', 400.0_EB/MESHES(1)%RHOS(1,1,1)
