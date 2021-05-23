@@ -1,4 +1,4 @@
-&HEAD CHID='insep', TITLE='Test of separable versus inseparable Poisson equation: inseparable case' /
+&HEAD CHID='sep_mixed', TITLE='Test separable Poisson equation with mixed boundary conditions' /
 
 &MESH IJK=8,1,8, XB=0,0.8,-0.01,0.01,0,0.8 /
 
@@ -6,19 +6,17 @@
 
 &TIME T_END=1 / 
 
-&PRES SOLVER        = 'SCARC'    
-      BAROCLINIC    = .FALSE.
+&PRES SOLVER        = 'SCARC'
+      BAROCLINIC    = .TRUE.
       CHECK_POISSON = .TRUE.
-      SCARC_POISSON = 'INSEPARABLE'
-      SCARC_MATRIX  = 'COMPACT' 
+      SCARC_POISSON = 'SEPARABLE'
+      SCARC_MATRIX  = 'COMPACT'
       SCARC_PRECON  = 'SSOR'
       SCARC_KRYLOV_ACCURACY = 1.0E-16 /
 
 &SURF ID='BLOW', COLOR='RED',  VEL=-1. , TAU_V=0/
- SURF ID='SUCK', COLOR='BLUE', VEL= 1. , TAU_V=0/
 
 &VENT XB=0.0,0.0,-0.01,0.01,0.0,0.8, SURF_ID='BLOW' / 
- VENT XB=0.8,0.8,-0.01,0.01,0.0,0.8, SURF_ID='SUCK' / 
 &VENT XB=0.8,0.8,-0.01,0.01,0.0,0.8, SURF_ID='OPEN' /
 
  OBST XB=0.3,0.5,-0.01,0.01,0.3,0.5, COLOR='BLUE' /
