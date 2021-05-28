@@ -585,7 +585,8 @@ DO IZ = MESHES(NM)%KBP1, 0, -1
    !WRITE(MSG%LU_DEBUG,*) '-------- IZ = ', IZ,' ------------------------------------------'
    !DO IY = MESHES(NM)%JBP1, 0, -1
    DO IY = MESHES(NM)%JBAR, 1, -1
-      WRITE(MSG%LU_DEBUG,'(10E24.16)') (HH(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+      !WRITE(MSG%LU_DEBUG,'(10E24.16)') (HH(IX, IY, IZ), IX = 0, MESHES(NM)%IBP1)
+      WRITE(MSG%LU_DEBUG,'(10E24.16)') (HH(IX, IY, IZ), IX = 0, MIN(9,MESHES(NM)%IBP1))
    ENDDO
 ENDDO
 WRITE(MSG%LU_DEBUG,*) '============================================================='
@@ -710,6 +711,76 @@ WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CMYSELF, ' AT ', TRI
 ENDIF
 
 END SUBROUTINE SCARC_DEBUG_CMATRIX
+
+! --------------------------------------------------------------------------------------------------------------------
+!> \brief Debugging version only: Print out debug information for compactly stored matrix
+! --------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_DEBUG_CMATRIX_SCALED(A, RHO_SCAL, CMYSELF, CTEXT)
+CHARACTER(*), INTENT(IN) :: CMYSELF, CTEXT
+REAL(EB), INTENT(IN) :: RHO_SCAL
+TYPE (SCARC_CMATRIX_TYPE), INTENT(INOUT) :: A      
+INTEGER :: IC, ICOL
+CHARACTER(40) :: CFORM
+
+WRITE(MSG%LU_DEBUG,*)
+WRITE(MSG%LU_DEBUG,*) '============ START DEBUGGING MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
+WRITE(MSG%LU_DEBUG,*) 'INTERNAL NAME OF MATRIX :', A%CNAME
+WRITE(MSG%LU_DEBUG,*) 'REQUESTED SIZES N_ROW, N_VAL:', A%N_ROW, A%N_VAL
+WRITE(MSG%LU_DEBUG,*) 'ALLOCATED SIZES N_ROW, N_VAL:', SIZE(A%ROW), SIZE(A%VAL)
+
+WRITE(MSG%LU_DEBUG,*)
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%ROW:'
+WRITE(MSG%LU_DEBUG,'(8I12)') (A%ROW(IC), IC=1, A%N_ROW)
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%COL:'
+DO IC = 1, A%N_ROW-1
+   IF (A%ROW(IC) == 0) CYCLE
+   IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+      CFORM = "(I8,A,10I12)"
+   ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+      CFORM = "(I8,A,20I12)"
+   ELSE IF (A%ROW(IC+1)-A%ROW(IC)  < 30) THEN
+      CFORM = "(I8,A,30I12)"
+   ELSE
+      CFORM = "(I8,A,40I12)"
+   ENDIF
+   WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%COL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+ENDDO
+IF (ALLOCATED(A%COLG)) THEN
+   WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%COLG:'
+   DO IC = 1, A%N_ROW-1
+      IF (A%ROW(IC) == 0) CYCLE
+      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+         CFORM = "(I8,A,10I12)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+         CFORM = "(I8,A,20I12)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
+         CFORM = "(I8,A,30I12)"
+      ELSE
+         CFORM = "(I8,A,40I12)"
+      ENDIF
+      WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%COLG(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   ENDDO
+ENDIF
+IF (ALLOCATED(A%VAL)) THEN
+WRITE(MSG%LU_DEBUG,*) "------------->", TRIM(CMYSELF),'%VAL:'
+DO IC = 1, A%N_ROW-1
+   IF (A%ROW(IC) == 0) CYCLE
+      IF (A%ROW(IC+1)-A%ROW(IC) < 10) THEN
+         CFORM = "(I8,A,10E11.3)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 20) THEN
+         CFORM = "(I8,A,20E11.3)"
+      ELSE IF (A%ROW(IC+1)-A%ROW(IC) < 30) THEN
+         CFORM = "(I8,A,30E11.3)"
+      ELSE
+         CFORM = "(I8,A,40E11.3)"
+      ENDIF
+   WRITE(MSG%LU_DEBUG,*) IC,':', (A%VAL(ICOL)*RHO_SCAL, ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+   !WRITE(MSG%LU_DEBUG,CFORM) IC,':', (A%VAL(ICOL), ICOL=A%ROW(IC), A%ROW(IC+1)-1)
+ENDDO
+WRITE(MSG%LU_DEBUG,*) '============ END DEBUGGING MATRIX ', CMYSELF, ' AT ', TRIM(CTEXT)
+ENDIF
+
+END SUBROUTINE SCARC_DEBUG_CMATRIX_SCALED
 
 ! --------------------------------------------------------------------------------------------------------------------
 !> \brief Debugging version only: Print out debug information for compactly stored matrix
@@ -965,7 +1036,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO IY = 1, MESHES(NM)%JBAR
             DO IX = 0, MESHES(NM)%IBP1
                WRITE(LU_DUMP,'(E24.16)')  HP(IX, IY, IZ)
-#ifdef WITH_SCARC_DEBUG
+#ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,*) 'DUMPING: IX, IZ, HP:', IX, IZ, TOTAL_PRESSURE_ITERATIONS, FN_DUMP, HP(IX,IY,IZ)
 #endif
             ENDDO

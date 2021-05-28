@@ -1147,12 +1147,12 @@ USE SCARC_MGM, ONLY: SCARC_MGM_SET_OBSTRUCTIONS, SCARC_MGM_SET_INTERFACES
 USE TYPES, ONLY: VENTS_TYPE, WALL_TYPE
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 INTEGER, INTENT(IN) :: NS, NL
-REAL(EB) :: VAL, DIFF, B_SAVE, KKRES
+REAL(EB) :: VAL, DIFF, B_SAVE, RRHO2, SCAL
 REAL(EB), DIMENSION(:),     POINTER :: RDX, RDXN, RDY, RDYN, RDZ, RDZN
-REAL(EB), DIMENSION(:,:,:), POINTER :: KRES, RHOP, UU, VV, WW
+REAL(EB), DIMENSION(:,:,:), POINTER :: KRES, RHOP, UU, VV, WW, FVX_B, FVY_B, FVZ_B
 TYPE (VENTS_TYPE), POINTER :: VT
 TYPE (WALL_TYPE),  POINTER :: WC
-REAL(EB) :: TSI, P_EXTERNAL, TIME_RAMP_FACTOR, DUMMY=0.0_EB
+REAL(EB) :: TSI, P_EXTERNAL, TIME_RAMP_FACTOR, DUMMY=0.0_EB, KRES2, RHO2
 INTEGER  :: NM, IW, IW1, IW2, IOR0, I, J, K, IC
 
 #ifdef WITH_SCARC_DEBUG
@@ -1187,10 +1187,10 @@ SELECT_SOLVER_TYPE: SELECT CASE (SV%TYPE_SOLVER)
          BZS => M%BZS   ;  BZF => M%BZF
 
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BXS:', BXS
-WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BXF:', BXF
-WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BZS:', BZS
-WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BZF:', BZF
+WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: TPI, BXS:', TOTAL_PRESSURE_ITERATIONS, BXS
+WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: TPI, BXF:', TOTAL_PRESSURE_ITERATIONS, BXF
+WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: TPI, BZS:', TOTAL_PRESSURE_ITERATIONS, BZS
+WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: TPI, BZF:', TOTAL_PRESSURE_ITERATIONS, BZF
 #endif
 
          !$OMP PARALLEL DO PRIVATE(IC) SCHEDULE(STATIC)
@@ -1218,17 +1218,25 @@ WRITE(MSG%LU_DEBUG,*) 'WORKSPACE: BZF:', BZF
 
          INSEPARABLE_IF: IF (IS_INSEPARABLE) THEN
 
-            DO IC = 1, G%NC
-               I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
-               B_SAVE = ST%B(IC)
-               DIFF =   ((KRES(I+1,J,K) - KRES(I,J,K))*RDXN(I) - (KRES(I,J,K) - KRES(I-1,J,K))*RDXN(I-1))*RDX(I)    &
-                      + ((KRES(I,J+1,K) - KRES(I,J,K))*RDYN(J) - (KRES(I,J,K) - KRES(I,J-1,K))*RDYN(J-1))*RDY(J)    &
-                      + ((KRES(I,J,K+1) - KRES(I,J,K))*RDZN(K) - (KRES(I,J,K) - KRES(I,J,K-1))*RDZN(K-1))*RDZ(K)
-               ST%B(IC) = ST%B(IC) - DIFF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SAVE, ST%B(IC)
-#endif
-            ENDDO                         
+            KRES => M%KRES
+            FVX_B => M%FVX_B
+            FVY_B => M%FVY_B
+            FVZ_B => M%FVZ_B
+            RDX  => M%RDX
+            RDXN => M%RDXN
+            RDY  => M%RDY
+            RDYN => M%RDYN
+            RDZ  => M%RDZ
+            RDZN => M%RDZN
+
+            !DO I=1,L%NX
+            ! KRES(I,1,0) = KRES(I,1,1)
+            ! KRES(I,1,L%NZ+1) = KRES(I,1,L%NZ)
+            !ENDDO
+            !DO K=1,L%NZ
+            ! KRES(0,1,K) = KRES(1,1,K)
+            ! KRES(L%NX+1,1,K) = KRES(L%NX,1,K)
+            !ENDDO
 
             IF (PREDICTOR) THEN
                UU => M%U
@@ -1242,18 +1250,22 @@ WRITE(MSG%LU_DEBUG,*) 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SA
                RHOP=>M%RHOS
             ENDIF
 
-            KRES => M%KRES
-            RDX  => M%RDX
-            RDXN => M%RDXN
-            RDY  => M%RDY
-            RDYN => M%RDYN
-            RDZ  => M%RDZ
-            RDZN => M%RDZN
+            DO IC = 1, G%NC
 
-!            KRES(0     ,1,0     ) = 0.0_EB                ! TODO: CHECK !!
-!            KRES(L%NX+1,1,0     ) = 0.0_EB
-!            KRES(0     ,1,L%NZ+1) = 0.0_EB
-!            KRES(L%NX+1,1,L%NZ+1) = 0.0_EB
+               I = G%ICX(IC) ; J = G%ICY(IC) ; K = G%ICZ(IC)
+               B_SAVE = ST%B(IC)
+               DIFF =   ((KRES(I+1,J,K) - KRES(I,J,K))*RDXN(I) - (KRES(I,J,K) - KRES(I-1,J,K))*RDXN(I-1))*RDX(I)    &
+                      + ((KRES(I,J+1,K) - KRES(I,J,K))*RDYN(J) - (KRES(I,J,K) - KRES(I,J-1,K))*RDYN(J-1))*RDY(J)    &
+                      + ((KRES(I,J,K+1) - KRES(I,J,K))*RDZN(K) - (KRES(I,J,K) - KRES(I,J,K-1))*RDZN(K-1))*RDZ(K)
+               !DIFF = (UU(I,J,K)-UU(I-1,J,K))*RDX(I) + (VV(I,J,K)-VV(I,J-1,K))*RDY(J) + (WW(I,J,K)-WW(I,J,K-1))*RDZ(K)
+               ST%B(IC) = ST%B(IC) - DIFF
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,I4,3E12.4)') 'WORKSPACE-INSEP: IC, DIFF, B_OLD, B_NEW:', IC, DIFF, B_SAVE, ST%B(IC)
+               !                UU(I,J,K), UU(I-1,J,K), UU(I,J,K)-UU(I-1,J,K), &
+               !                VV(I,J,K), VV(I,J-1,K), VV(I,J,K)-VV(I,J-1,K), &
+               !                WW(I,J,K), WW(I,J,K-1), WW(I,J,K)-WW(I,J,K-1)
+#endif
+            ENDDO                         
 
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (B, 'CG-METHOD: B INIT0 ', NL)
@@ -1265,7 +1277,8 @@ CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN WORKSPACE-INSEP')
 #endif
 
             !!$OMP PARALLEL 
-            INSEPARABLE_FACES_LOOP: DO IOR0 = -3, 3, 1 
+            INSEPARABLE_FACES_LOOP: DO IOR0 = -3, 3, 1             
+            !INSEPARABLE_FACES_LOOP: DO IOR0 = -3, -4, 1             ! DON'T PERFORM THIS LOOP CURRENTLY
          
                IF (IOR0 == 0) CYCLE
                F => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
@@ -1303,54 +1316,41 @@ CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'KRES IN WORKSPACE-INSEP')
                      ENDIF
                      TIME_RAMP_FACTOR = EVALUATE_RAMP(TSI,DUMMY,VT%PRESSURE_RAMP_INDEX)
                      P_EXTERNAL = TIME_RAMP_FACTOR*VT%DYNAMIC_PRESSURE
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,*) 'SETUP_WORKSPACE, DIRICHLET: T, VENT_INDEX, PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL:', &
-                                                T, WC%VENT_INDEX, VT%PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL
-#endif
       
                      SELECT CASE (IOR0)
-                        CASE (1)
-                           VAL =  BXS(J,K)
-                           BXS(J,K) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BXS(J,K) =', IOR0, IW,I,J,K,BXS(J,K)
-#endif
+                        CASE ( 1)
+                           RRHO2 = 2.0_EB/(RHOP(0,J,K)+RHOP(1,J,K))            ! reciproke of 0.5*(rhop_0+rhop_1)
+                           SCAL  = 2.0_EB*RDX(1)*RDXN(0)*RRHO2
+                           !VAL   = BXS(J,K)
                         CASE (-1)
-                           VAL =  BXF(J,K)
-                           BXF(J,K) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BXF(J,K) =', IOR0, IW,I,J,K,BXF(J,K)
-#endif
-                        CASE (2)
-                           VAL =  BYS(I,K)
-                           BYS(I,K) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BYS(I,K) =', IOR0, IW,I,J,K,BYS(I,K)
-#endif
+                           RRHO2 = 2.0_EB/(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K)) 
+                           SCAL  = 2.0_EB*RDX(L%NX)*RDXN(L%NX)*2.0_EB*RRHO2
+                           !VAL   = BXF(J,K)
+                        CASE ( 2)
+                           RRHO2 = 2.0_EB/(RHOP(I,0,K)+RHOP(I,1,K)) 
+                           SCAL  = 2.0_EB*RDY(1)*RDYN(0)*RRHO2
+                           !VAL   = BYS(I,K)
                         CASE (-2)
-                           VAL =  BYF(I,K)
-                           BYF(I,K) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BYF(I,K) =', IOR0, IW,I,J,K,BYF(I,K)
-#endif
-                        CASE (3)
-                           VAL =  BZS(I,J)
-                           BZS(I,J) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BZS(I,J) =', IOR0, IW,I,J,K,BZS(I,J)
-#endif
+                           RRHO2 = 2.0_EB/(RHOP(I,L%NY,K)+RHOP(I,L%NY+1,K)) 
+                           SCAL  = 2.0_EB*RDY(L%NY)*RDYN(L%NY)*2.0_EB*RRHO2
+                           !VAL   = BYF(I,K)
+                        CASE ( 3)
+                           RRHO2 = 2.0_EB/(RHOP(I,J,0)+RHOP(I,J,1)) 
+                           SCAL  = 2.0_EB*RDZ(1)*RDZN(0)*RRHO2
+                           !VAL   = BZS(I,J)
                         CASE (-3)
-                           VAL =  BZF(I,J)
-                           BZF(I,J) = P_EXTERNAL
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,BZF(I,J) =', IOR0, IW,I,J,K,BZF(I,J)
-#endif
+                           RRHO2 = 2.0_EB/(RHOP(I,J,L%NZ)+RHOP(I,J,L%NZ+1)) 
+                           SCAL  = 2.0_EB*RDZ(L%NZ)*RDZN(L%NZ)*2.0_EB*RRHO2
+                           !VAL   = BZF(I,J)
                      END SELECT
-      
-                     ST%B(IC) = ST%B(IC) + F%SCAL_DIRICHLET * VAL             ! TODO: check SCAL_DIRICHLET value in general
-#ifdef WITH_SCARC_DEBUG2
-WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, IC, VAL, B(IC):', &
-                                    IW, I, J, K, IC, VAL, ST%B(IC)
+                     VAL = P_EXTERNAL
+                     ST%B(IC) = ST%B(IC) - SCAL * VAL
+
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,*) 'SETUP_WORKSPACE, DIRICHLET: T, VENT_INDEX, PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL:', &
+                       T, WC%VENT_INDEX, VT%PRESSURE_RAMP_INDEX, TIME_RAMP_FACTOR, P_EXTERNAL, SCAL
+WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, D: IOR0, IW, I,J,K,B, T, T_BEGIN =', &
+                                      IOR0, IW, I, J, K, ST%B(IC), T, T_BEGIN
 #endif
                   ENDIF INSEPARABLE_DIRICHLET_IF
       
@@ -1367,62 +1367,74 @@ WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: DIRICHLET: IW, I, J, K, 
       
                      SELECT CASE (IOR0)
                         CASE (1)
-                           BXS(J,K) = 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K))*(BXS(J,K) - UU(0,J,K))
-                           !BXS(J,K) = 0.5_EB*(RHOP(0,J,K)+RHOP(1,J,K)) &
-                           !                 *(BXS(J,K) - 0.5_EB*(KRES(1,J,K)-KRES(0,J,K))*M%RDXN(0))
+                           !KRES2 = UU(0,J,K)
+                           KRES2 = 1.0_EB*(KRES(1,J,K)-KRES(0,J,K))*M%RDXN(0)
+                           RHO2  = 0.5_EB*(RHOP(1,J,K)+RHOP(0,J,K)) 
+                           !VAL   = RHO2*(BXS(J,K) + FVX_B(1,J,K) - KRES2)
+                           VAL   = RHO2*(BXS(J,K) - KRES2)
+                           SCAL  = RDX(1)/RHO2
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BXS(J,K) =', &
-                                        IOR0, IW,I,J,K,RHOP(0,J,K),RHOP(1,J,K),UU(0,J,K), BXS(J,K)
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =', &
+                                      IOR0, IW,I,J,K,RHOP(0,J,K),RHOP(1,J,K),RHO2, BXS(J,K), KRES2, UU(0,J,K), VAL, SCAL
 #endif
-                           VAL =  BXS(J,K)
                         CASE (-1)
-                           VAL =  BXF(J,K)
-                           BXF(J,K) = 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K))*(BXF(J,K) - UU(L%NX,J,K))
-                           !BXF(J,K) = 0.5_EB*(RHOP(L%NX,J,K)+RHOP(L%NX+1,J,K)) &
-                           !                 *(BXF(J,K) - 0.5_EB*(KRES(L%NX+1,J,K)-KRES(L%NX,J,K))*M%RDXN(L%NX))
+                           !KRES2 = UU(L%NX,J,K)
+                           KRES2 = 1.0_EB*(KRES(L%NX+1,J,K)-KRES(L%NX,J,K))*M%RDXN(L%NX)
+                           RHO2  = 0.5_EB*(RHOP(L%NX+1,J,K)+RHOP(L%NX,J,K)) 
+                           !VAL   = RHO2*(BXF(J,K) + FVX_B(L%NX,J,K) - KRES2)
+                           VAL   = RHO2*(BXF(J,K) - KRES2)
+                           SCAL  = -RDX(L%NX)/RHO2
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BXF(J,K) =',&
-                                        IOR0, IW,I,J,K,RHOP(L%NX,J,K),RHOP(L%NX+1,J,K),UU(L%NX,J,K), BXF(J,K)
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =',&
+                                      IOR0, IW,I,J,K,RHOP(L%NX,J,K),RHOP(L%NX+1,J,K),RHO2, BXF(J,K),KRES2, UU(L%NX,J,K), VAL, SCAL
 #endif
                         CASE (2)
-                           VAL =  BYS(I,K)
-                           BYS(I,K) = 0.5_EB*(RHOP(I,0,K)+RHOP(I,1,K))*(BYS(I,K) - VV(I,0,K))
-                           !BYS(I,K) = 0.5_EB*(RHOP(I,0,K)+RHOP(I,1,K)) &
-                           !                 *(BYS(I,K) - 0.5_EB*(KRES(I,1,K)-KRES(I,0,K))*M%RDYN(0))
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BYS(I,K) =',&
-                                        IOR0, IW,I,J,K,RHOP(I,0,K),RHOP(I,1,K),VV(I,0,K),BYS(I,K)
+                           !KRES2 = VV(I,0,K)
+                           KRES2 = 1.0_EB*(KRES(I,1,K)-KRES(I,0,K))*M%RDYN(0)
+                           RHO2  = 0.5_EB*(RHOP(I,1,K)+RHOP(I,0,K))
+                           !VAL   = RHO2*(BYS(I,K) + FVY_B(I,1,K) - KRES2)
+                           VAL   = RHO2*(BYS(I,K) - KRES2)
+                           SCAL  = RDY(1)/RHO2
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =',&
+                                      IOR0, IW,I,J,K,RHOP(I,0,K),RHOP(I,1,K),RHO2, BYS(I,K), KRES2, VV(I,0,K),VAL, SCAL
 #endif
                         CASE (-2)
-                           VAL =  BYF(I,K)
-                           BYF(I,K) = 0.5_EB*(RHOP(I,L%NY,K)+RHOP(I,L%NY+1,K))*(BYF(I,K) - VV(I,L%NY,K))
-                           !BYF(I,K) = 0.5_EB*(RHOP(I,L%NY,K)+RHOP(I,L%NY+1,K)) &
-                           !                 *(BYS(I,K) - 0.5_EB*(KRES(I,L%NY+1,K)-KRES(I,L%NY,K))*M%RDYN(L%NY))
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BYF(I,K) =',&
-                                        IOR0, IW,I,J,K,RHOP(I,L%NY,K),RHOP(I,L%NY+1,K),VV(I,L%NY,K),BYF(I,K)
+                           !KRES2 = VV(I,L%NY,K)
+                           KRES2 = 1.0_EB*(KRES(I,L%NY+1,K)-KRES(I,L%NY,K))*M%RDYN(L%NY)
+                           RHO2  = 0.5_EB*(RHOP(I,L%NY+1,K)+RHOP(I,L%NY,K))
+                           !VAL   = RHO2*(BYF(I,K) + FVY_B(I,L%NY,K) - KRES2) 
+                           VAL   = RHO2*(BYF(I,K) - KRES2) 
+                           SCAL  = -RDY(L%NY)/RHO2
+#ifdef WITH_SCARC_DEBUG2
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =',&
+                                      IOR0, IW,I,J,K,RHOP(I,L%NY,K),RHOP(I,L%NY+1,K),RHO2, BYF(I,K), KRES2, VV(I,L%NY,K),VAL, SCAL
 #endif
                         CASE (3)
-                           VAL =  BZS(I,J)
-                           BZS(I,J) = 0.5_EB*(RHOP(I,J,0)+RHOP(I,J,1))*(BZS(I,J) - WW(I,J,0))
-                           !BZS(I,J) = 0.5_EB*(RHOP(I,J,0)+RHOP(I,J,1)) &
-                           !                 *(BZS(I,J) - 0.5_EB*(KRES(I,J,1)-KRES(I,J,0))*M%RDZN(L%NZ))
+                           !KRES2 = WW(I,J,0)
+                           KRES2 = 1.0_EB*(KRES(I,J,1)-KRES(I,J,0))*M%RDZN(0)
+                           RHO2  = 0.5_EB*(RHOP(I,J,1)+RHOP(I,J,0)) 
+                           !VAL   = RHO2*(BZS(I,J) + FVZ_B(I,J,1) - KRES2)
+                           VAL   = RHO2*(BZS(I,J) - KRES2)
+                           SCAL  = RDZ(1)/RHO2
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BZS(I,J) =',&
-                                        IOR0, IW,I,J,K,RHOP(I,J,0),RHOP(I,J,1),WW(I,J,0),BZS(I,J)
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =',&
+                                      IOR0, IW,I,J,K,RHOP(I,J,0),RHOP(I,J,1),RHO2, BZS(I,J), KRES2, WW(I,J,0),VAL, SCAL
 #endif
                         CASE (-3)
-                           VAL =  BZF(I,J)
-                           BZF(I,J) = 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(I,J,L%NZ+1))*(BZF(I,J) - WW(I,J,L%NZ))
-                           !BZF(I,J) = 0.5_EB*(RHOP(I,J,L%NZ)+RHOP(I,J,L%NZ+1)) &
-                           !                 *(BZS(I,J) - 0.5_EB*(KRES(I,J,L%NZ+1)-KRES(I,J,L%NZ))*M%RDZN(L%NZ))
+                           !KRES2 = WW(I,J,L%NZ)
+                           KRES2 = 1.0_EB*(KRES(I,J,L%NZ+1)-KRES(I,J,L%NZ))*M%RDZN(L%NZ)
+                           RHO2  = 0.5_EB*(RHOP(I,J,L%NZ+1)+RHOP(I,J,L%NZ))
+                           !VAL   = RHO2*(BZF(I,J) +FVZ_B(I,J,L%NZ) - KRES2)
+                           VAL   = RHO2*(BZF(I,J) - KRES2)
+                           SCAL  = -RDZ(L%NZ)/RHO2
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,5I4,4E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,BZF(I,J) =',&
-                                        IOR0, IW,I,J,K,RHOP(I,J,L%NZ),RHOP(I,J,L%NZ+1),WW(I,J,L%NZ),BZF(I,J)
+WRITE(MSG%LU_DEBUG,'(A,5I4,8E14.6)') 'SETUP_WORKSPACE, N: IOR0, IW, I,J,K,VAL =',&
+                                      IOR0, IW,I,J,K,RHOP(I,J,L%NZ),RHOP(I,J,L%NZ+1),RHO2, BZF(I,J), KRES2, WW(I,J,L%NZ),VAL, SCAL
 #endif
                      END SELECT
+                     ST%B(IC) = ST%B(IC) + SCAL * VAL
       
-                     ST%B(IC) = ST%B(IC) + F%SCAL_NEUMANN * VAL             ! TODO: check SCAL_NEUMANN value in general
 
 #ifdef WITH_SCARC_DEBUG2
 WRITE(MSG%LU_DEBUG,'(A, 5I6,2E14.6)') 'SETUP_WORKSPACE: NEUMANN  : IW, I, J, K, IC, VAL, B(IC):', &
@@ -1956,13 +1968,11 @@ WRITE(MSG%LU_DEBUG,*) '=======================>> CG : END =', ITE
 
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN .AND. .NOT.IS_MGM) THEN
    CALL SCARC_UPDATE_MAINCELLS(NLEVEL_MIN)
-   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
+   !CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
    CALL SCARC_DEBUG_PRESSURE('PRES')
-   CALL SCARC_CHECK_POISSON(NLEVEL_MIN)
-   IF (IS_INSEPARABLE) THEN
-      CALL SCARC_UPDATE_HP(NLEVEL_MIN)
-      CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
-   ENDIF
+   !CALL SCARC_CHECK_POISSON(NLEVEL_MIN)
+   IF (IS_INSEPARABLE) CALL SCARC_UPDATE_HP(NLEVEL_MIN)
+   CALL SCARC_UPDATE_GHOSTCELLS(NLEVEL_MIN)
    CALL SCARC_DEBUG_PRESSURE('HP')
 #ifdef WITH_SCARC_POSTPROCESSING
    IF (SCARC_DUMP) THEN
@@ -3046,11 +3056,19 @@ WRITE(MSG%LU_DEBUG,MSG%CFORM3) ((HP(I,1,K), I=0, L%NX+1), K=L%NZ+1,0,-1)
       SELECT CASE (IOR0)
          CASE ( 1)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXS(IYW,IZW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BXS(IYW,IZW) - M%HX(0)*M%FVX_B(IXG,IYW,IZW))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
+WRITE(MSG%LU_DEBUG,'(A,4I5,4E14.6)') 'GHOSTCELLS: D-INSEP: IXG, IXW, IYW, IZW, DX, BXS, FVX_B, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), M%FVX_B(IXG,IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+               ELSE
+                  HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXS(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D-SEP: IXG, IXW, IYW, IZW, DX, BXS, HP:', &
                        IXG, IXW, IYW, IZW, L%DX, M%BXS(IYW, IZW), HP(IXG, IYW, IZW)
 #endif
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) - L%DX *M%BXS(IYW,IZW)
 #ifdef WITH_SCARC_DEBUG
@@ -3060,11 +3078,19 @@ WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXS
             ENDIF
          CASE (-1)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXF(IYW,IZW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BXF(IYW,IZW) - M%HX(L%NX+1)*M%FVX_B(IXW, IYW, IZW))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IXG, IXW, IYW, IZW, DX, BXF, HP:', &
+WRITE(MSG%LU_DEBUG,'(A,4I5,4E14.6)') 'GHOSTCELLS: D-INSEP: IXG, IXW, IYW, IZW, DX, BXF, FVX_B, HP:', &
+                       IXG, IXW, IYW, IZW, L%DX, M%BXF(IYW, IZW), M%FVX_B(IXG, IYW, IZW), HP(IXG, IYW, IZW)
+#endif
+               ELSE
+                  HP(IXG,IYW,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BXF(IYW,IZW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D-SEP: IXG, IXW, IYW, IZW, DX, BXF, HP:', &
                        IXG, IXW, IYW, IZW, L%DX, M%BXF(IYW, IZW), HP(IXG, IYW, IZW)
 #endif
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXG,IYW,IZW) =  HP(IXW,IYW,IZW) + L%DX *M%BXF(IYW,IZW)
 #ifdef WITH_SCARC_DEBUG
@@ -3074,23 +3100,39 @@ WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IXG, IXW, IYW, IZW, DX, BXF
             ENDIF
          CASE ( 2)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYS(IXW,IZW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BYS(IXW,IZW) - M%HY(0)*M%FVY_B(IXW, IYG, IZW))
+               ELSE
+                  HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYS(IXW,IZW)
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYG,IZW) =  HP(IXW,IYW,IZW) - L%DY *M%BYS(IXW,IZW)
             ENDIF
          CASE (-2)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYF(IXW,IZW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BYF(IXW,IZW) - M%HY(L%NY+1)*M%FVY_B(IXW, IYW, IZW))
+               ELSE
+                  HP(IXW,IYG,IZW) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BYF(IXW,IZW)
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYG,IZW) =  HP(IXW,IYW,IZW) + L%DY *M%BYF(IXW,IZW)
             ENDIF
          CASE ( 3)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZS(IXW,IYW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BZS(IXW,IYW) - M%HZ(0)*M%FVZ_B(IXW, IYW, IZG))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IZG, IXW, IYW, IZW, DZ, BZS, HP:', &
+WRITE(MSG%LU_DEBUG,'(A,4I5,4E14.6)') 'GHOSTCELLS: D-INSEP: IZG, IXW, IYW, IZW, DZ, BZS, FVZ_B, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZS(IXW, IYW), M%FVZ_B(IXW, IYW, IZG), HP(IXG, IYW, IZW)
+#endif
+               ELSE
+                  HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZS(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D-SEP: IZG, IXW, IYW, IZW, DZ, BZS, HP:', &
                        IZG, IXW, IYW, IZW, L%DZ, M%BZS(IXW, IYW), HP(IXG, IYW, IZW)
 #endif
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) - L%DZ *M%BZS(IXW,IYW)
 #ifdef WITH_SCARC_DEBUG
@@ -3100,11 +3142,19 @@ WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: N: IZG, IXW, IYW, IZW, DZ, BZS
             ENDIF
          CASE (-3)
             IF (GWC%BTYPE==DIRICHLET) THEN
-               HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZF(IXW,IYW)
+               IF (IS_INSEPARABLE) THEN
+                  HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * (M%BZS(IXW,IYW) - M%HZ(L%NZ+1)*M%FVZ_B(IXW, IYW, IZW))
 #ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D: IZG, IXW, IYW, IZW, DZ, BZF, HP:', &
+WRITE(MSG%LU_DEBUG,'(A,4I5,4E14.6)') 'GHOSTCELLS: D-INSEP: IZG, IXW, IYW, IZW, DZ, BZF, FVZ_B, HP:', &
+                       IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), M%FVZ_B(IXW, IYW, IZG), HP(IXG, IYW, IZW)
+#endif
+               ELSE
+                  HP(IXW,IYW,IZG) = -HP(IXW,IYW,IZW) + 2.0_EB * M%BZF(IXW,IYW)
+#ifdef WITH_SCARC_DEBUG
+WRITE(MSG%LU_DEBUG,'(A,4I5,3E14.6)') 'GHOSTCELLS: D-SEP: IZG, IXW, IYW, IZW, DZ, BZF, HP:', &
                        IZG, IXW, IYW, IZW, L%DZ, M%BZF(IXW, IYW), HP(IXG, IYW, IZW)
 #endif
+               ENDIF
             ELSE IF (GWC%BTYPE==NEUMANN) THEN
                HP(IXW,IYW,IZG) =  HP(IXW,IYW,IZW) + L%DZ *M%BZF(IXW,IYW)
 #ifdef WITH_SCARC_DEBUG
@@ -3326,7 +3376,7 @@ ENDIF
 DO K=0,KBP1
    DO J=0,JBP1
       DO I=0,IBP1
-         RHMK(I,J,K) = HP(I,J,K)
+         RHMK(I,J,K) = HP(I,J,K)                 ! in this case HP still contains the pressure \tilde{p}
          RRHO(I,J,K) = 1._EB/RHOP(I,J,K)
       ENDDO
    ENDDO
@@ -3401,6 +3451,7 @@ DO K=1,KBAR
       DO I=0,IBAR
          FVX_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I+1,J,K)+RHMK(I+1,J,K)*RHOP(I,J,K))*(RRHO(I+1,J,K)-RRHO(I,J,K))*RDXN(I)/ &
                          (RHOP(I+1,J,K)+RHOP(I,J,K))
+!        FVX_B(I,J,K) = 0.5_EB*(RHMK(I,J,K)+RHMK(I+1,J,K)) * RDXN(I)*(1.0_EB/RHOP(I+1,J,K) - 1.0_EB/RHOP(I,J,K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVX_B:', I, J, K, FVX_B(I, J, K)
 #endif
@@ -3418,6 +3469,7 @@ IF (.NOT.TWO_D) THEN
          DO I=1,IBAR
             FVY_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J+1,K)+RHMK(I,J+1,K)*RHOP(I,J,K))*(RRHO(I,J+1,K)-RRHO(I,J,K))*RDYN(J)/ &
                             (RHOP(I,J+1,K)+RHOP(I,J,K))
+!           FVY_B(I,J,K) = 0.5_EB*(RHMK(I,J,K)+RHMK(I,J+1,K)) * RDYN(I)*(1.0_EB/RHOP(I,J+1,K) - 1.0_EB/RHOP(I,J,K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVY_B:', I, J, K, FVY_B(I, J, K)
 #endif
@@ -3435,6 +3487,7 @@ DO K=0,KBAR
       DO I=1,IBAR
          FVZ_B(I,J,K) = -(RHMK(I,J,K)*RHOP(I,J,K+1)+RHMK(I,J,K+1)*RHOP(I,J,K))*(RRHO(I,J,K+1)-RRHO(I,J,K))*RDZN(K)/ &
                          (RHOP(I,J,K+1)+RHOP(I,J,K))
+!        FVZ_B(I,J,K) = 0.5_EB*(RHMK(I,J,K)+RHMK(I,J,K+1)) * RDZN(I)*(1.0_EB/RHOP(I,1,K+1) - 1.0_EB/RHOP(I,J,K))
 #ifdef WITH_SCARC_DEBUG
 WRITE(MSG%LU_DEBUG,'(A, 3I5, E14.6)') 'BARO: I, J, K, FVZ_B:', I, J, K, FVZ_B(I, J, K)
 #endif
@@ -3491,10 +3544,10 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          DO I=1,L%NX
             IF (IS_UNSTRUCTURED .AND. L%IS_SOLID(I, J, K)) CYCLE
             IC = G%CELL_NUMBER(I,J,K)
-            !X_SAVE = ST%X(IC)
-            X_SAVE = HP(I,J,K)
-            !HP(I,J,K) = ST%X(IC)/RHOP(I,J,K) + KRES(I,J,K)
-            HP(I,J,K) = HP(I,J,K)/RHOP(I,J,K) + KRES(I,J,K)
+            X_SAVE = ST%X(IC)
+            !X_SAVE = HP(I,J,K)
+            HP(I,J,K) = ST%X(IC)/RHOP(I,J,K) + KRES(I,J,K)
+            !HP(I,J,K) = HP(I,J,K)/RHOP(I,J,K) + KRES(I,J,K)
 #ifdef WITH_SCARC_DEBUG
 IF (J==1) WRITE(MSG%LU_DEBUG,'(A, 3I6, 4E14.6)') 'UPDATE_HP: IC, I, J, K, X_SAVE, RHO, KRES, X_NEW:', &
                                                   I,J,K, X_SAVE, RHOP(I,J,K), KRES(I,J,K), HP(I,J,K)
