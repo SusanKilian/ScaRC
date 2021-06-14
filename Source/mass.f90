@@ -407,7 +407,6 @@ CASE(.TRUE.) PREDICTOR_STEP
          DO I=1,IBAR
             IF (SOLID(CELL_INDEX(I,J,K))) CYCLE
             RHOS(I,J,K) = SUM(ZZS(I,J,K,1:N_TRACKED_SPECIES))
-   !         RHOS(I,J,K) = 0.1195253017817356E+01
          ENDDO
       ENDDO
    ENDDO

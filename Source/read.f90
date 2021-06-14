@@ -5414,15 +5414,6 @@ READ_PART_LOOP: DO N=1,N_LAGRANGIAN_CLASSES
       CALL SHUTDOWN(MESSAGE) ; RETURN
    ENDIF
 
-   ! If particle class has no ID at this point, stop.
-
-   DO I=1,10
-      IF (QUANTITIES(I)=='MASS FLUX' .AND. QUANTITIES_SPEC_ID(I)=='null') THEN
-         WRITE(MESSAGE,'(A)') "ERROR: PART QUANTITIES 'MASS FLUX' requires QUANTITIES_SPEC_ID."
-         CALL SHUTDOWN(MESSAGE) ; RETURN
-      ENDIF
-   ENDDO
-
    ! Set default colors for Smokeview. Water droplets are BLUE. Fuel droplets are YELLOW. Everything else is BLACK.
 
    IF (TRIM(SPEC_ID)=='WATER VAPOR') THEN
@@ -8905,7 +8896,7 @@ SELECT CASE(TRIM(SOLVER))
       PRES_ON_WHOLE_DOMAIN = .FALSE.
       IF (SCARC_METHOD == 'NONE') SCARC_METHOD = 'KRYLOV'    ! Use Krylov as default solver for USCARC
       IF (SCARC_PRECON == 'NONE') SCARC_PRECON = 'PARDISO'   ! Use PARDISO as default preconditioner for USCARC
-      IF (SCARC_MATRIX == 'NONE') SCARC_MATRIX = 'COMPACT'   ! Use compact matrix storage technique -Wextra -Werror
+      IF (SCARC_MATRIX == 'NONE') SCARC_MATRIX = 'COMPACT'   ! Use compact matrix storage technique
       IF (SCARC_POISSON == 'INSEPARABLE') BAROCLINIC = .FALSE.
 
    CASE('SCARC')

@@ -14,12 +14,13 @@ CONTAINS
 
 SUBROUTINE PRESSURE_SOLVER_COMPUTE_RHS(T,DT,NM)
 
-!USE SCARC_VARIABLES, ONLY: IS_INSEPARABLE
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
 USE COMPLEX_GEOMETRY, ONLY: IBM_IDCF
 USE GLOBAL_CONSTANTS
-USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_MESSAGES, ONLY: SCARC_DEBUG_VECTOR3_BIG, MSG
+#endif
 
 INTEGER, INTENT(IN) :: NM
 REAL(EB), INTENT(IN) :: T,DT
@@ -27,8 +28,7 @@ REAL(EB), POINTER, DIMENSION(:,:,:) :: UU,VV,WW,HP,RHOP
 INTEGER :: I,J,K,IW,IOR,NOM,N_INT_CELLS,IIO,JJO,KKO,ICF
 REAL(EB) :: TRM1,TRM2,TRM3,TRM4,H_OTHER,TNOW,DUMMY=0._EB, &
             TSI,TIME_RAMP_FACTOR,DX_OTHER,DY_OTHER,DZ_OTHER,P_EXTERNAL, &
-            VEL_EDDY, KRES2, RHO2
-LOGICAL :: IS_SUSI = .FALSE.
+            VEL_EDDY
 TYPE (VENTS_TYPE), POINTER :: VT
 TYPE (WALL_TYPE), POINTER :: WC
 TYPE (EXTERNAL_WALL_TYPE), POINTER :: EWC
@@ -53,19 +53,6 @@ ELSE
    RHOP => RHOS
 ENDIF
 
-#ifdef WITH_SCARC_DEBUG
-     CALL SCARC_DEBUG_VECTOR3_BIG (U, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: U')
-     CALL SCARC_DEBUG_VECTOR3_BIG (V, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: V')
-     CALL SCARC_DEBUG_VECTOR3_BIG (W, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: W')
-     CALL SCARC_DEBUG_VECTOR3_BIG (US, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: US')
-     CALL SCARC_DEBUG_VECTOR3_BIG (VS, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: VS')
-     CALL SCARC_DEBUG_VECTOR3_BIG (WS, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: WS')
-     CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: FVX')
-     CALL SCARC_DEBUG_VECTOR3_BIG (FVY, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: FVY')
-     CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: FVZ')
-     CALL SCARC_DEBUG_VECTOR3_BIG (H, NM, 'PRESSURE_SOLVER_COMPUTE_RHS: H')
-#endif
-
 ! Apply pressure boundary conditions at external cells.
 ! If Neumann, BXS, BXF, etc., contain dH/dx(x=XS), dH/dx(x=XF), etc.
 ! If Dirichlet, BXS, BXF, etc., contain H(x=XS), H(x=XF), etc.
@@ -87,71 +74,17 @@ WALL_CELL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS
    IF_NEUMANN: IF (WC%PRESSURE_BC_INDEX==NEUMANN) THEN
       SELECT CASE(IOR)
          CASE( 1)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(1,J,K)-KRES(0,J,K))*RDXN(0)
-               RHO2  = 0.5_EB*(RHOP(1,J,K)+RHOP(0,J,K))
-               BXS(J,K) = HX(0)/RHO2  * (-FVX(0,J,K) - KRES2  + WC%DUNDT)
-            ELSE
-               BXS(J,K) = HX(0)   *(-FVX(0,J,K)    + WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVX, DUNDT, BXS=', IW, I, J, K, FVX(0,J,K), WC%DUNDT, BXS(J,K)
-#endif
+            BXS(J,K) = HX(0)   *(-FVX(0,J,K)    + WC%DUNDT)
          CASE(-1)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(IBP1,J,K)-KRES(IBAR,J,K))*RDXN(IBAR)
-               RHO2  = 0.5_EB*(RHOP(IBP1,J,K)+RHOP(IBAR,J,K))
-               BXF(J,K) = HX(IBP1)/RHO2 * (-FVX(IBAR,J,K) - KRES2 - WC%DUNDT)
-            ELSE
-               BXS(J,K) = HX(0)   *(-FVX(0,J,K)    + WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVX, DUNDT, BXF=', IW, I, J, K, FVX(IBAR,J,K), WC%DUNDT, BXF(J,K)
-#endif
+            BXF(J,K) = HX(IBP1)*(-FVX(IBAR,J,K) - WC%DUNDT)
          CASE( 2)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(I,1,K)-KRES(I,0,K))*RDYN(0)
-               RHO2  = 0.5_EB*(RHOP(I,1,K)+RHOP(I,0,K))
-               BYS(I,K) = HY(0)/RHO2   *(-FVY(I,0,K) - KRES2  + WC%DUNDT)
-            ELSE
-               BYS(I,K) = HY(0)   *(-FVY(I,0,K)    + WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVY, DUNDT, BYS=', IW, I, J, K, FVY(I,0,K), WC%DUNDT, BYS(I,K)
-#endif
+            BYS(I,K) = HY(0)   *(-FVY(I,0,K)    + WC%DUNDT)
          CASE(-2)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(I,JBP1,K)-KRES(I,JBAR,K))*RDYN(JBAR)
-               RHO2  = 0.5_EB*(RHOP(I,JBP1,K)+RHOP(I,JBAR,K))
-               BYF(I,K) = HY(JBP1)/RHO2*(-FVY(I,JBAR,K) - KRES2 - WC%DUNDT)
-            ELSE
-               BYF(I,K) = HY(JBP1)*(-FVY(I,JBAR,K) - WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVY, DUNDT, BYF=', IW, I, J, K, FVX(I,JBAR,K), WC%DUNDT, BYF(I,K)
-#endif
+            BYF(I,K) = HY(JBP1)*(-FVY(I,JBAR,K) - WC%DUNDT)
          CASE( 3)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(I,J,1)-KRES(I,J,0))*RDZN(0)
-               RHO2  = 0.5_EB*(RHOP(I,J,1)+RHOP(I,J,0))
-               BZS(I,J) = HZ(0)/RHO2   *(-FVZ(I,J,0) - KRES2   + WC%DUNDT)
-            ELSE
-               BZS(I,J) = HZ(0)   *(-FVZ(I,J,0)    + WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVZ, DUNDT, BZS=', IW, I, J, K, FVZ(I,J,0), WC%DUNDT, BZS(I,J)
-#endif
+            BZS(I,J) = HZ(0)   *(-FVZ(I,J,0)    + WC%DUNDT)
          CASE(-3)
-            IF (IS_SUSI) THEN
-               KRES2 = (KRES(I,J,KBP1)-KRES(I,J,KBAR))*RDZN(KBAR)
-               RHO2  = 0.5_EB*(RHOP(I,J,KBP1)+RHOP(I,J,KBAR))
-               BZF(I,J) = HZ(KBP1)/RHO2*(-FVZ(I,J,KBAR) - KRES2 - WC%DUNDT)
-            ELSE
-               BZF(I,J) = HZ(KBP1)*(-FVZ(I,J,KBAR) - WC%DUNDT)
-            ENDIF
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVZ, DUNDT, BZF=', IW, I, J, K, FVZ(I,J,KBAR), WC%DUNDT, BZF(I,J)
-#endif
+            BZF(I,J) = HZ(KBP1)*(-FVZ(I,J,KBAR) - WC%DUNDT)
       END SELECT
    ENDIF IF_NEUMANN
 
@@ -167,45 +100,21 @@ WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'NEUMANN: IW, I, J, K, FVZ, DUNDT, BZF=', I
          SELECT CASE(IOR)
             CASE( 1)
                BXS(J,K) = 0.5_EB*(HP(0,J,K)+HP(1,J,K)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BXS:', &
-                                      IW,I,J,K,HP(0,J,K),HP(1,J,K),BXS(J,K)
-#endif
             CASE(-1)
                BXF(J,K) = 0.5_EB*(HP(IBAR,J,K)+HP(IBP1,J,K)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BXF:', &
-                                      IW,I,J,K,HP(IBAR,J,K),HP(IBP1,J,K),BXF(J,K)
-#endif
             CASE( 2)
                BYS(I,K) = 0.5_EB*(HP(I,0,K)+HP(I,1,K)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BYS:', &
-                                      IW,I,J,K,HP(I,0,K),HP(I,1,K),BYS(I,K)
-#endif
             CASE(-2)
                BYF(I,K) = 0.5_EB*(HP(I,JBAR,K)+HP(I,JBP1,K)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BYF:', &
-                                      IW,I,J,K,HP(I,JBAR,K),HP(I,JBP1,K),BYF(I,K)
-#endif
             CASE( 3)
                BZS(I,J) = 0.5_EB*(HP(I,J,0)+HP(I,J,1)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BZS:', &
-                                      IW,I,J,K,HP(I,J,0),HP(I,J,1),BZS(I,J)
-#endif
             CASE(-3)
                BZF(I,J) = 0.5_EB*(HP(I,J,KBAR)+HP(I,J,KBP1)) + WALL_WORK1(IW)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP, BZF:', &
-                                      IW,I,J,K,HP(I,J,KBAR),HP(I,J,KBP1),BZF(I,J)
-#endif
          END SELECT
 
       ENDIF NOT_OPEN
 
-      ! Interpolated boundary -- set boundary value of H to be average of neighboring cells from previous time ste
+      ! Interpolated boundary -- set boundary value of H to be average of neighboring cells from previous time step
 
       INTERPOLATED_ONLY: IF (WC%BOUNDARY_TYPE==INTERPOLATED_BOUNDARY) THEN
 
@@ -261,10 +170,6 @@ WRITE(MSG%LU_DEBUG,'(A,4I4,3E14.6)') 'DIRICHLET-NOT_OPEN: IW, I, J, K, HPM, HPP,
          ! Synthetic eddy method for OPEN inflow boundaries
          VEL_EDDY = 0._EB
          IF (VT%N_EDDY>0) THEN
-
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'V%N_EDDY =', VT%N_EDDY
-#endif
             SELECT CASE(ABS(VT%IOR))
                CASE(1); VEL_EDDY = VT%U_EDDY(J,K)
                CASE(2); VEL_EDDY = VT%V_EDDY(I,K)
@@ -274,9 +179,6 @@ WRITE(MSG%LU_DEBUG,*) 'V%N_EDDY =', VT%N_EDDY
 
          ICF = 0
          IF (CC_IBM) THEN
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'CC_IBM =', CC_IBM
-#endif
             SELECT CASE(IOR)
                CASE( 1); ICF = FCVAR(0,   J,K,IBM_IDCF,ABS(IOR))
                CASE(-1); ICF = FCVAR(IBAR,J,K,IBM_IDCF,ABS(IOR))
@@ -290,9 +192,6 @@ WRITE(MSG%LU_DEBUG,*) 'CC_IBM =', CC_IBM
          ! Wind inflow boundary conditions
 
          IF (OPEN_WIND_BOUNDARY) THEN
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'OPEN_WIND_BOUNDARY=', OPEN_WIND_BOUNDARY
-#endif
             IF (ICF>0) THEN
                H0 = 0.5_EB*((U_WIND(K)+VEL_EDDY)**2 + (V_WIND(K)+VEL_EDDY)**2 + (W_WIND(K)+VEL_EDDY)**2)
             ELSE
@@ -309,102 +208,40 @@ WRITE(MSG%LU_DEBUG,*) 'OPEN_WIND_BOUNDARY=', OPEN_WIND_BOUNDARY
 
          SELECT CASE(IOR)
             CASE( 1)
-               IF (IS_SUSI) THEN
-                  BXS(J,K) = P_EXTERNAL
-               ELSE
-
                IF (UU(0,J,K)<0._EB) THEN
                   BXS(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(1,J,K)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, KRES, BXS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, KRES(1,J,K), BXS(J,K)
-#endif
                ELSE
                   BXS(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-B: IW, I, J, K, P_EXT, RHO_F, H0, BXS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, H0, BXS(J,K)
-#endif
-               ENDIF
                ENDIF
             CASE(-1)
-               IF (IS_SUSI) THEN
-                  BXF(J,K) = P_EXTERNAL
-               ELSE
-
                IF (UU(IBAR,J,K)>0._EB) THEN
                   BXF(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(IBAR,J,K)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, KRES, BXF:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, KRES(IBAR,J,K), BXF(J,K)
-#endif
                ELSE
                   BXF(J,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, H0, BXF:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, H0, BXF(J,K)
-#endif
-               ENDIF
                ENDIF
             CASE( 2)
-               IF (IS_SUSI) THEN
-                  BYF(I,K) = P_EXTERNAL
-               ELSE
-
                IF (VV(I,0,K)<0._EB) THEN
                   BYS(I,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,1,K)
                ELSE
                   BYS(I,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
                ENDIF
-               ENDIF
             CASE(-2)
-               IF (IS_SUSI) THEN
-                  BYF(I,K) = P_EXTERNAL
-               ELSE
-
                IF (VV(I,JBAR,K)>0._EB) THEN
                   BYF(I,K) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,JBAR,K)
                ELSE
                   BYF(I,K) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
                ENDIF
-               ENDIF
             CASE( 3)
-               IF (IS_SUSI) THEN
-                  BZS(I,J) = P_EXTERNAL
-               ELSE
-
                IF (WW(I,J,0)<0._EB) THEN
                   BZS(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,J,1)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, KRES, BZS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, KRES(I,J,1), BZS(I,J)
-#endif
                ELSE
                   BZS(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, H0, BZS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, H0, BZS(I,J)
-#endif
-               ENDIF
                ENDIF
             CASE(-3)
-               IF (IS_SUSI) THEN
-                  BZS(I,J) = P_EXTERNAL
-               ELSE
-
                IF (WW(I,J,KBAR)>0._EB) THEN
                   BZF(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + KRES(I,J,KBAR)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, KRES, BZS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, KRES(I,J,KBAR), BZS(I,J)
-#endif
                ELSE
                   BZF(I,J) = P_EXTERNAL/WC%ONE_D%RHO_F + H0
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_F, H0, BZS:', &
-                                      IW,I,J,K,P_EXTERNAL, WC%ONE_D%RHO_F, H0, BZS(I,J)
-#endif
-               ENDIF
                ENDIF
          END SELECT
 
@@ -414,6 +251,13 @@ WRITE(MSG%LU_DEBUG,'(A,4I4,4E14.6)') 'DIRICHLET-OPEN-A: IW, I, J, K, P_EXT, RHO_
 
 ENDDO WALL_CELL_LOOP
 
+#ifdef WITH_SCARC_DEBUG
+   WRITE(MSG%LU_DEBUG,*) 'SUSIPRES, TPI: ', TOTAL_PRESSURE_ITERATIONS
+   CALL SCARC_DEBUG_VECTOR3_BIG (DDDT, NM, 'SUSIPRES 1: DDDT')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVX, NM, 'SUSIPRES 1: FVX')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVY, NM, 'SUSIPRES 1: FVY')
+   CALL SCARC_DEBUG_VECTOR3_BIG (FVZ, NM, 'SUSIPRES 1: FVZ')
+#endif
 ! Compute the RHS of the Poisson equation
 
 SELECT CASE(IPS)
@@ -756,14 +600,16 @@ END SUBROUTINE PRESSURE_SOLVER_FFT
 
 SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS(NM)
 
-USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG, SCARC_DUMP_VECTOR3_BIG
+#endif
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE GLOBAL_CONSTANTS
 
 INTEGER, INTENT(IN) :: NM
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP,RHOP,P,RESIDUAL
 INTEGER :: I,J,K
-REAL(EB) :: LHSS,RHSS,TNOW, RHSS1, RHSS3, LHSS1, LHSS2, DIFF
+REAL(EB) :: LHSS,RHSS,TNOW
 
 IF (SOLID_PHASE_ONLY) RETURN
 IF (FREEZE_VELOCITY)  RETURN
@@ -781,7 +627,6 @@ ENDIF
 
 ! Optional check of the accuracy of the separable pressure solution, del^2 H = -del dot F - dD/dt
 
-CHECK_POISSON = .TRUE.
 IF (CHECK_POISSON) THEN
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
    !$OMP PARALLEL DO PRIVATE(I,J,K,RHSS,LHSS) SCHEDULE(STATIC)
@@ -796,9 +641,6 @@ IF (CHECK_POISSON) THEN
                  + ((HP(I,J+1,K)-HP(I,J,K))*RDYN(J)      - (HP(I,J,K)-HP(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
                  + ((HP(I,J,K+1)-HP(I,J,K))*RDZN(K)      - (HP(I,J,K)-HP(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,3I4,3E14.6)') 'CHECK_POISSON: I, J, K, RHSS, LHSS, RESIDUAL:', I,J,K,RHSS, LHSS, RESIDUAL(I,J,K)
-#endif
          ENDDO
       ENDDO
    ENDDO
@@ -812,53 +654,48 @@ ENDIF
 !IF (ITERATE_BAROCLINIC_TERM) THEN
    P => WORK7
    P = RHOP*(HP-KRES)
-#ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_VECTOR3_BIG (RHOP, NM, 'ITERATE_BARO: RHOP')
-CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'ITERATE_BARO: KRES')
-CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'ITERATE_BARO: HP')
-CALL SCARC_DEBUG_VECTOR3_BIG (P, NM, 'ITERATE_BARO: P')
-WRITE(MSG%LU_DEBUG,*) 'SUSI:ITERATE_BARO, TPI:', TOTAL_PRESSURE_ITERATIONS
-#endif
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR)
-   !!$OMP PARALLEL PRIVATE(I,J,K,RHSS,LHSS,NM)
-   !!$OMP DO COLLAPSE(3) SCHEDULE(STATIC)
-   DO K=1,KBAR
 #ifdef WITH_SCARC_DEBUG
-   WRITE(MSG%LU_DEBUG,*) '-----------------------------------K=', K
+  CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'ITERATE_BARO: KRES')
+  CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'ITERATE_BARO: HP')
+  CALL SCARC_DEBUG_VECTOR3_BIG (P, NM, 'ITERATE_BARO: P')
+  CALL SCARC_DUMP_VECTOR3_BIG (HP, NM, 'H')
+  CALL SCARC_DUMP_VECTOR3_BIG (P, NM, 'P')
 #endif
+   !$OMP PARALLEL PRIVATE(I,J,K,RHSS,LHSS,NM)
+   !$OMP DO COLLAPSE(3) SCHEDULE(STATIC)
+   DO K=1,KBAR
       DO J=1,JBAR
          DO I=1,IBAR
-
-            RHSS1 = ( R(I-1)*(FVX(I-1,J,K)-FVX_B(I-1,J,K)) - R(I)*(FVX(I,J,K)-FVX_B(I,J,K)) )*RDX(I)*RRN(I) &
+            RHSS = ( R(I-1)*(FVX(I-1,J,K)-FVX_B(I-1,J,K)) - R(I)*(FVX(I,J,K)-FVX_B(I,J,K)) )*RDX(I)*RRN(I) &
                  + (        (FVY(I,J-1,K)-FVY_B(I,J-1,K)) -      (FVY(I,J,K)-FVY_B(I,J,K)) )*RDY(J)        &
-                 + (        (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -      (FVZ(I,J,K)-FVZ_B(I,J,K)) )*RDZ(K)        
-
-            RHSS3 =  - DDDT(I,J,K)
-
-            LHSS1 = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
+                 + (        (FVZ(I,J,K-1)-FVZ_B(I,J,K-1)) -      (FVZ(I,J,K)-FVZ_B(I,J,K)) )*RDZ(K)        &
+                 - DDDT(I,J,K)
+            LHSS = ((P(I+1,J,K)-P(I,J,K))*RDXN(I)*R(I)    *2._EB/(RHOP(I+1,J,K)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I-1,J,K))*RDXN(I-1)*R(I-1)*2._EB/(RHOP(I-1,J,K)+RHOP(I,J,K)))*RDX(I)*RRN(I) &
                  + ((P(I,J+1,K)-P(I,J,K))*RDYN(J)         *2._EB/(RHOP(I,J+1,K)+RHOP(I,J,K)) - &
                     (P(I,J,K)-P(I,J-1,K))*RDYN(J-1)       *2._EB/(RHOP(I,J-1,K)+RHOP(I,J,K)))*RDY(J)        &
                  + ((P(I,J,K+1)-P(I,J,K))*RDZN(K)         *2._EB/(RHOP(I,J,K+1)+RHOP(I,J,K)) - &
-                    (P(I,J,K)-P(I,J,K-1))*RDZN(K-1)       *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*RDZ(K)        
-
-           LHSS2 = ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
+                    (P(I,J,K)-P(I,J,K-1))*RDZN(K-1)       *2._EB/(RHOP(I,J,K-1)+RHOP(I,J,K)))*RDZ(K)        &
+                 + ((KRES(I+1,J,K)-KRES(I,J,K))*RDXN(I)*R(I) - (KRES(I,J,K)-KRES(I-1,J,K))*RDXN(I-1)*R(I-1) )*RDX(I)*RRN(I) &
                  + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)        )*RDY(J)        &
                  + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)        )*RDZ(K)
-
-            DIFF = ABS(RHSS1+RHSS3-LHSS1-LHSS2)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
 #ifdef WITH_SCARC_DEBUG
-IF (J == 1) &
-WRITE(MSG%LU_DEBUG,'(A, 3I4, 6E20.12)') 'ITERATE_BARO : I, J, K, P, LHSS1, LHSS2, RHSS1, RHSS3, DIFF:', &
-                          I,J,K, P(I,J,K), LHSS1, LHSS2, RHSS1, RHSS3, DIFF !, DIFF-GLOBAL_MEAN_VALUE
+  IF (J == 1) &
+    WRITE(MSG%LU_DEBUG,'(A, 4I4, 6E14.6)') 'SUSIBARO: TPI, I, J, K, P, LHSS, RHSS, RESIDUAL:', &
+                           TOTAL_PRESSURE_ITERATIONS, I,J,K, P(I,J,K), LHSS, RHSS, RESIDUAL(I,J,K)
 #endif
          ENDDO
       ENDDO
    ENDDO
-   !!$OMP END DO
-   !!$OMP END PARALLEL
+   !$OMP END DO
+   !$OMP END PARALLEL
    PRESSURE_ERROR_MAX(NM) = MAXVAL(RESIDUAL)
+#ifdef WITH_SCARC_DEBUG
+    WRITE(MSG%LU_DEBUG,'(A, I4, E14.6)') 'SUSIBARO_FINAL: TPI, PRESSURE_ERROR_MAX:', &
+                                           TOTAL_PRESSURE_ITERATIONS, PRESSURE_ERROR_MAX(NM)
+#endif
    PRESSURE_ERROR_MAX_LOC(:,NM) = MAXLOC(RESIDUAL)
 !ENDIF
 
@@ -870,10 +707,9 @@ SUBROUTINE COMPUTE_VELOCITY_ERROR(DT,NM)
 
 ! Check the maximum velocity error at a solid boundary
 
-USE SCARC_MESSAGES, ONLY: MSG
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE GLOBAL_CONSTANTS, ONLY: PREDICTOR,VELOCITY_ERROR_MAX,SOLID_BOUNDARY,INTERPOLATED_BOUNDARY,VELOCITY_ERROR_MAX_LOC,T_USED,&
-                            PRES_ON_WHOLE_DOMAIN,PRES_METHOD,FREEZE_VELOCITY,SOLID_PHASE_ONLY, TOTAL_PRESSURE_ITERATIONS
+                            PRES_ON_WHOLE_DOMAIN,PRES_METHOD,FREEZE_VELOCITY,SOLID_PHASE_ONLY
 
 REAL(EB), INTENT(IN) :: DT
 INTEGER, INTENT(IN) :: NM
@@ -936,10 +772,6 @@ CHECK_WALL_LOOP: DO IW=1,N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS
       SELECT CASE(IOR)
          CASE( 1)
             UN_NEW = U(II,JJ,KK)   - DT*(FVX(II,JJ,KK)   + RDXN(II)  *(H(II+1,JJ,KK)-H(II,JJ,KK))*DHFCT)
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,3I4,5E24.16)') 'PREDICTOR: II,JJ,KK, U, FVX, H+, H, UN_NEW:', &
-   II, JJ, KK, U(II,JJ,KK), FVX(II,JJ,KK), H(II+1,JJ,KK), H(II,JJ,KK), UN_NEW
-#endif
          CASE(-1)
             UN_NEW = U(II-1,JJ,KK) - DT*(FVX(II-1,JJ,KK) + RDXN(II-1)*(H(II,JJ,KK)-H(II-1,JJ,KK))*DHFCT)
          CASE( 2)
@@ -955,10 +787,6 @@ WRITE(MSG%LU_DEBUG,'(A,3I4,5E24.16)') 'PREDICTOR: II,JJ,KK, U, FVX, H+, H, UN_NE
       SELECT CASE(IOR)
          CASE( 1)
             UN_NEW = 0.5_EB*(U(II,JJ,KK)+US(II,JJ,KK)     - DT*(FVX(II,JJ,KK)   + RDXN(II)  *(HS(II+1,JJ,KK)-HS(II,JJ,KK))*DHFCT))
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,3I4,5E24.16)') 'CORRECTOR: II,JJ,KK, U,US, FVX, H+, H, UN_NEW:', &
-   II, JJ, KK, U(II,JJ,KK), US(II,JJ,KK), FVX(II,JJ,KK), H(II+1,JJ,KK), H(II,JJ,KK), UN_NEW
-#endif
          CASE(-1)
             UN_NEW = 0.5_EB*(U(II-1,JJ,KK)+US(II-1,JJ,KK) - DT*(FVX(II-1,JJ,KK) + RDXN(II-1)*(HS(II,JJ,KK)-HS(II-1,JJ,KK))*DHFCT))
          CASE( 2)
@@ -1112,9 +940,6 @@ WRITE(MSG%LU_DEBUG,'(A,3I4,5E24.16)') 'CORRECTOR: II,JJ,KK, U,US, FVX, H+, H, UN
    IF (WC%BOUNDARY_TYPE==SOLID_BOUNDARY) THEN
       IF (PREDICTOR) THEN
          UN_NEW_OTHER = -SIGN(1._EB,REAL(IOR,EB))*WC%ONE_D%U_NORMAL_S
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A,3I4,1E24.16)') 'PREDICTOR: UN_NEW_OTHER: II,JJ,KK, UN_NEW_OTHER',II,JJ,KK, UN_NEW_OTHER
-#endif
       ELSE
          UN_NEW_OTHER = -SIGN(1._EB,REAL(IOR,EB))*WC%ONE_D%U_NORMAL
       ENDIF
@@ -1123,10 +948,6 @@ WRITE(MSG%LU_DEBUG,'(A,3I4,1E24.16)') 'PREDICTOR: UN_NEW_OTHER: II,JJ,KK, UN_NEW
    ! Compute velocity difference
 
    VELOCITY_ERROR = UN_NEW - UN_NEW_OTHER
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,'(A, 3I4, 3E24.16)') 'VELOCITY_ERROR: II, JJ, KK, UN_NEW, UN_NEW_OTHER, VELOCITY_ERROR:', &
-                                                        II, JJ, KK, UN_NEW, UN_NEW_OTHER, VELOCITY_ERROR
-#endif
    WC%VEL_ERR_NEW = VELOCITY_ERROR
    WALL_WORK1(IW) = -SIGN(1._EB,REAL(IOR,EB))*ITERATIVE_FACTOR*VELOCITY_ERROR/(WC%ONE_D%RDN*DT)
 
@@ -1146,10 +967,6 @@ WRITE(MSG%LU_DEBUG,'(A, 3I4, 3E24.16)') 'VELOCITY_ERROR: II, JJ, KK, UN_NEW, UN_
    ENDIF
 
 ENDDO CHECK_WALL_LOOP
-#ifdef WITH_SCARC_DEBUG
-WRITE(MSG%LU_DEBUG,*) 'SUSI:VELOCITY_ERROR_MAX: PREDICTOR, TPI:',&
-                       VELOCITY_ERROR_MAX, PREDICTOR, TOTAL_PRESSURE_ITERATIONS
-#endif
 
 T_USED(5)=T_USED(5)+CURRENT_TIME()-TNOW
 
@@ -3573,6 +3390,9 @@ END SUBROUTINE SET_CCVAR_CGSC_H
 
 SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS_U(NM)
 
+#ifdef WITH_SCARC_DEBUG
+USE SCARC_MESSAGES, ONLY: MSG, SCARC_DEBUG_VECTOR3_BIG, SCARC_DUMP_VECTOR3_BIG
+#endif
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
 USE GLOBAL_CONSTANTS
 
@@ -3639,10 +3459,17 @@ ENDIF
 ! Mandatory check of how well the computed pressure satisfies the inseparable Poisson equation:
 ! LHSS = del dot (1/rho) del p + del K = -del dot F - dD/dt = RHSS
 
-IF (ITERATE_BAROCLINIC_TERM) THEN
+!IF (ITERATE_BAROCLINIC_TERM) THEN
    P => WORK7
    P = RHOP*(HP-KRES)
    RESIDUAL => WORK8(1:IBAR,1:JBAR,1:KBAR); RESIDUAL = 0._EB
+#ifdef WITH_SCARC_DEBUG
+  CALL SCARC_DEBUG_VECTOR3_BIG (KRES, NM, 'ITERATE_BARO: KRES')
+  CALL SCARC_DEBUG_VECTOR3_BIG (HP, NM, 'ITERATE_BARO: HP')
+  CALL SCARC_DEBUG_VECTOR3_BIG (P, NM, 'ITERATE_BARO: P')
+  CALL SCARC_DUMP_VECTOR3_BIG (HP, NM, 'H')
+  CALL SCARC_DUMP_VECTOR3_BIG (P, NM, 'P')
+#endif
    !$OMP PARALLEL PRIVATE(I,J,K,RHSS,LHSS,IMFCT,JMFCT,KMFCT,IPFCT,JPFCT,KPFCT,NM)
    !$OMP DO COLLAPSE(3) SCHEDULE(STATIC)
    DO K=1,KBAR
@@ -3680,14 +3507,23 @@ IF (ITERATE_BAROCLINIC_TERM) THEN
             + ((KRES(I,J+1,K)-KRES(I,J,K))*RDYN(J)*JPFCT      - (KRES(I,J,K)-KRES(I,J-1,K))*RDYN(J-1)*JMFCT        )*RDY(J)        &
             + ((KRES(I,J,K+1)-KRES(I,J,K))*RDZN(K)*KPFCT      - (KRES(I,J,K)-KRES(I,J,K-1))*RDZN(K-1)*KMFCT        )*RDZ(K)
             RESIDUAL(I,J,K) = ABS(RHSS-LHSS)
+#ifdef WITH_SCARC_DEBUG
+  IF (J == 1) &
+    WRITE(MSG%LU_DEBUG,'(A, 4I4, 6E14.6)') 'SUSIBARO: TPI, I, J, K, P, LHSS, RHSS, RESIDUAL:', &
+                           TOTAL_PRESSURE_ITERATIONS, I,J,K, P(I,J,K), LHSS, RHSS, RESIDUAL(I,J,K)
+#endif
          ENDDO
       ENDDO
    ENDDO
    !$OMP END DO
    !$OMP END PARALLEL
    PRESSURE_ERROR_MAX(NM) = MAXVAL(RESIDUAL)
+#ifdef WITH_SCARC_DEBUG
+    WRITE(MSG%LU_DEBUG,'(A, I4, E14.6)') 'SUSIBARO_FINAL: TPI, PRESSURE_ERROR_MAX:', &
+                                          TOTAL_PRESSURE_ITERATIONS, PRESSURE_ERROR_MAX(NM)
+#endif
    PRESSURE_ERROR_MAX_LOC(:,NM) = MAXLOC(RESIDUAL)
-ENDIF
+!ENDIF
 
 T_USED(5)=T_USED(5)+CURRENT_TIME()-TNOW
 END SUBROUTINE PRESSURE_SOLVER_CHECK_RESIDUALS_U
